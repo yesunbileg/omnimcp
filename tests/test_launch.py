@@ -10,7 +10,7 @@ import itertools
 
 import pytest
 
-from hypruse import server
+from agentic_os_mcp import server
 
 
 class FakeHyprctl:

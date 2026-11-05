@@ -1,0 +1,6 @@
+interface:
+  display_name: "Self learing OS"
+  short_description: "Давтагдах ажлыг MCP код/workflow болгох санал гаргах"
+  default_prompt: "$self-learing-os ашиглан дууссан session-ийг дүгнэж, дахин ашиглах код/workflow-ийн саналыг дугаартай, нэг мөрөөр гарга. Миний зөвшөөрсөн саналыг л Agentic OS MCP-ийн санд нэмж шалга."
+policy:
+  allow_implicit_invocation: false

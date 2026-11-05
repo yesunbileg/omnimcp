@@ -1,13 +1,10 @@
-"""Set-of-Marks capture (marks) and click-by-name/mark (click_ui)."""
+"""Numbered control legends (marks) and click-by-name/mark (click_ui)."""
 
 import json
-import shutil
-import subprocess
 
 import pytest
-from mcp.types import TextContent
 
-from hypruse import server as srv
+from agentic_os_mcp import server as srv
 
 
 def make_client():
@@ -102,48 +99,19 @@ def test_click_ui_no_tree_falls_back(wired, monkeypatch):
     assert wired["clicks"] == []
 
 
-def test_marks_builds_legend_and_stores_relative_offsets(wired, monkeypatch):
-    monkeypatch.setattr(srv, "_grab_env", lambda **kw: (b"IMG", dict(META)))
-    drawn = {}
+def test_marks_numbers_controls_without_capturing_the_screen(wired, monkeypatch):
+    def unexpected_capture(**kwargs):
+        raise AssertionError("numbering controls must not capture pixels")
 
-    def fake_draw(data, fmt, points):
-        drawn["points"] = points
-        return b"MARKED"
-
-    monkeypatch.setattr(srv, "_draw_marks", fake_draw)
-    monkeypatch.setattr(
-        srv, "_package", lambda data, meta: [TextContent(type="text", text=f"pkg:{len(data)}")]
-    )
+    monkeypatch.setattr(srv, "_grab_env", unexpected_capture)
     out = srv.marks()
-    # mark pixels: (global - origin) * scale
-    assert drawn["points"] == [(1, 50, 30), (2, 150, 30), (3, 300, 250)]
-    legend = json.loads(out[-1].text)["legend"]
+    assert len(out) == 1
+    legend = json.loads(out[0].text)["legend"]
     assert [x["mark"] for x in legend] == [1, 2, 3]
     assert legend[2]["value"] == "hi"
-    # stored offsets are window-relative, re-anchored at click time
-    assert srv._last_marks["items"][1] == {"dx": 50, "dy": 30, "label": "push button 'Save'",
-                                           "role": "push button"}
-    assert out[0].text == "pkg:6"  # the MARKED image was packaged, not the original
-
-
-def test_marks_pixel_math_honors_scale(wired, monkeypatch):
-    meta = dict(META, scale=2.0)
-    monkeypatch.setattr(srv, "_grab_env", lambda **kw: (b"IMG", meta))
-    drawn = {}
-    monkeypatch.setattr(
-        srv, "_draw_marks", lambda d, f, p: drawn.update(points=p) or b"M"
-    )
-    monkeypatch.setattr(srv, "_package", lambda data, meta: [])
-    srv.marks()
-    assert drawn["points"][0] == (1, 100, 60)  # (150-100)*2, (80-50)*2
-
-
-def test_marks_without_imagemagick_returns_legend(wired, monkeypatch):
-    monkeypatch.setattr(srv, "_grab_env", lambda **kw: (b"IMG", dict(META)))
-    monkeypatch.setattr(srv, "_draw_marks", lambda *a: None)
-    out = srv.marks()
-    assert "ImageMagick not found" in out[0].text
-    assert json.loads(out[1].text)["legend"]  # coordinates still exact
+    assert srv._last_marks["items"][1] == {
+        "dx": 50, "dy": 30, "label": "push button 'Save'", "role": "push button",
+    }
 
 
 def test_marks_no_tree_falls_back(wired, monkeypatch):
@@ -153,7 +121,6 @@ def test_marks_no_tree_falls_back(wired, monkeypatch):
 
 def test_click_mark_reanchors_to_moved_window(wired, monkeypatch):
     monkeypatch.setattr(srv, "_grab_env", lambda **kw: (b"IMG", dict(META)))
-    monkeypatch.setattr(srv, "_draw_marks", lambda *a: b"M")
     monkeypatch.setattr(srv, "_package", lambda data, meta: [])
     srv.marks()
     wired["client"]["at"] = [300, 200]  # the window moved since the capture
@@ -166,18 +133,6 @@ def test_click_unknown_mark_raises(wired):
     srv._last_marks = {}
     with pytest.raises(ValueError, match="no mark"):
         srv.click_ui(mark=7)
-
-
-@pytest.mark.skipif(shutil.which("magick") is None, reason="needs imagemagick")
-def test_draw_marks_real_imagemagick(tmp_path, monkeypatch):
-    monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
-    src = tmp_path / "src.jpg"
-    subprocess.run(["magick", "-size", "60x40", "xc:white", str(src)], check=True)
-    from hypruse import screenshot as shot
-
-    out = srv._draw_marks(src.read_bytes(), "jpeg", [(1, 15, 15), (12, 45, 25)])
-    assert out is not None and out != src.read_bytes()
-    assert shot.image_size(out) == (60, 40)  # dims unchanged, marks drawn
 
 
 def test_click_ui_then_ui_observes_the_clicked_window(wired, monkeypatch):
@@ -232,7 +187,7 @@ def test_click_ui_refuses_under_lock_even_with_allow_auth(wired, monkeypatch):
 def test_click_ui_confinement_wiring_refuses_out_of_scope(wired, monkeypatch):
     # integration: guard_client is real here; the 'gedit' target is out of
     # a kitty-only scope, so the click is refused before any side effect
-    monkeypatch.setenv("HYPRUSE_CONFINE", "class:kitty")
+    monkeypatch.setenv("AGENTIC_OS_CONFINE", "class:kitty")
     with pytest.raises(srv.trust.TrustError, match="confinement scope"):
         srv.click_ui(name="Save")
     assert wired["clicks"] == []
@@ -287,7 +242,7 @@ def test_a_floating_target_does_not_hide_a_floating_auth_dialog(monkeypatch):
 
 
 def test_a_pinned_window_over_the_point_counts(monkeypatch):
-    monkeypatch.setenv("HYPRUSE_CONFINE", "class:gedit")
+    monkeypatch.setenv("AGENTIC_OS_CONFINE", "class:gedit")
     pip = {"address": "0xq", "class": "mpv", "floating": True, "pinned": True,
            "at": [120, 60], "size": [200, 120], "workspace": {"id": 5}, "monitor": 1}
     _scene(monkeypatch, [pip])
@@ -316,7 +271,7 @@ def test_windows_that_cannot_cover_the_target_do_not_count(monkeypatch):
 def test_a_scratchpad_focusing_will_hide_does_not_count_before_focus(monkeypatch):
     # with input:special_fallthrough 0 (the default), focusing a window on a
     # regular workspace hides the monitor's scratchpad
-    monkeypatch.setenv("HYPRUSE_CONFINE", "class:gedit")
+    monkeypatch.setenv("AGENTIC_OS_CONFINE", "class:gedit")
     pad = {"address": "0xk", "class": "kitty", "floating": False, "at": [0, 0],
            "size": [1920, 1080], "workspace": {"id": -98, "name": "special:term"},
            "monitor": 0}
@@ -382,7 +337,7 @@ def test_click_ui_refuses_when_focusing_moved_the_window(wired, monkeypatch):
 # pinned windows) at special_fallthrough 0, so the click cannot reach the
 # target; at 1 the scratchpad's windows come first.
 def _overhang(monkeypatch, fallthrough, pad_covers=True):
-    monkeypatch.setenv("HYPRUSE_CONFINE", "class:gedit")
+    monkeypatch.setenv("AGENTIC_OS_CONFINE", "class:gedit")
     target = dict(make_client(), floating=True, at=[1700, 200], size=[800, 500],
                   workspace={"id": 5}, monitor=1)
     mons = [dict(MONS[0], specialWorkspace={"id": -98, "name": "special:term"}), MONS[1]]
@@ -416,7 +371,7 @@ def test_at_fallthrough_1_the_scratchpads_own_windows_count(monkeypatch):
     ({"option": "input:special_fallthrough"}, None),
 ])
 def test_special_fallthrough_reads_both_config_managers(monkeypatch, reply, expect):
-    from hypruse.trust import _special_fallthrough as real
+    from agentic_os_mcp.trust import _special_fallthrough as real
 
     monkeypatch.setattr(srv.trust.hyprctl, "query", lambda what: reply)
     assert real() == expect
@@ -451,21 +406,6 @@ def test_a_target_on_its_own_open_scratchpad_reaches_past_another(monkeypatch):
     _check(target, x=1800, y=300)
 
 
-def test_another_monitors_scrolled_out_scratchpad_does_not_cover_this_one(monkeypatch):
-    # its rect lies over monitor 0, but Hyprland's scratchpad pass on monitor
-    # 0 takes only monitor 0's scratchpad
-    monkeypatch.setenv("HYPRUSE_CONFINE", "class:gedit")
-    column = {"address": "0xc", "class": "kitty", "floating": False, "at": [1000, 0],
-              "size": [1200, 1080], "workspace": {"id": -98, "name": "special:term"},
-              "monitor": 1}
-    mons = [MONS[0], dict(MONS[1], specialWorkspace={"id": -98, "name": "special:term"})]
-    monkeypatch.setattr(srv.trust, "_click_scene", lambda: (mons, [column]))
-    monkeypatch.setattr(srv.trust, "_special_fallthrough", lambda: 1)
-    wide = dict(make_client(), size=[1700, 600])  # reaches x 1800 on monitor 0
-    for focused in (False, True):
-        _check(wide, x=1500, y=300, focused=focused)  # inside both rects, on monitor 0
-
-
 # Hyprland's own permission prompt (hyprland-dialog, Deny / Allow once /
 # Allow and remember) has priority focus: the pointer goes to it before
 # even the pinned pass. A click there can grant a permission.
@@ -479,8 +419,8 @@ def test_the_permission_prompt_counts_even_over_a_pinned_target(monkeypatch, foc
     pinned = dict(make_client(), floating=True, pinned=True)
     with pytest.raises(srv.trust.TrustError, match="Hyprland's own dialog"):
         _check(pinned, focused=focused)
-    monkeypatch.setenv("HYPRUSE_AUTH_GUARD", "0")
-    monkeypatch.setenv("HYPRUSE_CONFINE", "class:gedit")
+    monkeypatch.setenv("AGENTIC_OS_AUTH_GUARD", "0")
+    monkeypatch.setenv("AGENTIC_OS_CONFINE", "class:gedit")
     with pytest.raises(srv.trust.TrustError, match="confinement"):
         _check(pinned, focused=focused)
 
@@ -502,7 +442,6 @@ def test_click_ui_refuses_a_tiled_target_on_another_monitor(wired, monkeypatch):
     with pytest.raises(srv.trust.TrustError, match="own monitor"):
         srv.click_ui(name="Save")
     assert wired["clicks"] == [] and wired["dispatch"] == []
-
 
 
 @pytest.mark.parametrize("target", [

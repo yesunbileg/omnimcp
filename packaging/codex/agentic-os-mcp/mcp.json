@@ -1,0 +1,12 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "agentic-os-mcp": {
+      "type": "stdio",
+      "command": "./bin/agentic-os-mcp",
+      "env": {
+        "AGENTIC_OS_KANBAN_FILE": "/mnt/work/User/AI/Task/kanban.md"
+      }
+    }
+  }
+}

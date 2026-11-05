@@ -9,7 +9,7 @@ test that wants the interesting state opts in explicitly.
 
 import pytest
 
-from hypruse import a11y, dbuswire, hyprctl, journal, server, trust
+from agentic_os_mcp import a11y, dbuswire, hyprctl, journal, server, trust
 
 
 @pytest.fixture(autouse=True)
@@ -17,12 +17,13 @@ def no_ambient_journal(monkeypatch):
     """No recording, no dry run, unless a test asks for it.
 
     Same rule as below, pointed at the developer's environment rather
-    than the machine's: a suite run with HYPRUSE_JOURNAL exported would
+    than the machine's: a suite run with AGENTIC_OS_JOURNAL exported would
     append hundreds of fabricated entries to a real audit trail, and one
-    with HYPRUSE_DRYRUN set would pass while every acting tool did
+    with AGENTIC_OS_DRYRUN set would pass while every acting tool did
     nothing.
     """
-    for var in ("HYPRUSE_JOURNAL", "HYPRUSE_JOURNAL_TEXT", "HYPRUSE_DRYRUN"):
+    for var in ("AGENTIC_OS_JOURNAL", "AGENTIC_OS_JOURNAL_TEXT", "AGENTIC_OS_DRYRUN",
+                "AGENTIC_OS_KANBAN_FILE"):
         monkeypatch.delenv(var, raising=False)
     journal._broken = False
     # replay marks its records `by: replay` and the CLI verbs stamp theirs
@@ -71,17 +72,17 @@ def compositor_lock_unknown(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def foreground_by_default(monkeypatch):
-    """HYPRUSE_BACKGROUND=0 (0.12 behaviour) unless a test says otherwise.
+    """AGENTIC_OS_BACKGROUND=0 (0.12 behaviour) unless a test says otherwise.
 
     The tests written before background mode assert foreground behaviour;
     background tests unset it to get the automatic default.
     """
-    monkeypatch.setenv("HYPRUSE_BACKGROUND", "0")
+    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "0")
     # and the documented defaults for the agent's workspaces, whatever the
     # developer's shell exports
-    monkeypatch.delenv("HYPRUSE_AGENT_WORKSPACES", raising=False)
-    monkeypatch.delenv("HYPRUSE_AGENT_FILL", raising=False)
-    monkeypatch.delenv("HYPRUSE_CONFINE", raising=False)
+    monkeypatch.delenv("AGENTIC_OS_AGENT_WORKSPACES", raising=False)
+    monkeypatch.delenv("AGENTIC_OS_AGENT_FILL", raising=False)
+    monkeypatch.delenv("AGENTIC_OS_CONFINE", raising=False)
 
 
 @pytest.fixture(autouse=True)

@@ -1,0 +1,9 @@
+{
+  "samples": 100,
+  "warmup": 10,
+  "p50_ms": 6.395910499999999,
+  "p95_ms": 17.542866,
+  "includes": "MCP stdio/SDK + bridge + Unix socket + validation + SQLite event",
+  "backend": "private file.read; measured worker handler duration subtracted",
+  "target_p95_below_100ms": true
+}

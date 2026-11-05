@@ -1,0 +1,24 @@
+{
+  "name": "agentic-os-mcp",
+  "version": "0.2.1",
+  "description": "Local Agentic OS MCP tools and desktop workflow for Codex.",
+  "license": "MIT",
+  "interface": {
+    "displayName": "Agentic OS",
+    "shortDescription": "Control your Linux desktop",
+    "longDescription": "Use the existing Agentic OS MCP server and its workflow skill to inspect and operate the local Hyprland desktop, Canvas files, and the configured Kanban board.",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Read",
+      "Write",
+      "Interactive"
+    ],
+    "defaultPrompt": [
+      "Inspect my desktop with Agentic OS."
+    ],
+    "logo": "./assets/icon.svg",
+    "composerIcon": "./assets/icon.svg"
+  },
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json"
+}

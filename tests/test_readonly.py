@@ -4,10 +4,12 @@ import re
 
 import pytest
 
-from hypruse import server as srv
+from agentic_os_mcp import server as srv
 
-OBSERVE = {"desktop", "screenshot", "zoom", "ui", "marks", "binds", "wait_for"}
-ACT = {"pointer", "keyboard", "click_ui", "hypr", "launch", "use_bind", "sequence"}
+OBSERVE = {
+    "desktop", "screenshot", "zoom", "ui", "marks", "binds", "wait_for", "canvas", "codex_usage"
+}
+ACT = {"pointer", "keyboard", "click_ui", "hypr", "launch", "sequence", "opencode"}
 
 
 def _tool_names(module):
@@ -16,18 +18,18 @@ def _tool_names(module):
 
 @pytest.fixture
 def reloaded(monkeypatch):
-    """Reload hypruse.server with a given HYPRUSE_READONLY value and always
+    """Reload agentic-os-mcp.server with a given AGENTIC_OS_READONLY value and always
     restore the full-tool module afterwards (other tests hold references)."""
 
     def _with_env(value: str | None):
         if value is None:
-            monkeypatch.delenv("HYPRUSE_READONLY", raising=False)
+            monkeypatch.delenv("AGENTIC_OS_READONLY", raising=False)
         else:
-            monkeypatch.setenv("HYPRUSE_READONLY", value)
+            monkeypatch.setenv("AGENTIC_OS_READONLY", value)
         return importlib.reload(srv)
 
     yield _with_env
-    monkeypatch.delenv("HYPRUSE_READONLY", raising=False)
+    monkeypatch.delenv("AGENTIC_OS_READONLY", raising=False)
     importlib.reload(srv)
 
 
@@ -63,17 +65,17 @@ def test_env_value_parsing(reloaded, value, expect_readonly):
 def test_clipboard_is_double_gated(reloaded, monkeypatch):
     # absent by default, present with the opt-in flag, never in read-only
     assert "clipboard" not in _tool_names(reloaded(None))
-    monkeypatch.setenv("HYPRUSE_CLIPBOARD", "1")
+    monkeypatch.setenv("AGENTIC_OS_CLIPBOARD", "1")
     assert "clipboard" in _tool_names(reloaded(None))
     assert _tool_names(reloaded("1")) == OBSERVE
-    monkeypatch.delenv("HYPRUSE_CLIPBOARD")
+    monkeypatch.delenv("AGENTIC_OS_CLIPBOARD")
     assert "clipboard" not in _tool_names(reloaded(None))
 
 
-# every acting tool name, as a word (so "hypruse"/"Hyprland" do not match
+# every acting tool name, as a word (so "agentic-os-mcp"/"Hyprland" do not match
 # "hypr", and "launchers" does not match "launch")
 _ACT_REF = re.compile(
-    r"\b(pointer|keyboard|click_ui|hypr|launch|use_bind|sequence|clipboard)\b"
+    r"\b(pointer|keyboard|click_ui|hypr|launch|sequence|clipboard|opencode)\b"
 )
 
 
@@ -106,7 +108,6 @@ def test_readonly_marks_hint_does_not_advertise_click_ui(reloaded, monkeypatch):
         lambda **kw: (b"IMG", {"geometry": [0, 0, 10, 10], "scale": 1.0,
                                "image": [10, 10], "format": "jpeg"}),
     )
-    monkeypatch.setattr(module, "_draw_marks", lambda *a: None)  # legend-only path
     out = module.marks(window="0xa")
     legend_json = out[-1].text
     assert "click_ui" not in legend_json
@@ -117,7 +118,6 @@ def test_full_mode_docstrings_still_reference_acting_tools(reloaded):
     module = reloaded(None)
     tools = {t.name: t.description for t in asyncio.run(module.mcp.list_tools())}
     assert "click_ui" in tools["ui"]
-    assert "use_bind" in tools["binds"]
     assert "click_ui(mark=N)" in tools["marks"]
 
 
@@ -125,31 +125,34 @@ def test_every_tool_declares_a_title_and_whether_it_acts(reloaded, monkeypatch):
     # clients and directories read these hints (approval prompts, quality
     # scores); an observation tool must say it changes nothing, and an
     # acting one must not claim to be harmless
-    monkeypatch.setenv("HYPRUSE_CLIPBOARD", "1")
+    monkeypatch.setenv("AGENTIC_OS_CLIPBOARD", "1")
     tools = asyncio.run(reloaded(None).mcp.list_tools())
     assert {t.name for t in tools} == OBSERVE | ACT | {"clipboard"}
     for t in tools:
         a = t.annotations
         assert a is not None and a.title, t.name
-        if t.name in OBSERVE:
+        if t.name == "codex_usage":
+            assert a.readOnlyHint is True and a.openWorldHint is True, t.name
+            assert a.destructiveHint is False, t.name
+        elif t.name in OBSERVE - {"canvas"}:
             assert a.readOnlyHint is True and a.openWorldHint is False, t.name
         else:
             assert a.readOnlyHint is False and a.destructiveHint is True, t.name
 
 
 def test_the_acting_tools_explain_background_mode(reloaded, monkeypatch):
-    monkeypatch.delenv("HYPRUSE_BACKGROUND", raising=False)
+    monkeypatch.delenv("AGENTIC_OS_BACKGROUND", raising=False)
     module = reloaded(None)
     tools = {t.name: t.description for t in asyncio.run(module.mcp.list_tools())}
-    for name in ("click_ui", "keyboard", "pointer", "launch", "sequence", "hypr", "use_bind"):
+    for name in ("click_ui", "keyboard", "pointer", "launch", "sequence", "hypr"):
         assert "background" in tools[name].lower(), name
     assert "agent's own workspaces" in module.mcp.instructions
 
 
 def test_the_instructions_follow_the_background_setting(reloaded, monkeypatch):
-    monkeypatch.setenv("HYPRUSE_BACKGROUND", "1")
+    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "1")
     assert "GUARANTEED" in reloaded(None).mcp.instructions
-    monkeypatch.setenv("HYPRUSE_BACKGROUND", "0")
+    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "0")
     assert "off for this session" in reloaded(None).mcp.instructions
-    monkeypatch.setenv("HYPRUSE_BACKGROUND", "1")
+    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "1")
     assert "GUARANTEED" not in reloaded("1").mcp.instructions  # read-only acts on nothing

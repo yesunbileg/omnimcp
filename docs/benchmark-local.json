@@ -1,0 +1,18 @@
+{
+  "schema": {
+    "legacy": {
+      "tools": 14,
+      "bytes": 22263
+    },
+    "compact": {
+      "tools": 7,
+      "bytes": 3949
+    }
+  },
+  "token_benchmark": "not_measured",
+  "engine_overhead_ms": {
+    "p50": 0.040073,
+    "p95": 0.046598,
+    "includes": "validation, dispatch, SQLite event; excludes socket/MCP"
+  }
+}

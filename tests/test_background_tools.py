@@ -3,7 +3,7 @@ is not in, with every desktop and accessibility call stubbed."""
 
 import pytest
 
-from hypruse import server as srv
+from agentic_os_mcp import server as srv
 
 REAL_UI_READ = srv._ui_read  # bound before the fixture stubs it
 REAL_PROVEN_FRAME = srv._proven_frame
@@ -21,7 +21,7 @@ def wired_bg(monkeypatch):
          "has_action": True, "role": "push button", "values": [{}, {}], "gone": False,
          "inserted": [], "typed": [], "shortcuts": [], "focused_text": None,
          "xwayland": False, "window_at_point": "0xhuman"}
-    monkeypatch.delenv("HYPRUSE_BACKGROUND", raising=False)
+    monkeypatch.delenv("AGENTIC_OS_BACKGROUND", raising=False)
     monkeypatch.setattr(srv.safety, "touch", lambda *a: None)
     monkeypatch.setattr(srv.time, "sleep", lambda s_: None)
 
@@ -135,7 +135,6 @@ def wired_bg(monkeypatch):
     monkeypatch.setattr(srv, "_focus_on_activate", lambda addr="": s["focus_on_activate"])
     monkeypatch.setattr(srv.hinput, "move", lambda x, y: s["clicks"].append(("move", x, y)))
     monkeypatch.setattr(srv.hinput, "drag", lambda *a, **k: s["clicks"].append(("drag",) + a))
-    monkeypatch.setattr(srv.hinput, "scroll", lambda **k: s["clicks"].append(("scroll", k)))
     return s
 
 
@@ -193,7 +192,7 @@ def test_a_dry_run_names_the_method_and_does_nothing(wired_bg, monkeypatch):
 
 
 def test_the_guarantee_never_clicks_even_the_active_window(wired_bg, monkeypatch):
-    monkeypatch.setenv("HYPRUSE_BACKGROUND", "1")
+    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "1")
     wired_bg["active"] = "0xa"
     srv.click_ui(name="Save", window="0xa")
     assert wired_bg["actions"] and not wired_bg["clicks"]
@@ -204,7 +203,6 @@ def test_marks_carry_what_a_background_press_needs(wired_bg, monkeypatch):
     monkeypatch.setattr(srv, "_grab_env", lambda **kw: (b"IMG", {
         "geometry": [100, 50, 800, 600], "scale": 1.0, "image": [800, 600],
         "format": "jpeg"}))
-    monkeypatch.setattr(srv, "_draw_marks", lambda *a: None)
     srv._last_marks.clear()
     srv.marks(window="0xa")
     srv.click_ui(mark=1)
@@ -215,7 +213,6 @@ def test_a_mark_from_an_unproven_frame_is_refused_in_the_background(wired_bg, mo
     monkeypatch.setattr(srv, "_grab_env", lambda **kw: (b"IMG", {
         "geometry": [100, 50, 800, 600], "scale": 1.0, "image": [800, 600],
         "format": "jpeg"}))
-    monkeypatch.setattr(srv, "_draw_marks", lambda *a: None)
     wired_bg["frame_sure"] = False
     srv._last_marks.clear()
     srv.marks(window="0xa")
@@ -259,7 +256,6 @@ def test_focusing_a_text_field_does_not_claim_no_change(wired_bg):
     wired_bg["values"][:] = [{"value": ""}, {"value": ""}]
     out = str(srv.click_ui(name="Name", window="0xa"))
     assert "focused" in out and "no change" not in out
-
 
 
 # --- keyboard -----------------------------------------------------------------
@@ -315,10 +311,9 @@ def test_keyboard_without_a_window_types_into_the_humans_window_in_automatic_mod
 
 
 def test_the_guarantee_requires_a_window(wired_bg, monkeypatch):
-    monkeypatch.setenv("HYPRUSE_BACKGROUND", "1")
+    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "1")
     with pytest.raises(srv.trust.TrustError, match="window="):
         srv.keyboard("type", text="x")
-
 
 
 def test_a_hidden_window_with_one_field_gets_accessibility_text(wired_bg):
@@ -336,7 +331,7 @@ def test_one_field_in_a_walk_cut_short_is_not_the_only_field(wired_bg):
     wired_bg["fields_complete"] = False
     srv.keyboard("type", text="hi", window="0xa")
     assert wired_bg["inserted"] == [] and len(wired_bg["shortcuts"]) == 2
-    with pytest.raises(srv.trust.TrustError, match="more elements than hypruse reads"):
+    with pytest.raises(srv.trust.TrustError, match="more elements than agentic-os-mcp reads"):
         srv.keyboard("type", text="上", window="0xa")
 
 
@@ -346,7 +341,7 @@ def test_several_fields_and_no_focus_report_fall_back_to_keys(wired_bg):
     assert wired_bg["inserted"] == [] and len(wired_bg["shortcuts"]) == 2
 
 
-# --- pointer, hypr, use_bind --------------------------------------------------
+# --- pointer and window actions ---------------------------------------------
 
 
 def test_pointer_over_another_window_is_refused_in_automatic_mode(wired_bg):
@@ -405,7 +400,7 @@ def test_pointer_background_true_is_refused(wired_bg):
 
 
 def test_pointer_with_background_off_is_unchanged(wired_bg, monkeypatch):
-    monkeypatch.setenv("HYPRUSE_BACKGROUND", "0")
+    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "0")
     wired_bg["window_at_point"] = "0xa"
     srv.pointer("click", x=100, y=100)
     assert wired_bg["clicks"] == [(100, 100)] and wired_bg["at_points"] == []
@@ -414,20 +409,19 @@ def test_pointer_with_background_off_is_unchanged(wired_bg, monkeypatch):
 def test_the_guarantee_refuses_pointer_workspace_focus_fullscreen_and_binds(
     wired_bg, monkeypatch
 ):
-    monkeypatch.setenv("HYPRUSE_BACKGROUND", "1")
+    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "1")
     for call in (lambda: srv.pointer("click", x=1, y=1),
                  lambda: srv.pointer("move", x=1, y=1),
                  lambda: srv.hypr("workspace", workspace="3"),
                  lambda: srv.hypr("focus_window", target="0xa"),
-                 lambda: srv.hypr("fullscreen", target="0xa"),
-                 lambda: srv.use_bind("SUPER+F")):
-        with pytest.raises(srv.trust.TrustError, match="HYPRUSE_BACKGROUND"):
+                 lambda: srv.hypr("fullscreen", target="0xa")):
+        with pytest.raises(srv.trust.TrustError, match="AGENTIC_OS_BACKGROUND"):
             call()
     assert wired_bg["clicks"] == [] and wired_bg["dispatch"] == []
 
 
 def test_the_guarantee_keeps_agent_windows_on_agent_workspaces(wired_bg, monkeypatch):
-    monkeypatch.setenv("HYPRUSE_BACKGROUND", "1")
+    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "1")
     with pytest.raises(srv.trust.TrustError, match="agent's workspaces"):
         srv.hypr("move_window", target="0xa", workspace="3")
     srv.hypr("move_window", target="0xa", workspace="98")
@@ -446,7 +440,7 @@ def test_automatic_mode_still_switches_workspaces_on_request(wired_bg):
 def launch_fake(monkeypatch):
     s = {"rule": None, "clients": [], "seat": 0, "active": ["0xhuman"],
          "lands": None, "dispatch": [], "monitors": MONS}
-    monkeypatch.delenv("HYPRUSE_BACKGROUND", raising=False)
+    monkeypatch.delenv("AGENTIC_OS_BACKGROUND", raising=False)
     monkeypatch.setattr(srv.safety, "touch", lambda *a: None)
 
     def launch_and_wait(rule_command, wait_s, accept=None):
@@ -495,16 +489,16 @@ def test_launch_with_a_workspace_keeps_it(launch_fake):
 
 
 def test_launch_with_background_off_is_unchanged(launch_fake, monkeypatch):
-    monkeypatch.setenv("HYPRUSE_BACKGROUND", "0")
+    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "0")
     srv.launch("foot")
     assert launch_fake["rule"] == ""
 
 
 def test_the_guarantee_launches_only_onto_agent_workspaces(launch_fake, monkeypatch):
-    monkeypatch.setenv("HYPRUSE_BACKGROUND", "1")
+    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "1")
     with pytest.raises(srv.trust.TrustError, match="agent's workspaces"):
         srv.launch("foot", workspace="3")
-    with pytest.raises(srv.trust.TrustError, match="HYPRUSE_BACKGROUND"):
+    with pytest.raises(srv.trust.TrustError, match="AGENTIC_OS_BACKGROUND"):
         srv.launch("foot", background=False)
     assert launch_fake["rule"] is None
     srv.launch("foot", workspace="98")
@@ -693,7 +687,7 @@ def test_launch_never_opens_on_an_agent_workspace_the_human_is_viewing(launch_fa
 
 
 def test_the_guarantee_refuses_a_workspace_on_screen(launch_fake, monkeypatch):
-    monkeypatch.setenv("HYPRUSE_BACKGROUND", "1")
+    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "1")
     launch_fake["monitors"] = [dict(MONS[0], activeWorkspace={"id": 98, "name": "98"})]
     with pytest.raises(srv.trust.TrustError, match="on screen"):
         srv.launch("foot", workspace="98")
@@ -701,14 +695,14 @@ def test_the_guarantee_refuses_a_workspace_on_screen(launch_fake, monkeypatch):
 
 
 def test_a_named_agent_workspace_is_not_mistaken_for_a_move(launch_fake, monkeypatch):
-    monkeypatch.setenv("HYPRUSE_AGENT_WORKSPACES", "name:research")
+    monkeypatch.setenv("AGENTIC_OS_AGENT_WORKSPACES", "name:research")
     out = srv.launch("foot")
     assert launch_fake["rule"] == "[workspace name:research silent]"
     assert launch_fake["dispatch"] == [] and "elsewhere" not in out["note"]
 
 
 def test_with_background_off_launch_re_baselines_the_seat_as_before(launch_fake, monkeypatch):
-    monkeypatch.setenv("HYPRUSE_BACKGROUND", "0")
+    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "0")
     srv.launch("foot", workspace="3")
     assert launch_fake["seat"] == 1
 
@@ -721,16 +715,16 @@ def test_a_launch_that_took_focus_re_baselines_the_seat(launch_fake):
 
 
 def test_confinement_to_workspaces_narrows_where_apps_open(launch_fake, monkeypatch):
-    monkeypatch.setenv("HYPRUSE_CONFINE", "workspace:3,97")
+    monkeypatch.setenv("AGENTIC_OS_CONFINE", "workspace:3,97")
     srv.launch("foot")
     assert launch_fake["rule"] == "[workspace 97 silent]"
 
 
 def test_confinement_without_an_agent_workspace_opens_as_before(launch_fake, monkeypatch):
     # the agent could not use, move or close an app outside its scope
-    monkeypatch.setenv("HYPRUSE_CONFINE", "workspace:3")
+    monkeypatch.setenv("AGENTIC_OS_CONFINE", "workspace:3")
     out = srv.launch("foot")
-    assert launch_fake["rule"] == "" and "HYPRUSE_CONFINE" in out["note"]
+    assert launch_fake["rule"] == "" and "AGENTIC_OS_CONFINE" in out["note"]
 
 
 def test_an_app_that_opened_on_screen_says_it_took_focus(launch_fake):
@@ -741,10 +735,10 @@ def test_an_app_that_opened_on_screen_says_it_took_focus(launch_fake):
 
 
 def test_under_the_guarantee_an_app_that_opened_on_screen_is_a_warning(launch_fake, monkeypatch):
-    monkeypatch.setenv("HYPRUSE_BACKGROUND", "1")
+    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "1")
     launch_fake["lands"] = "1"
     out = srv.launch("foot")
-    assert "HYPRUSE_BACKGROUND" in out["warning"] and "separate" in out["warning"]
+    assert "AGENTIC_OS_BACKGROUND" in out["warning"] and "separate" in out["warning"]
 
 
 # --- which new window is the launched one -------------------------------------
@@ -862,7 +856,7 @@ def test_the_keyboard_on_the_humans_own_window_stays_in_the_foreground(wired_bg)
 
 
 def test_the_guarantee_keeps_click_and_keys_off_the_humans_windows(wired_bg, monkeypatch):
-    monkeypatch.setenv("HYPRUSE_BACKGROUND", "1")
+    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "1")
     monkeypatch.setattr(srv, "_resolve_window", lambda w="": dict(CLIENT, workspace={"id": 1}))
     with pytest.raises(srv.trust.TrustError, match="agent's workspaces"):
         srv.click_ui(name="Save", window="0xa")
@@ -873,7 +867,7 @@ def test_the_guarantee_keeps_click_and_keys_off_the_humans_windows(wired_bg, mon
 
 
 def test_confinement_still_applies_to_background_input(wired_bg, monkeypatch):
-    monkeypatch.setenv("HYPRUSE_CONFINE", "class:kitty")
+    monkeypatch.setenv("AGENTIC_OS_CONFINE", "class:kitty")
     with pytest.raises(srv.trust.TrustError, match="confinement"):
         srv.click_ui(name="Save", window="0xa")
     with pytest.raises(srv.trust.TrustError, match="confinement"):
@@ -907,8 +901,8 @@ def test_sequence_background_refuses_steps_that_take_the_humans_view(wired_bg):
 
 
 def test_the_guarantee_refuses_toggle_floating_without_a_target(wired_bg, monkeypatch):
-    monkeypatch.setenv("HYPRUSE_BACKGROUND", "1")
-    with pytest.raises(srv.trust.TrustError, match="HYPRUSE_BACKGROUND"):
+    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "1")
+    with pytest.raises(srv.trust.TrustError, match="AGENTIC_OS_BACKGROUND"):
         srv.hypr("toggle_floating")
     assert wired_bg["dispatch"] == []
 
@@ -1017,7 +1011,7 @@ def test_sequence_then_ui_reads_the_window_its_steps_named(wired_bg, monkeypatch
 
 
 def test_a_focus_change_that_was_not_the_new_window_stays_the_humans(launch_fake):
-    # under HYPRUSE_STRICT, re-baselining here would absorb the human's change
+    # under AGENTIC_OS_STRICT, re-baselining here would absorb the human's change
     launch_fake["active"][:] = ["0xhuman", "0xother"]
     srv.launch("foot")
     assert launch_fake["seat"] == 0
@@ -1030,18 +1024,18 @@ def test_a_launched_window_that_took_focus_says_so(launch_fake):
 
 
 def test_under_the_guarantee_a_window_that_took_focus_is_a_warning(launch_fake, monkeypatch):
-    monkeypatch.setenv("HYPRUSE_BACKGROUND", "1")
+    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "1")
     launch_fake["active"][:] = ["0xhuman", "0xnew"]
-    assert "HYPRUSE_BACKGROUND" in srv.launch("foot")["warning"]
+    assert "AGENTIC_OS_BACKGROUND" in srv.launch("foot")["warning"]
 
 
 def test_the_guarantee_note_does_not_offer_background_false(launch_fake, monkeypatch):
-    monkeypatch.setenv("HYPRUSE_BACKGROUND", "1")
+    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "1")
     assert "background=false" not in srv.launch("foot")["note"]
 
 
 def test_a_workspace_with_spaces_is_still_checked(launch_fake, monkeypatch):
-    monkeypatch.setenv("HYPRUSE_BACKGROUND", "1")
+    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "1")
     launch_fake["monitors"] = [dict(MONS[0], activeWorkspace={"id": 98, "name": "98"})]
     with pytest.raises(srv.trust.TrustError, match="on screen"):
         srv.launch("foot", workspace=" 98 ")
@@ -1055,14 +1049,14 @@ def test_background_true_refuses_an_explicit_workspace_on_screen(launch_fake):
 
 
 def test_a_disjoint_confinement_under_the_guarantee_says_why(launch_fake, monkeypatch):
-    monkeypatch.setenv("HYPRUSE_BACKGROUND", "1")
-    monkeypatch.setenv("HYPRUSE_CONFINE", "workspace:3")
-    with pytest.raises(srv.trust.TrustError, match="HYPRUSE_CONFINE"):
+    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "1")
+    monkeypatch.setenv("AGENTIC_OS_CONFINE", "workspace:3")
+    with pytest.raises(srv.trust.TrustError, match="AGENTIC_OS_CONFINE"):
         srv.launch("foot")
 
 
 def test_the_guarantee_moves_windows_only_to_agent_workspaces_off_screen(wired_bg, monkeypatch):
-    monkeypatch.setenv("HYPRUSE_BACKGROUND", "1")
+    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "1")
     monkeypatch.setattr(srv.hyprctl, "query", lambda what: (
         [dict(MONS[0], activeWorkspace={"id": 98, "name": "98"})] if what == "monitors"
         else [dict(CLIENT)]))

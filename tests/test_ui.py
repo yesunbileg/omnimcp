@@ -3,7 +3,7 @@ window-relative element extents to global click points."""
 
 import pytest
 
-from hypruse import server as srv
+from agentic_os_mcp import server as srv
 
 
 class FakeBus:

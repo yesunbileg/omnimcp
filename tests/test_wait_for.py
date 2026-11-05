@@ -2,7 +2,7 @@
 
 import pytest
 
-from hypruse import server as srv
+from agentic_os_mcp import server as srv
 
 
 class OneShotStream:
@@ -63,7 +63,7 @@ LAYERS_RAW = {
 
 
 def test_layer_open_already_mapped(monkeypatch):
-    # the classic late subscribe: use_bind returns AFTER the launcher maps,
+    # the classic late subscribe: the action returns AFTER the launcher maps,
     # so openlayer fired before wait_for could connect; the mapped surface
     # must satisfy the wait instead of timing out forever
     monkeypatch.setattr(srv.safety, "touch", lambda *a: None)

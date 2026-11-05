@@ -10,9 +10,9 @@ import os
 import pytest
 from mcp.types import TextContent
 
-from hypruse import cli, cli_state, journal, safety, session, trust, verbs
-from hypruse import input as hinput
-from hypruse import server as srv
+from agentic_os_mcp import cli, cli_state, journal, safety, session, trust, verbs
+from agentic_os_mcp import input as hinput
+from agentic_os_mcp import server as srv
 
 
 @pytest.fixture(autouse=True)
@@ -20,8 +20,10 @@ def isolated(tmp_path, monkeypatch):
     """No desktop, no beacon, no shared state: each test starts empty."""
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
     monkeypatch.setenv("HYPRLAND_INSTANCE_SIGNATURE", "sig-test")
-    for var in ("HYPRUSE_READONLY", "HYPRUSE_CLIPBOARD", "HYPRUSE_CONFINE", "HYPRUSE_STRICT",
-                "HYPRUSE_MARK", "HYPRUSE_SCREENSHOT_MODE"):
+    for var in (
+        "AGENTIC_OS_READONLY", "AGENTIC_OS_CLIPBOARD", "AGENTIC_OS_CONFINE",
+        "AGENTIC_OS_STRICT", "AGENTIC_OS_MARK", "AGENTIC_OS_SCREENSHOT_MODE",
+    ):
         monkeypatch.delenv(var, raising=False)
     monkeypatch.setattr(session, "ensure_session_env", lambda: None)
     monkeypatch.setattr(cli, "_take_beacon", lambda: False)
@@ -71,9 +73,9 @@ def test_help_prints_and_exits_zero_even_with_piped_stdin(monkeypatch, capsys):
     def boom():
         raise AssertionError("the MCP server must not start for --help")
 
-    monkeypatch.setattr("hypruse.server.main", boom)
+    monkeypatch.setattr("agentic_os_mcp.server.main", boom)
     for flag in ("--help", "-h"):
-        monkeypatch.setattr(cli.sys, "argv", ["hypruse", flag])
+        monkeypatch.setattr(cli.sys, "argv", ["agentic-os-mcp", flag])
         with pytest.raises(SystemExit) as e:
             cli.main()
         assert e.value.code == 0
@@ -82,24 +84,24 @@ def test_help_prints_and_exits_zero_even_with_piped_stdin(monkeypatch, capsys):
 
 
 def test_version_prints_without_the_server(monkeypatch, capsys):
-    monkeypatch.setattr(cli.sys, "argv", ["hypruse", "--version"])
+    monkeypatch.setattr(cli.sys, "argv", ["agentic-os-mcp", "--version"])
     with pytest.raises(SystemExit) as e:
         cli.main()
     assert e.value.code == 0
-    assert capsys.readouterr().out.startswith("hypruse ")
+    assert capsys.readouterr().out.startswith("agentic-os-mcp ")
 
 
 def test_no_arguments_still_runs_the_server(monkeypatch):
     started = []
-    monkeypatch.setattr("hypruse.server.main", lambda: started.append(True))
-    monkeypatch.setattr(cli.sys, "argv", ["hypruse"])
+    monkeypatch.setattr("agentic_os_mcp.server.main", lambda: started.append(True))
+    monkeypatch.setattr(cli.sys, "argv", ["agentic-os-mcp"])
     cli.main()
     assert started == [True]
 
 
 def test_serve_is_the_explicit_form(monkeypatch):
     started = []
-    monkeypatch.setattr("hypruse.server.main", lambda: started.append(True))
+    monkeypatch.setattr("agentic_os_mcp.server.main", lambda: started.append(True))
     assert verbs.main(["serve"]) == 0
     assert started == [True]
 
@@ -111,10 +113,6 @@ def test_owner_subcommands_are_looked_up_at_call_time(monkeypatch):
     monkeypatch.setattr(cli, "journal_cmd", lambda rest: seen.append(rest) or 0)
     assert verbs.main(["journal", "--acts", "-n", "3"]) == 0
     assert seen == [["--acts", "-n", "3"]]
-    monkeypatch.setattr(cli, "init", lambda assume_yes, install_skill: 0 if install_skill else 5)
-    assert verbs.main(["init", "--yes", "--skill"]) == 0
-    assert verbs.main(["init"]) == 5
-
 
 # --- argv to tool call --------------------------------------------------------
 
@@ -129,10 +127,6 @@ def test_only_passed_flags_reach_the_tool():
     assert kwargs_of("pointer", "move", "1", "2") == {"action": "move", "x": 1.0, "y": 2.0}
     assert kwargs_of("pointer", "drag", "1", "2", "3", "4", "--allow-auth") == {
         "action": "drag", "x": 1.0, "y": 2.0, "to_x": 3.0, "to_y": 4.0, "allow_auth": True,
-    }
-    assert kwargs_of("pointer", "scroll", "3") == {"action": "scroll", "scroll_dy": 3.0}
-    assert kwargs_of("pointer", "scroll", "-2", "1", "--at", "10", "20") == {
-        "action": "scroll", "scroll_dy": -2.0, "scroll_dx": 1.0, "x": 10.0, "y": 20.0,
     }
 
 
@@ -150,7 +144,6 @@ def test_keyboard_hypr_click_ui_launch_wait_for_mappings():
     }
     assert kwargs_of("click_ui", "Save", "--index", "1") == {"name": "Save", "index": 1}
     assert kwargs_of("click-ui", "--mark", "3") == {"mark": 3}
-    assert kwargs_of("use-bind", "SUPER+F") == {"combo": "SUPER+F"}
     assert kwargs_of("wait-for", "window_open", "--match", "kitty", "--timeout", "5") == {
         "event": "window_open", "match": "kitty", "timeout_s": 5.0,
     }
@@ -192,7 +185,7 @@ def test_json_and_dry_run_are_accepted_after_the_action_word():
 def test_click_ui_needs_exactly_one_target_as_a_usage_error(capsys):
     for argv in (["click_ui"], ["click_ui", "Save", "--mark", "2"]):
         assert verbs.main(argv) == verbs.EXIT_USAGE
-        assert "hypruse: usage: pass NAME or --mark N" in capsys.readouterr().err
+        assert "agentic-os-mcp: usage: pass NAME or --mark N" in capsys.readouterr().err
     assert verbs.main(["sequence", "[]"]) == verbs.EXIT_USAGE
     assert "at least one step" in capsys.readouterr().err
 
@@ -201,7 +194,7 @@ def test_usage_errors_are_one_line(capsys):
     with pytest.raises(SystemExit):
         verbs.main(["keyboard", "type"])
     err = capsys.readouterr().err
-    assert err.startswith("hypruse: usage:") and err.count("\n") == 1
+    assert err.startswith("agentic-os-mcp: usage:") and err.count("\n") == 1
 
 
 def test_text_from_stdin(monkeypatch):
@@ -226,17 +219,12 @@ def test_sequence_steps_inline_file_and_stdin(tmp_path, monkeypatch):
 def test_bad_steps_are_usage_errors(capsys):
     for bad in ("{not json", '{"op": "hypr"}', '[1, 2]', "@/nonexistent/steps.json"):
         assert verbs.main(["sequence", bad]) == verbs.EXIT_USAGE
-        assert "hypruse: usage:" in capsys.readouterr().err
+        assert "agentic-os-mcp: usage:" in capsys.readouterr().err
 
 
 def test_click_with_one_coordinate_is_a_usage_error(capsys):
     assert verbs.main(["pointer", "click", "5"]) == verbs.EXIT_USAGE
     assert "click takes X Y" in capsys.readouterr().err
-
-
-def test_scroll_with_a_non_numeric_dx_is_a_usage_error(capsys):
-    assert verbs.main(["pointer", "scroll", "3", "left"]) == verbs.EXIT_USAGE
-    assert "DX must be a number" in capsys.readouterr().err
 
 
 def test_unknown_verb_and_unknown_action_exit_two(capsys):
@@ -246,7 +234,7 @@ def test_unknown_verb_and_unknown_action_exit_two(capsys):
     with pytest.raises(SystemExit) as e:
         verbs.main(["hypr", "explode"])
     assert e.value.code == 2
-    assert "hypruse: usage:" in capsys.readouterr().err
+    assert "agentic-os-mcp: usage:" in capsys.readouterr().err
 
 
 # --- gates and exit codes --------------------------------------------------------
@@ -254,11 +242,11 @@ def test_unknown_verb_and_unknown_action_exit_two(capsys):
 
 def test_read_only_mode_refuses_acting_verbs_before_calling_them(stub, monkeypatch, capsys):
     calls = stub("pointer", "click ok")
-    monkeypatch.setenv("HYPRUSE_READONLY", "1")
+    monkeypatch.setenv("AGENTIC_OS_READONLY", "1")
     assert verbs.main(["pointer", "click", "1", "2"]) == verbs.EXIT_REFUSED
     assert calls == []
     err = capsys.readouterr().err
-    assert err.startswith("hypruse: refused:") and "HYPRUSE_READONLY" in err
+    assert err.startswith("agentic-os-mcp: refused:") and "AGENTIC_OS_READONLY" in err
     # observation still works
     stub("desktop", {"monitors": [], "workspaces": [], "windows": [], "active_window": None,
                      "cursor": [1, 2]})
@@ -268,8 +256,8 @@ def test_read_only_mode_refuses_acting_verbs_before_calling_them(stub, monkeypat
 def test_clipboard_needs_the_same_opt_in_the_server_needs(stub, monkeypatch, capsys):
     calls = stub("clipboard", "hello")
     assert verbs.main(["clipboard", "read"]) == verbs.EXIT_REFUSED
-    assert calls == [] and "HYPRUSE_CLIPBOARD=1" in capsys.readouterr().err
-    monkeypatch.setenv("HYPRUSE_CLIPBOARD", "1")
+    assert calls == [] and "AGENTIC_OS_CLIPBOARD=1" in capsys.readouterr().err
+    monkeypatch.setenv("AGENTIC_OS_CLIPBOARD", "1")
     assert verbs.main(["clipboard", "read"]) == 0
     assert calls == [("clipboard", {"action": "read"})]
     assert capsys.readouterr().out == "hello\n"
@@ -279,17 +267,17 @@ def test_a_trust_refusal_is_exit_three_with_the_guards_reason(stub, capsys):
     stub("keyboard", trust.TrustError("0xabc (Signal) is outside the confinement scope"))
     assert verbs.main(["keyboard", "type", "hi", "--window", "0xabc"]) == verbs.EXIT_REFUSED
     assert capsys.readouterr().err == (
-        "hypruse: refused: 0xabc (Signal) is outside the confinement scope\n"
+        "agentic-os-mcp: refused: 0xabc (Signal) is outside the confinement scope\n"
     )
 
 
 def test_errors_are_one_line_on_stderr(stub, capsys):
     stub("hypr", ValueError("unknown action 'x'"))
     assert verbs.main(["hypr", "workspace", "3"]) == verbs.EXIT_ERROR
-    assert capsys.readouterr().err == "hypruse: error: unknown action 'x'\n"
+    assert capsys.readouterr().err == "agentic-os-mcp: error: unknown action 'x'\n"
     stub("hypr", RuntimeError("socket gone"))
     assert verbs.main(["hypr", "workspace", "3"]) == verbs.EXIT_ERROR
-    assert capsys.readouterr().err == "hypruse: error: RuntimeError: socket gone\n"
+    assert capsys.readouterr().err == "agentic-os-mcp: error: RuntimeError: socket gone\n"
 
 
 def test_no_result_is_exit_four():
@@ -435,7 +423,7 @@ def test_a_capture_prints_its_path_and_metadata_and_honors_out(monkeypatch, tmp_
     assert verbs.main(["screenshot", "--out", str(tmp_path / "nope" / "x.jpg")]) == 1
     captured = capsys.readouterr()
     assert captured.out.splitlines()[0] == str(shot) and shot.exists()
-    assert captured.err.startswith("hypruse: error: cannot move the capture")
+    assert captured.err.startswith("agentic-os-mcp: error: cannot move the capture")
 
 
 def test_then_observations_render_in_their_own_shape(stub, capsys):
@@ -446,12 +434,9 @@ def test_then_observations_render_in_their_own_shape(stub, capsys):
     assert out.startswith("on workspace 3\nmonitor eDP-1 at 0,0")
     legend = {"legend": [{"mark": 1, "role": "push button", "name": "Ok", "x": 5, "y": 6,
                           "clickable": True}], "hint": "click_ui(mark=N)"}
-    stub("marks", [TextContent(type="text", text="ImageMagick not found, returning the legend "
-                                                  "only (its coordinates are exact)"),
-                   TextContent(type="text", text=json.dumps(legend))])
+    stub("marks", [TextContent(type="text", text=json.dumps(legend))])
     assert verbs.main(["marks"]) == 0
     assert capsys.readouterr().out == (
-        "ImageMagick not found, returning the legend only (its coordinates are exact)\n"
         '[1] push button "Ok" @5,6\n'
     )
 
@@ -460,11 +445,11 @@ def test_captures_are_always_files_for_a_shell_caller(stub, monkeypatch):
     seen = {}
 
     def fake(**kw):
-        seen["mode"] = os.environ.get("HYPRUSE_SCREENSHOT_MODE")
+        seen["mode"] = os.environ.get("AGENTIC_OS_SCREENSHOT_MODE")
         return "x"
 
     monkeypatch.setattr(srv, "screenshot", fake)
-    monkeypatch.setenv("HYPRUSE_SCREENSHOT_MODE", "image")
+    monkeypatch.setenv("AGENTIC_OS_SCREENSHOT_MODE", "image")
     verbs.main(["screenshot"])
     assert seen["mode"] == "file"
 
@@ -506,7 +491,7 @@ def test_state_is_saved_after_every_call_and_restored_before_the_next(stub, monk
 
 
 def test_strict_seat_baseline_survives_between_calls(stub, monkeypatch):
-    monkeypatch.setenv("HYPRUSE_STRICT", "1")
+    monkeypatch.setenv("AGENTIC_OS_STRICT", "1")
 
     def act(**kw):
         trust._seat.update(cursor=(5, 6), active="0x1")
@@ -554,7 +539,7 @@ def test_take_beacon_is_used_when_no_server_holds_it(stub, monkeypatch):
 def test_journal_entries_from_the_cli_carry_a_source_and_one_header(stub, monkeypatch,
                                                                      tmp_path, capsys):
     log = tmp_path / "journal.ndjson"
-    monkeypatch.setenv("HYPRUSE_JOURNAL", str(log))
+    monkeypatch.setenv("AGENTIC_OS_JOURNAL", str(log))
     monkeypatch.setattr(journal, "_seq", 0)
 
     @journal.journaled("act")
@@ -585,7 +570,7 @@ def test_seq_numbers_are_unique_across_writers(stub, monkeypatch, tmp_path):
     # a verb beside a live server, or two verbs at once: the counter file
     # beside the journal hands out numbers, not each process's memory
     log = tmp_path / "journal.ndjson"
-    monkeypatch.setenv("HYPRUSE_JOURNAL", str(log))
+    monkeypatch.setenv("AGENTIC_OS_JOURNAL", str(log))
     monkeypatch.setattr(journal, "_seq", 0)
 
     @journal.journaled("observe")
@@ -605,12 +590,12 @@ def test_seq_numbers_are_unique_across_writers(stub, monkeypatch, tmp_path):
 
 def test_a_dry_run_between_real_calls_does_not_open_a_new_header(stub, monkeypatch, tmp_path):
     log = tmp_path / "journal.ndjson"
-    monkeypatch.setenv("HYPRUSE_JOURNAL", str(log))
+    monkeypatch.setenv("AGENTIC_OS_JOURNAL", str(log))
     stub("hypr", "DRY RUN, nothing was delivered: would switch to workspace 3")
     stub("desktop", SNAP)
     verbs.main(["desktop"])
     verbs.main(["hypr", "workspace", "3", "--dry-run"])
-    monkeypatch.delenv("HYPRUSE_DRYRUN", raising=False)  # the next process is not dry
+    monkeypatch.delenv("AGENTIC_OS_DRYRUN", raising=False)  # the next process is not dry
     verbs.main(["desktop"])
     headers = [e for e in journal.read(log) if e.get("kind") == "session"]
     assert len(headers) == 1
@@ -618,10 +603,10 @@ def test_a_dry_run_between_real_calls_does_not_open_a_new_header(stub, monkeypat
 
 def test_a_changed_mode_opens_a_new_header(stub, monkeypatch, tmp_path):
     log = tmp_path / "journal.ndjson"
-    monkeypatch.setenv("HYPRUSE_JOURNAL", str(log))
+    monkeypatch.setenv("AGENTIC_OS_JOURNAL", str(log))
     stub("desktop", SNAP)
     verbs.main(["desktop"])
-    monkeypatch.setenv("HYPRUSE_STRICT", "1")
+    monkeypatch.setenv("AGENTIC_OS_STRICT", "1")
     verbs.main(["desktop"])
     headers = [e for e in journal.read(log) if e.get("kind") == "session"]
     assert len(headers) == 2 and headers[1]["mode"]["strict"] is True
@@ -630,7 +615,7 @@ def test_a_changed_mode_opens_a_new_header(stub, monkeypatch, tmp_path):
 def test_acting_verbs_take_the_cross_process_lock(stub, monkeypatch, tmp_path):
     stub("pointer", "ok")
     verbs.main(["pointer", "click"])
-    assert (tmp_path / "hypruse" / "cli.lock").exists()
+    assert (tmp_path / "agentic-os-mcp" / "cli.lock").exists()
 
 
 def test_stale_or_foreign_marks_are_refused_not_clicked(monkeypatch):
@@ -679,7 +664,7 @@ def test_control_characters_never_reach_the_terminal(stub, capsys):
     assert capsys.readouterr().out == "typed into .[2J.window\n"
     stub("keyboard", ValueError("bad \x1b[31mcombo"))
     verbs.main(["keyboard", "key", "x"])
-    assert capsys.readouterr().err == "hypruse: error: bad .[31mcombo\n"
+    assert capsys.readouterr().err == "agentic-os-mcp: error: bad .[31mcombo\n"
 
 
 def test_desktop_quotes_workspace_names_that_are_not_numbers(stub, capsys):

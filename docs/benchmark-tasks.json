@@ -1,0 +1,22 @@
+[
+  {"id":"01","task":"Read CPU, RAM, disk and temperatures","domain":"system"},
+  {"id":"02","task":"Find top resource-consuming processes and parent tree","domain":"process"},
+  {"id":"03","task":"Execute a command and retrieve all output","domain":"command"},
+  {"id":"04","task":"Use a persistent PTY across two client connections","domain":"pty"},
+  {"id":"05","task":"Search a fixture repository for a literal","domain":"file"},
+  {"id":"06","task":"Read, patch and verify a UTF-8 config","domain":"file"},
+  {"id":"07","task":"Restore a config from a verified backup","domain":"file"},
+  {"id":"08","task":"Diagnose a fixture service from state and journal","domain":"service"},
+  {"id":"09","task":"Restart a fixture user service and verify PID/state","domain":"service"},
+  {"id":"10","task":"Query installed package versions","domain":"package"},
+  {"id":"11","task":"Install and remove a fixture package in a disposable VM","domain":"package"},
+  {"id":"12","task":"Read interface, DNS, route and port state","domain":"network"},
+  {"id":"13","task":"Change a fixture connection with checkpoint rollback in a VM","domain":"network"},
+  {"id":"14","task":"Inspect filesystems and mount a fixture device in a VM","domain":"storage"},
+  {"id":"15","task":"Back up, verify and restore fixture files with restic","domain":"backup"},
+  {"id":"16","task":"Read desktop windows and accessible controls","domain":"desktop"},
+  {"id":"17","task":"Focus a fixture desktop window and verify, then restore focus","domain":"desktop"},
+  {"id":"18","task":"Fill and submit a local fixture browser form","domain":"browser"},
+  {"id":"19","task":"Read then adjust and restore a fixture audio device","domain":"audio"},
+  {"id":"20","task":"Build and test a fixture checkout as one workflow","domain":"development"}
+]

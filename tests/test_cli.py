@@ -4,99 +4,18 @@ from pathlib import Path
 
 import pytest
 
-import hypruse
-from hypruse import cli
-from hypruse import hyprctl as hyprctl_mod
+import agentic_os_mcp
+from agentic_os_mcp import cli
+from agentic_os_mcp import hyprctl as hyprctl_mod
 
 ROOT = Path(__file__).resolve().parent.parent
 
 
 def test_version_sources_agree():
-    # RELEASING.md requires bumping pyproject.toml (the PyPI build),
-    # __init__.py (what `hypruse --version` prints), and server.json (the MCP
-    # registry entry); a release cut with only one bumped would report the
-    # previous version forever
     version = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]["version"]
-    assert hypruse.__version__ == version
-
-    server = json.loads((ROOT / "server.json").read_text())
-    assert server["version"] == version
-    # the registry rejects a package version that is not on PyPI yet, and
-    # validates ownership against *that* version's README
-    assert [p["version"] for p in server["packages"]] == [version]
-    # the skill ships inside the wheel and names the release it describes
-    skill = (ROOT / "skills" / "hypruse" / "SKILL.md").read_text()
+    assert agentic_os_mcp.__version__ == version
+    skill = (ROOT / "skills" / "agentic-os-mcp" / "SKILL.md").read_text()
     assert f'version: "{version}"' in skill
-
-
-def test_registry_ownership_token_matches_server_name():
-    # the MCP registry proves we own the PyPI package by finding
-    # `mcp-name: <name>` in the README it published as the package
-    # description, and a PyPI release is immutable: a name that drifts from
-    # the token can only be fixed by cutting another version
-    name = json.loads((ROOT / "server.json").read_text())["name"]
-    assert tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]["readme"] == "README.md"
-
-    readme = (ROOT / "README.md").read_text()
-    token = f"mcp-name: {name}"
-    assert token in readme
-    # the registry requires a boundary after the name, so the token cannot be
-    # read as the prefix of a longer one: anything outside the server-name
-    # charset, or an HTML comment close
-    rest = readme.split(token, 1)[1]
-    assert not rest[:1].isalnum() and rest[:1] not in ".-_/" or rest.startswith(("-->", "--!>"))
-
-
-def test_merge_adds_entry_preserving_others():
-    cfg = {"mcpServers": {"platform": {"type": "http", "url": "https://x"}}, "other": 1}
-    merged, changed = cli.merge_desktop_config(cfg)
-    assert changed
-    assert merged["mcpServers"]["platform"]["url"] == "https://x"
-    assert merged["mcpServers"]["hypruse"]["command"] == "uvx"
-    assert merged["other"] == 1
-
-
-def test_merge_never_touches_existing_hypruse_entry():
-    mine = {"command": "uv", "args": ["run", "--directory", "/src", "hypruse"]}
-    cfg = {"mcpServers": {"hypruse": mine}}
-    merged, changed = cli.merge_desktop_config(cfg)
-    assert not changed
-    assert merged["mcpServers"]["hypruse"] is mine
-
-
-def test_merge_from_empty():
-    merged, changed = cli.merge_desktop_config({})
-    assert changed and "hypruse" in merged["mcpServers"]
-
-
-def test_desktop_init_backs_up_and_writes(tmp_path, monkeypatch):
-    cfgfile = tmp_path / "claude_desktop_config.json"
-    cfgfile.write_text(json.dumps({"mcpServers": {}}))
-    monkeypatch.setattr(cli, "DESKTOP_CONFIG", cfgfile)
-    cli._init_claude_desktop(assume_yes=True)
-    written = json.loads(cfgfile.read_text())
-    assert written["mcpServers"]["hypruse"]["args"] == ["hypruse"]
-    backups = list(tmp_path.glob("*.bak.*"))
-    assert len(backups) == 1
-    assert json.loads(backups[0].read_text()) == {"mcpServers": {}}
-
-
-def test_desktop_init_skips_when_configured(tmp_path, monkeypatch, capsys):
-    cfgfile = tmp_path / "claude_desktop_config.json"
-    cfgfile.write_text(json.dumps({"mcpServers": {"hypruse": {"command": "uv"}}}))
-    monkeypatch.setattr(cli, "DESKTOP_CONFIG", cfgfile)
-    cli._init_claude_desktop(assume_yes=True)
-    assert "already configured" in capsys.readouterr().out
-    assert not list(tmp_path.glob("*.bak.*"))
-
-
-def test_desktop_init_refuses_broken_json(tmp_path, monkeypatch, capsys):
-    cfgfile = tmp_path / "claude_desktop_config.json"
-    cfgfile.write_text("{not json")
-    monkeypatch.setattr(cli, "DESKTOP_CONFIG", cfgfile)
-    cli._init_claude_desktop(assume_yes=True)
-    assert "not valid JSON" in capsys.readouterr().out
-    assert cfgfile.read_text() == "{not json"  # untouched
 
 
 def test_check_deps_reports_missing(monkeypatch):
@@ -117,18 +36,18 @@ def test_doctor_never_crashes_on_broken_check(monkeypatch, capsys):
 
 def test_main_dispatch(monkeypatch):
     monkeypatch.setattr(cli, "doctor", lambda: 0)
-    monkeypatch.setattr(cli.sys, "argv", ["hypruse", "doctor"])
+    monkeypatch.setattr(cli.sys, "argv", ["agentic-os-mcp", "doctor"])
     with pytest.raises(SystemExit) as e:
         cli.main()
     assert e.value.code == 0
 
     monkeypatch.setattr(cli, "stop", lambda: 0)
-    monkeypatch.setattr(cli.sys, "argv", ["hypruse", "stop"])
+    monkeypatch.setattr(cli.sys, "argv", ["agentic-os-mcp", "stop"])
     with pytest.raises(SystemExit) as e:
         cli.main()
     assert e.value.code == 0
 
-    monkeypatch.setattr(cli.sys, "argv", ["hypruse", "bogus"])
+    monkeypatch.setattr(cli.sys, "argv", ["agentic-os-mcp", "bogus"])
     with pytest.raises(SystemExit) as e:
         cli.main()
     assert e.value.code == 2
@@ -137,25 +56,25 @@ def test_main_dispatch(monkeypatch):
 def test_stop_no_beacon(tmp_path, monkeypatch, capsys):
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
     assert cli.stop() == 0
-    assert "no active hypruse session" in capsys.readouterr().out
+    assert "no active agentic-os-mcp session" in capsys.readouterr().out
 
 
 def test_stop_signals_beacon_pid(tmp_path, monkeypatch, capsys):
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
-    d = tmp_path / "hypruse"
+    d = tmp_path / "agentic-os-mcp"
     d.mkdir()
     (d / "state.json").write_text(json.dumps({"pid": 4242, "started": 1}))
     killed = []
     monkeypatch.setattr(cli.os, "kill", lambda pid, sig: killed.append((pid, sig)))
     assert cli.stop() == 0
     assert killed == [(4242, cli.signal.SIGTERM)]
-    assert "stopped hypruse (pid 4242)" in capsys.readouterr().out
+    assert "stopped agentic-os-mcp (pid 4242)" in capsys.readouterr().out
 
 
 def test_stop_handles_non_dict_beacon(tmp_path, monkeypatch, capsys):
     # valid JSON that is not an object must not crash the emergency stop
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
-    d = tmp_path / "hypruse"
+    d = tmp_path / "agentic-os-mcp"
     d.mkdir()
     (d / "state.json").write_text("[1, 2, 3]")
     assert cli.stop() == 1
@@ -166,7 +85,7 @@ def test_stop_handles_dict_beacon_missing_pid(tmp_path, monkeypatch, capsys):
     # a dict beacon without a pid key hits the KeyError branch the fix added
     # (int({...}["pid"]) raises KeyError, must be caught)
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
-    d = tmp_path / "hypruse"
+    d = tmp_path / "agentic-os-mcp"
     d.mkdir()
     (d / "state.json").write_text('{"started": 1}')
     assert cli.stop() == 1
@@ -176,10 +95,10 @@ def test_stop_handles_dict_beacon_missing_pid(tmp_path, monkeypatch, capsys):
 def test_stop_reaches_a_verb_acting_beside_a_server(tmp_path, monkeypatch, capsys):
     # a verb acting while a server owns the beacon is findable only through
     # the lock it holds; the panic bind must stop it too
-    from hypruse import verbs
+    from agentic_os_mcp import verbs
 
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
-    d = tmp_path / "hypruse"
+    d = tmp_path / "agentic-os-mcp"
     d.mkdir()
     (d / "state.json").write_text(json.dumps({"pid": 4242, "started": 1}))
     held = verbs._lock()  # this process stands in for the verb
@@ -196,25 +115,14 @@ def test_stop_reaches_a_verb_acting_beside_a_server(tmp_path, monkeypatch, capsy
         held.close()
     assert killed == [(7777, cli.signal.SIGTERM), (4242, cli.signal.SIGTERM)]
     out = capsys.readouterr().out
-    assert "stopped a running hypruse verb (pid 7777)" in out
-    assert "stopped hypruse (pid 4242)" in out
+    assert "stopped a running agentic-os-mcp verb (pid 7777)" in out
+    assert "stopped agentic-os-mcp (pid 4242)" in out
     # lock released: nothing acting any more
     assert cli._running_verb_pid() is None
 
 
-def test_init_yes_does_not_write_into_agent_directories_unasked(monkeypatch, capsys):
-    from hypruse import skill
-
-    installs = []
-    monkeypatch.setattr(skill, "install", lambda agents, copy: installs.append(agents) or 0)
-    cli._init_skill(assume_yes=True, wanted=False)
-    assert installs == [] and "skipped" in capsys.readouterr().out
-    cli._init_skill(assume_yes=True, wanted=True)
-    assert installs == [[]]
-
-
 def test_a_verbs_beacon_is_not_removed_once_a_server_took_the_file(tmp_path, monkeypatch):
-    from hypruse import safety
+    from agentic_os_mcp import safety
 
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
     monkeypatch.setattr(safety, "_armed", True)  # keep atexit/signal out of the test process
@@ -231,7 +139,7 @@ def test_a_verbs_beacon_is_not_removed_once_a_server_took_the_file(tmp_path, mon
 
 def test_stop_clears_stale_beacon(tmp_path, monkeypatch, capsys):
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
-    d = tmp_path / "hypruse"
+    d = tmp_path / "agentic-os-mcp"
     d.mkdir()
     beacon = d / "state.json"
     beacon.write_text(json.dumps({"pid": 999999, "started": 1}))

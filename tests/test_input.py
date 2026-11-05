@@ -1,6 +1,6 @@
 import pytest
 
-from hypruse import input as hinput
+from agentic_os_mcp import input as hinput
 
 
 def test_parse_combo_mods_and_key():
@@ -26,22 +26,11 @@ def test_parse_combo_rejects_garbage():
         hinput.parse_combo("banana+t")
 
 
-def test_combo_to_wtype_args_press_release_order():
-    args = hinput.combo_to_wtype_args(["ctrl", "shift"], "t")
-    assert args == ["-M", "ctrl", "-M", "shift", "-k", "t", "-m", "shift", "-m", "ctrl"]
-    assert hinput.combo_to_wtype_args(["logo"], None) == ["-M", "logo", "-m", "logo"]
-
-
 def test_click_validates_before_touching_compositor():
     with pytest.raises(hinput.InputError, match="both x and y"):
         hinput.click(x=100)  # y missing, must fail before any socket use
     with pytest.raises(hinput.InputError, match="unknown button"):
         hinput.click(button="laser")
-
-
-def test_scroll_requires_a_direction():
-    with pytest.raises(hinput.InputError, match="non-zero"):
-        hinput.scroll()
 
 
 class FakeVP:
@@ -65,7 +54,7 @@ def test_drag_tracks_and_clears_held_button(monkeypatch):
     monkeypatch.setattr(hinput, "move", lambda x, y: seen.append(hinput._held_button))
     monkeypatch.setattr(hinput.time, "sleep", lambda s: None)
     hinput.drag(0, 0, 10, 10)
-    from hypruse.wire import PRESSED, RELEASED
+    from agentic_os_mcp.wire import PRESSED, RELEASED
 
     assert vp.events == [("left", PRESSED), ("left", RELEASED)]
     assert hinput._held_button is None
@@ -79,7 +68,7 @@ def test_concurrent_drags_never_interleave(monkeypatch):
     # atomic on the shared virtual pointer
     import threading
 
-    from hypruse.wire import PRESSED, RELEASED
+    from agentic_os_mcp.wire import PRESSED, RELEASED
 
     vp = FakeVP()
     monkeypatch.setattr(hinput, "_vp", vp)
@@ -95,7 +84,7 @@ def test_concurrent_drags_never_interleave(monkeypatch):
 
 def test_release_held_releases_mid_drag_state(monkeypatch):
     # the state a SIGTERM would see if it lands between press and release
-    from hypruse.wire import RELEASED
+    from agentic_os_mcp.wire import RELEASED
 
     vp = FakeVP()
     monkeypatch.setattr(hinput, "_vp", vp)
@@ -105,3 +94,33 @@ def test_release_held_releases_mid_drag_state(monkeypatch):
     assert hinput._held_button is None
     hinput.release_held()  # idempotent: nothing held, nothing sent
     assert vp.events == [("left", RELEASED)]
+
+
+@pytest.mark.parametrize("seat_query", ["failed", "default"])
+def test_explicit_seat_uncertainty_never_types_on_default(monkeypatch, seat_query):
+    deliveries = []
+    monkeypatch.setenv("AGENTIC_OS_SEAT", "agent-seat")
+
+    def pointer_query(fn):
+        if seat_query == "failed":
+            raise hinput.WireError("fixture connection lost")
+        return False
+
+    monkeypatch.setattr(hinput, "_with_pointer", pointer_query)
+    monkeypatch.setattr(hinput, "_wtype", lambda args, stdin=None: deliveries.append(stdin))
+    with pytest.raises(hinput.InputError, match="seat"):
+        hinput.type_text("private fixture text")
+    assert deliveries == []
+
+
+def test_unconfigured_seat_keeps_wtype_fallback_when_pointer_unavailable(monkeypatch):
+    deliveries = []
+    monkeypatch.delenv("AGENTIC_OS_SEAT", raising=False)
+
+    def unavailable(fn):
+        raise hinput.WireError("fixture pointer unavailable")
+
+    monkeypatch.setattr(hinput, "_with_pointer", unavailable)
+    monkeypatch.setattr(hinput, "_wtype", lambda args, stdin=None: deliveries.append(stdin))
+    hinput.type_text("default fixture")
+    assert deliveries == ["default fixture"]

@@ -1,6 +1,6 @@
 import pytest
 
-from hypruse import hyprctl
+from agentic_os_mcp import hyprctl
 
 
 @pytest.mark.parametrize(
@@ -136,7 +136,7 @@ def test_parse_binds_drops_pointer_and_switch_binds_a_lua_config_did_not_flag():
 
 def test_parse_binds_keeps_scroll_binds():
     # mouse_up/mouse_down are scroll, not buttons: on a hyprlang config they
-    # carry a real dispatcher and use_bind runs them, so dropping them by a
+    # carry a real dispatcher, so dropping them by a
     # bare "mouse" prefix would take a working bind away
     scroll = [
         {"modmask": 64, "key": "mouse_down", "dispatcher": "workspace", "arg": "e+1",

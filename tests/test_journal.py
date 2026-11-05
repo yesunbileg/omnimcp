@@ -7,15 +7,15 @@ import os
 
 import pytest
 
-from hypruse import journal
-from hypruse import server as srv
-from hypruse.trust import TrustError
+from agentic_os_mcp import journal
+from agentic_os_mcp import server as srv
+from agentic_os_mcp.trust import TrustError
 
 
 @pytest.fixture
 def journal_file(tmp_path, monkeypatch):
     path = tmp_path / "journal.ndjson"
-    monkeypatch.setenv("HYPRUSE_JOURNAL", str(path))
+    monkeypatch.setenv("AGENTIC_OS_JOURNAL", str(path))
     monkeypatch.setattr(journal, "_seq", 0)
     return path
 
@@ -38,27 +38,27 @@ def looked(window: str = "") -> list:
 
 
 def test_off_by_default(monkeypatch, tmp_path):
-    monkeypatch.delenv("HYPRUSE_JOURNAL", raising=False)
+    monkeypatch.delenv("AGENTIC_OS_JOURNAL", raising=False)
     assert journal.path() is None
     assert journal.enabled() is False
     acted("click")  # no file, no crash
 
 
 def test_explicitly_off_is_off(monkeypatch):
-    monkeypatch.setenv("HYPRUSE_JOURNAL", "0")
+    monkeypatch.setenv("AGENTIC_OS_JOURNAL", "0")
     assert journal.path() is None
 
 
 def test_1_means_the_default_path(monkeypatch, tmp_path):
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path))
-    monkeypatch.setenv("HYPRUSE_JOURNAL", "1")
-    assert journal.path() == tmp_path / "hypruse" / "journal.ndjson"
+    monkeypatch.setenv("AGENTIC_OS_JOURNAL", "1")
+    assert journal.path() == tmp_path / "agentic-os-mcp" / "journal.ndjson"
 
 
 def test_default_path_is_state_not_runtime(monkeypatch, tmp_path):
     # an audit trail in XDG_RUNTIME_DIR (tmpfs) would not survive a reboot
     monkeypatch.setenv("XDG_STATE_HOME", str(tmp_path / "state"))
-    assert journal.default_path().parent == tmp_path / "state" / "hypruse"
+    assert journal.default_path().parent == tmp_path / "state" / "agentic-os-mcp"
 
 
 def test_records_a_call(journal_file):
@@ -138,7 +138,7 @@ def test_the_digest_is_stable_across_calls(journal_file):
 
 
 def test_text_is_kept_when_opted_in(journal_file, monkeypatch):
-    monkeypatch.setenv("HYPRUSE_JOURNAL_TEXT", "1")
+    monkeypatch.setenv("AGENTIC_OS_JOURNAL_TEXT", "1")
     acted("type", text="hunter2")
     assert entries(journal_file)[0]["args"]["text"] == "hunter2"
 
@@ -212,7 +212,7 @@ def test_parent_is_cleared_after_the_sequence(journal_file):
 
 
 def test_dry_calls_are_marked(journal_file, monkeypatch):
-    monkeypatch.setenv("HYPRUSE_DRYRUN", "1")
+    monkeypatch.setenv("AGENTIC_OS_DRYRUN", "1")
     acted("click")
     assert entries(journal_file)[0]["dry"] is True
 
@@ -226,8 +226,8 @@ def test_real_calls_are_not_marked(journal_file):
 
 
 def test_session_start_records_the_trust_flags(journal_file, monkeypatch):
-    monkeypatch.setenv("HYPRUSE_CONFINE", "launched")
-    monkeypatch.setenv("HYPRUSE_STRICT", "1")
+    monkeypatch.setenv("AGENTIC_OS_CONFINE", "launched")
+    monkeypatch.setenv("AGENTIC_OS_STRICT", "1")
     journal.start("9.9.9")
     (entry,) = entries(journal_file)
     assert entry["kind"] == "session" and entry["event"] == "start"
@@ -237,7 +237,7 @@ def test_session_start_records_the_trust_flags(journal_file, monkeypatch):
 
 
 def test_session_records_are_skipped_when_recording_is_off(monkeypatch):
-    monkeypatch.delenv("HYPRUSE_JOURNAL", raising=False)
+    monkeypatch.delenv("AGENTIC_OS_JOURNAL", raising=False)
     journal.start("9.9.9")  # no path, no crash
     journal.stop()
 
@@ -248,7 +248,7 @@ def test_session_records_are_skipped_when_recording_is_off(monkeypatch):
 def test_an_unwritable_journal_does_not_break_the_action(monkeypatch, capsys, tmp_path):
     blocked = tmp_path / "afile"
     blocked.write_text("not a directory")
-    monkeypatch.setenv("HYPRUSE_JOURNAL", str(blocked / "sub" / "journal.ndjson"))
+    monkeypatch.setenv("AGENTIC_OS_JOURNAL", str(blocked / "sub" / "journal.ndjson"))
     assert acted("click") == "did click"  # the action still happened
     assert "cannot write the journal" in capsys.readouterr().err
 
@@ -256,7 +256,7 @@ def test_an_unwritable_journal_does_not_break_the_action(monkeypatch, capsys, tm
 def test_the_write_failure_is_reported_once(monkeypatch, capsys, tmp_path):
     blocked = tmp_path / "afile"
     blocked.write_text("not a directory")
-    monkeypatch.setenv("HYPRUSE_JOURNAL", str(blocked / "sub" / "journal.ndjson"))
+    monkeypatch.setenv("AGENTIC_OS_JOURNAL", str(blocked / "sub" / "journal.ndjson"))
     acted("click")
     capsys.readouterr()
     acted("click")
@@ -264,7 +264,7 @@ def test_the_write_failure_is_reported_once(monkeypatch, capsys, tmp_path):
 
 
 def test_rotation_keeps_one_generation(journal_file, monkeypatch):
-    monkeypatch.setenv("HYPRUSE_JOURNAL_MAX_BYTES", "4096")
+    monkeypatch.setenv("AGENTIC_OS_JOURNAL_MAX_BYTES", "4096")
     journal_file.write_text("x" * 5000)
     acted("click")
     assert journal_file.with_suffix(".ndjson.1").read_text().startswith("x")
@@ -285,14 +285,14 @@ def test_the_decorator_preserves_the_signature():
     # FastMCP builds each tool's JSON schema from this
     assert list(inspect.signature(srv.pointer).parameters) == [
         "action", "x", "y", "button", "to_x", "to_y",
-        "scroll_dy", "scroll_dx", "double", "then", "allow_auth", "background",
+        "double", "then", "allow_auth", "background",
     ]
     assert srv.pointer.__doc__ and "Mouse in global coordinates" in srv.pointer.__doc__
 
 
 def test_every_tool_is_journaled():
     tools = (srv.pointer, srv.keyboard, srv.click_ui, srv.hypr, srv.launch,
-             srv.use_bind, srv.sequence, srv.clipboard, srv.desktop, srv.screenshot,
+             srv.sequence, srv.clipboard, srv.desktop, srv.screenshot,
              srv.zoom, srv.ui, srv.marks, srv.binds, srv.wait_for)
     assert all(hasattr(t, "__wrapped__") for t in tools)
 
@@ -379,7 +379,7 @@ def test_redaction_reaches_arbitrary_nesting(journal_file):
 
 def test_opting_in_to_text_needs_an_affirmative_value(journal_file, monkeypatch):
     # a privacy control must not be turned on by a typo
-    monkeypatch.setenv("HYPRUSE_JOURNAL_TEXT", "please-dont")
+    monkeypatch.setenv("AGENTIC_OS_JOURNAL_TEXT", "please-dont")
     acted("type", text="hunter2")
     assert entries(journal_file)[0]["args"]["text"]["redacted"] is True
 
@@ -387,7 +387,7 @@ def test_opting_in_to_text_needs_an_affirmative_value(journal_file, monkeypatch)
 def test_the_session_header_reports_the_flags_the_guards_actually_read(journal_file, monkeypatch):
     # trust._flag and this module's must agree, or the header claims a
     # protection that was never in force
-    monkeypatch.setenv("HYPRUSE_STRICT", "sortof")
+    monkeypatch.setenv("AGENTIC_OS_STRICT", "sortof")
     journal.start("9.9.9")
     assert entries(journal_file)[0]["mode"]["strict"] is False
 
@@ -401,7 +401,7 @@ def test_the_journal_is_not_world_readable(journal_file):
 def test_an_unusable_path_disables_recording_rather_than_failing_the_action(
     monkeypatch, capsys, tmp_path
 ):
-    monkeypatch.setenv("HYPRUSE_JOURNAL", "~nosuchuser/journal.ndjson")
+    monkeypatch.setenv("AGENTIC_OS_JOURNAL", "~nosuchuser/journal.ndjson")
     assert acted("click") == "did click"
     assert journal.path() is None
 
@@ -412,13 +412,13 @@ def test_a_fifo_journal_path_is_refused_not_opened(monkeypatch, capsys, tmp_path
     # still, injecting NDJSON into the MCP transport
     fifo = tmp_path / "pipe"
     os.mkfifo(fifo)
-    monkeypatch.setenv("HYPRUSE_JOURNAL", str(fifo))
+    monkeypatch.setenv("AGENTIC_OS_JOURNAL", str(fifo))
     assert acted("click") == "did click"
     assert "not a regular file" in capsys.readouterr().err
 
 
 def test_zero_max_bytes_means_no_rotation(journal_file, monkeypatch):
-    monkeypatch.setenv("HYPRUSE_JOURNAL_MAX_BYTES", "0")
+    monkeypatch.setenv("AGENTIC_OS_JOURNAL_MAX_BYTES", "0")
     journal_file.write_text('{"v": 1, "seq": 1, "kind": "act"}\n' * 500)
     acted("click")
     assert not journal_file.with_suffix(".ndjson.1").exists()

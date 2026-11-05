@@ -1,6 +1,77 @@
+import os
+import stat
+from pathlib import Path
+
 import pytest
 
-from hypruse import screenshot
+from agentic_os_mcp import screenshot
+
+
+def test_same_clock_capture_paths_keep_distinct_private_payloads(tmp_path, monkeypatch):
+    from agentic_os_mcp import server
+
+    monkeypatch.setenv("AGENTIC_OS_SCREENSHOT_MODE", "file")
+    monkeypatch.setattr(server, "_runtime_dir", lambda: tmp_path)
+    monkeypatch.setattr(server.time, "time", lambda: 1000.0)
+    first, second = {"format": "jpeg"}, {"format": "jpeg"}
+    server._package(b"first capture", first)
+    server._package(b"second capture", second)
+    assert first["path"] != second["path"]
+    assert Path(first["path"]).read_bytes() == b"first capture"
+    assert Path(second["path"]).read_bytes() == b"second capture"
+    assert stat.S_IMODE(Path(first["path"]).stat().st_mode) == 0o600
+
+
+def test_capture_write_failure_removes_partial_file(tmp_path, monkeypatch):
+    from agentic_os_mcp import server
+
+    monkeypatch.setenv("AGENTIC_OS_SCREENSHOT_MODE", "file")
+    monkeypatch.setattr(server, "_runtime_dir", lambda: tmp_path)
+    fdopen = os.fdopen
+
+    class InterruptedWrite:
+        def __init__(self, stream):
+            self.stream = stream
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            self.stream.close()
+
+        def write(self, data):
+            self.stream.write(data[:2])
+            raise OSError("fixture disk write failure")
+
+    monkeypatch.setattr(server.os, "fdopen", lambda fd, mode: InterruptedWrite(fdopen(fd, mode)))
+    with pytest.raises(OSError, match="fixture disk write failure"):
+        server._package(b"capture", {"format": "jpeg"})
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_same_millisecond_capture_burst_retains_newest_twenty(tmp_path, monkeypatch):
+    from agentic_os_mcp import server
+
+    monkeypatch.setenv("AGENTIC_OS_SCREENSHOT_MODE", "file")
+    monkeypatch.setattr(server, "_runtime_dir", lambda: tmp_path)
+    monkeypatch.setattr(server.time, "time", lambda: 1000.0)
+    ticks, suffixes = iter(range(22)), iter(range(21, -1, -1))
+    monkeypatch.setattr(server.time, "monotonic_ns", lambda: next(ticks))
+
+    def create_exclusive_file(*, prefix, suffix, dir):
+        path = Path(dir) / f"{prefix}{next(suffixes):02d}{suffix}"
+        fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        return fd, str(path)
+
+    monkeypatch.setattr(server.tempfile, "mkstemp", create_exclusive_file)
+    captures = []
+    for index in range(22):
+        meta = {"format": "jpeg"}
+        server._package(str(index).encode(), meta)
+        captures.append(Path(meta["path"]))
+    assert captures[-1].read_bytes() == b"21"
+    assert not captures[0].exists() and not captures[1].exists()
+    assert len(list(tmp_path.iterdir())) == 20
 
 
 def test_parse_region_both_separators():
@@ -348,7 +419,7 @@ def test_hidden_window_hints_never_promise_the_old_coordinates(monkeypatch):
 
 
 def test_read_only_hints_do_not_name_tools_that_are_not_there(monkeypatch):
-    monkeypatch.setenv("HYPRUSE_READONLY", "1")
+    monkeypatch.setenv("AGENTIC_OS_READONLY", "1")
     _scene(monkeypatch, [SHOWN, HIDDEN])
     _, meta = screenshot.capture(window="0xb")
     assert "hypr(" not in meta["coords"] and "ask the human" in meta["coords"]

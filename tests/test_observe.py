@@ -6,7 +6,7 @@ import json
 import pytest
 from mcp.types import TextContent
 
-from hypruse import server as srv
+from agentic_os_mcp import server as srv
 
 
 def test_then_none_returns_bare_string():
@@ -107,9 +107,9 @@ def test_hypr_fuses_observation(monkeypatch):
 
 def test_hypr_targetless_fullscreen_honors_seat_guard(monkeypatch):
     # target-less fullscreen/toggle_floating act on the ACTIVE window; under
-    # HYPRUSE_STRICT, if the human refocused since hypruse last acted, they
+    # AGENTIC_OS_STRICT, if the human refocused since agentic-os-mcp last acted, they
     # would hit the wrong window, so the seat guard must refuse
-    monkeypatch.setenv("HYPRUSE_STRICT", "1")
+    monkeypatch.setenv("AGENTIC_OS_STRICT", "1")
     monkeypatch.setattr(srv.hyprctl, "dispatch", lambda *a: None)
     monkeypatch.setattr(srv.safety, "touch", lambda *a: None)
     # seat baseline says cursor (1,1)/active 0xa; now it reads (9,9)/0xb -> moved
@@ -127,7 +127,7 @@ def test_desktop_rebaselines_the_strict_seat_guard(monkeypatch):
     # the lockout bug: once the human nudged the seat, the guard refused
     # forever, because its own advice ("re-read desktop() and retry") never
     # re-baselined anything. A desktop() read must re-arm the guard.
-    monkeypatch.setenv("HYPRUSE_STRICT", "1")
+    monkeypatch.setenv("AGENTIC_OS_STRICT", "1")
     srv.trust._seat.update(cursor=(1, 1), active="0xa")
     monkeypatch.setattr(srv.hyprctl, "cursor_pos", lambda: (9, 9))
     monkeypatch.setattr(srv.hyprctl, "query", lambda cmd: {"address": "0xb"})
@@ -141,7 +141,7 @@ def test_desktop_rebaselines_the_strict_seat_guard(monkeypatch):
 def test_capture_rebaselines_the_strict_seat_guard(monkeypatch):
     # same recovery path for screenshot/zoom: any fresh capture counts as
     # the re-observation the guard error asks for
-    monkeypatch.setenv("HYPRUSE_STRICT", "1")
+    monkeypatch.setenv("AGENTIC_OS_STRICT", "1")
     srv.trust._seat.update(cursor=(1, 1), active="0xa")
     monkeypatch.setattr(srv.hyprctl, "cursor_pos", lambda: (9, 9))
     monkeypatch.setattr(srv.hyprctl, "query", lambda cmd: {"address": "0xb"})
@@ -159,7 +159,6 @@ def _pointer_wired(monkeypatch, covering):
     monkeypatch.setattr(srv.trust, "covering_layer", covering)
     monkeypatch.setattr(srv.hinput, "click", lambda *a, **k: None)
     monkeypatch.setattr(srv.hinput, "drag", lambda *a, **k: None)
-    monkeypatch.setattr(srv.hinput, "scroll", lambda *a, **k: None)
     monkeypatch.setattr(srv.hyprctl, "cursor_pos", lambda: (600, 350))
 
 
@@ -167,7 +166,6 @@ def _pointer_wired(monkeypatch, covering):
     "action,extra",
     [
         ("click", {}),
-        ("scroll", {"scroll_dy": 3}),
         ("drag", {"to_x": 700, "to_y": 400}),
     ],
 )
@@ -238,16 +236,16 @@ def test_then_ui_reports_failure_when_nothing_can_be_read(monkeypatch):
 
 @pytest.mark.parametrize(
     "action,extra",
-    [("click", {}), ("scroll", {"scroll_dy": 3}), ("drag", {"to_x": 70, "to_y": 80})],
+    [("click", {}), ("drag", {"to_x": 70, "to_y": 80})],
 )
 def test_pointer_refuses_while_the_session_is_locked(monkeypatch, action, extra):
     # every input-delivering arm must refuse under a lock, not just click;
-    # narrowing the guard to click alone left drag/scroll firing into the
+    # narrowing the guard to click alone left drag firing into the
     # credential prompt with the suite green
     monkeypatch.setattr(srv.safety, "touch", lambda *a: None)
     monkeypatch.setattr(srv.trust, "session_locked", lambda: "hyprlock")
     fired = []
-    for name in ("click", "scroll", "drag"):
+    for name in ("click", "drag"):
         monkeypatch.setattr(srv.hinput, name, lambda *a, **k: fired.append(1))
     with pytest.raises(srv.trust.TrustError, match="session is locked"):
         srv.pointer(action, x=10, y=10, **extra)
@@ -278,7 +276,7 @@ def test_ui_rearms_the_strict_seat_guard(monkeypatch):
     # ui() is an observation of current state, so it must re-arm the strict
     # guard like desktop()/screenshot do, or the recommended read-then-act
     # flow stays locked after a human nudge
-    monkeypatch.setenv("HYPRUSE_STRICT", "1")
+    monkeypatch.setenv("AGENTIC_OS_STRICT", "1")
     monkeypatch.setattr(srv.safety, "touch", lambda *a: None)
     srv.trust._seat.update(cursor=(1, 1), active="0xa")
     monkeypatch.setattr(srv.hyprctl, "cursor_pos", lambda: (9, 9))
@@ -291,7 +289,7 @@ def test_ui_rearms_the_strict_seat_guard(monkeypatch):
 
 
 def test_marks_rearms_the_strict_seat_guard(monkeypatch):
-    monkeypatch.setenv("HYPRUSE_STRICT", "1")
+    monkeypatch.setenv("AGENTIC_OS_STRICT", "1")
     monkeypatch.setattr(srv.safety, "touch", lambda *a: None)
     srv.trust._seat.update(cursor=(1, 1), active="0xa")
     monkeypatch.setattr(srv.hyprctl, "cursor_pos", lambda: (9, 9))
@@ -313,7 +311,6 @@ def test_marks_rearms_the_strict_seat_guard(monkeypatch):
         lambda **kw: (b"IMG", {"geometry": [0, 0, 10, 10], "scale": 1.0,
                                "image": [10, 10], "format": "jpeg"}),
     )
-    monkeypatch.setattr(srv, "_draw_marks", lambda *a: None)
     with pytest.raises(srv.trust.TrustError, match="seat moved"):
         srv.trust.guard_seat()
     srv.marks(window="0xa")
@@ -339,8 +336,8 @@ def test_acted_ui_fallback_only_when_a_window_was_named(monkeypatch):
 def test_pointer_guard_pointer_wiring_refuses_out_of_scope(monkeypatch):
     # integration: guard_pointer is NOT stubbed here, so the real
     # confinement check runs on the windows under the click point
-    monkeypatch.setenv("HYPRUSE_CONFINE", "class:kitty")
-    monkeypatch.setenv("HYPRUSE_AUTH_GUARD", "0")
+    monkeypatch.setenv("AGENTIC_OS_CONFINE", "class:kitty")
+    monkeypatch.setenv("AGENTIC_OS_AUTH_GUARD", "0")
     monkeypatch.setattr(srv.safety, "touch", lambda *a: None)
     mon = [{"name": "m", "x": 0, "y": 0, "width": 1920, "height": 1080,
             "scale": 1.0, "activeWorkspace": {"id": 1}}]

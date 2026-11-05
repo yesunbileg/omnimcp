@@ -1,4 +1,4 @@
-from hypruse import server
+from agentic_os_mcp import server
 
 
 def test_prune_keeps_newest_20(tmp_path):

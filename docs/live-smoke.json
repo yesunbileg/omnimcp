@@ -1,0 +1,27 @@
+{
+  "mcp_tools": 7,
+  "system": "passed",
+  "file_home": {
+    "status": "passed",
+    "filesystem": "ext4",
+    "mode": "0o640"
+  },
+  "file_workspace": {
+    "status": "passed",
+    "filesystem": "ntfs3",
+    "mode": "0o640"
+  },
+  "command_job": "passed",
+  "user_service_restart": "passed",
+  "package.search": "ok",
+  "storage.list": "ok",
+  "network.status": "ok",
+  "audio.status": "ok",
+  "app.list": "passed",
+  "screenshot_preserves_focus": "passed",
+  "desktop_launch_close": "passed",
+  "browser_tabs": "ok",
+  "browser_navigation_snapshot": "passed",
+  "browser_form_fill_click_readback": "passed",
+  "event_cursor": "passed"
+}

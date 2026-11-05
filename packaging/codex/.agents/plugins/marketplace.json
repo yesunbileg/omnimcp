@@ -1,0 +1,20 @@
+{
+  "name": "agentic-os-local",
+  "interface": {
+    "displayName": "Agentic OS Local"
+  },
+  "plugins": [
+    {
+      "name": "agentic-os-mcp",
+      "source": {
+        "source": "local",
+        "path": "./agentic-os-mcp"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

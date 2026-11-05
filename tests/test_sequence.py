@@ -5,7 +5,7 @@ import json
 
 import pytest
 
-from hypruse import server as srv
+from agentic_os_mcp import server as srv
 
 
 class FakeStream:
@@ -28,7 +28,7 @@ class FakeStream:
     def wait_for(self, names, matcher, timeout):
         self.wait_calls.append((set(names), timeout))
         if self.wait_error:
-            from hypruse import events
+            from agentic_os_mcp import events
 
             raise events.EventError("socket died mid-wait")
         while self.waits:
@@ -256,16 +256,15 @@ def test_wait_step_never_served_a_stale_event(wired, monkeypatch):
     assert len(stream.wait_calls) == 1  # it really blocked
 
 
-def test_wait_step_survives_socket_death_mid_wait(wired, monkeypatch):
-    # the event socket dying DURING an in-sequence wait degrades to a note,
-    # not a crash, and the sequence still reports its steps
+def test_wait_step_stops_on_socket_death_mid_wait(wired, monkeypatch):
+    # A failed wait must not be reported as successful completion.
     _stream(monkeypatch, [[]], wait_error=True)
     steps = [
         {"op": "pointer", "action": "click", "x": 1, "y": 2},
         {"op": "wait_for", "event": "window_open"},
     ]
     out = srv.sequence(steps, then="none")
-    assert "all 2/2" in _head(out)
+    assert "stopped after 2/2" in _head(out)
     assert "event socket unavailable" in _head(out)
 
 
@@ -373,13 +372,53 @@ def test_stop_on_change_false_skips_stream(wired, monkeypatch):
     assert len(wired) == 2
 
 
-def test_degrades_when_event_socket_unavailable(wired, monkeypatch):
+def test_refuses_when_event_socket_unavailable(wired, monkeypatch):
     def boom():
         raise srv.events.EventError("no socket")
 
     monkeypatch.setattr(srv.events, "EventStream", boom)
-    out = srv.sequence([{"op": "pointer", "action": "move", "x": 1, "y": 1}], then="none")
-    assert len(wired) == 1 and "all 1/1" in _head(out)
+    with pytest.raises(srv.events.EventError, match="no socket"):
+        srv.sequence([{"op": "pointer", "action": "move", "x": 1, "y": 1}], then="none")
+    assert wired == []
+
+
+@pytest.mark.parametrize("monitor", [True, False])
+@pytest.mark.parametrize("failure", ["timeout", "socket"])
+def test_failed_wait_never_runs_following_action(wired, monkeypatch, monitor, failure):
+    stream = _stream(monkeypatch, [], wait_error=failure == "socket")
+    dispatched = srv._dispatch_step
+
+    def dispatch(step):
+        if step["op"] == "wait_for":
+            return ("timeout: no matching window_open event" if failure == "timeout"
+                    else "event socket unavailable: no socket")
+        return dispatched(step)
+
+    monkeypatch.setattr(srv, "_dispatch_step", dispatch)
+    out = srv.sequence([
+        {"op": "wait_for", "event": "window_open", "timeout_s": 1},
+        {"op": "pointer", "action": "click", "x": 1, "y": 2},
+    ], stop_on_change=monitor, then="none")
+    assert wired == []
+    assert "stopped after 1/2" in _head(out)
+    assert ("timeout" if failure == "timeout" else "event socket unavailable") in _head(out)
+    if monitor:
+        assert stream.closed
+
+
+@pytest.mark.parametrize("monitor", [True, False])
+def test_satisfied_wait_allows_following_action(wired, monkeypatch, monitor):
+    _stream(monkeypatch, [], waits=[("openwindow", {"address": "0xnew"})])
+    dispatched = srv._dispatch_step
+    monkeypatch.setattr(srv, "_dispatch_step", lambda step:
+                        {"event": "openwindow", "address": "0xnew"}
+                        if step["op"] == "wait_for" else dispatched(step))
+    out = srv.sequence([
+        {"op": "wait_for", "event": "window_open"},
+        {"op": "pointer", "action": "click", "x": 1, "y": 2},
+    ], stop_on_change=monitor, then="none")
+    assert [step["op"] for step in wired] == ["pointer"]
+    assert "all 2/2" in _head(out)
 
 
 def test_time_budget_stops_before_a_late_step(wired, monkeypatch):

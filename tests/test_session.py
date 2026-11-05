@@ -1,7 +1,9 @@
 import os
 import time
 
-from hypruse import session
+import pytest
+
+from agentic_os_mcp import session
 
 
 def make_instance(runtime, sig, age=0.0):
@@ -27,7 +29,7 @@ def test_discovers_missing_vars(tmp_path, monkeypatch):
     assert os.environ["WAYLAND_DISPLAY"] == "wayland-1"
 
 
-def test_prefers_newest_live_instance_and_ignores_dead(tmp_path, monkeypatch):
+def test_ambiguous_sessions_require_explicit_selection(tmp_path, monkeypatch):
     make_instance(tmp_path, "old_sig", age=500)
     make_instance(tmp_path, "new_sig", age=5)
     dead = tmp_path / "hypr" / "dead_sig"
@@ -35,9 +37,10 @@ def test_prefers_newest_live_instance_and_ignores_dead(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
     monkeypatch.delenv("HYPRLAND_INSTANCE_SIGNATURE", raising=False)
 
-    session.ensure_session_env()
+    with pytest.raises(RuntimeError, match="Multiple Hyprland"):
+        session.ensure_session_env()
 
-    assert os.environ["HYPRLAND_INSTANCE_SIGNATURE"] == "new_sig"
+    assert "HYPRLAND_INSTANCE_SIGNATURE" not in os.environ
 
 
 def test_never_overrides_existing_env(tmp_path, monkeypatch):
@@ -61,3 +64,10 @@ def test_graceful_when_nothing_to_discover(tmp_path, monkeypatch):
 
     assert "HYPRLAND_INSTANCE_SIGNATURE" not in os.environ
     assert "WAYLAND_DISPLAY" not in os.environ
+
+
+def test_multiple_displays_require_selection(tmp_path):
+    (tmp_path / "wayland-0").touch()
+    (tmp_path / "wayland-1").touch()
+    with pytest.raises(RuntimeError, match="Multiple Wayland"):
+        session.discover_wayland_display(tmp_path)

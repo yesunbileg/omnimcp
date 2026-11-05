@@ -1,4 +1,4 @@
-"""HYPRUSE_DRYRUN: run every check, deliver nothing.
+"""AGENTIC_OS_DRYRUN: run every check, deliver nothing.
 
 Two properties matter and are tested separately. A dry run must produce
 the SAME refusals a real run would, or it is worth nothing as a
@@ -10,10 +10,10 @@ fires for any path nobody thought of.
 
 import pytest
 
-from hypruse import clipboard as clip
-from hypruse import hyprctl, journal, trust
-from hypruse import input as hinput
-from hypruse import server as srv
+from agentic_os_mcp import clipboard as clip
+from agentic_os_mcp import hyprctl, journal, trust
+from agentic_os_mcp import input as hinput
+from agentic_os_mcp import server as srv
 
 REAL_QUERY = hyprctl.query  # bound at import: conftest stubs it for unit tests
 
@@ -30,7 +30,7 @@ MONITORS = [{"name": "DP-1", "x": 0, "y": 0, "width": 1920, "height": 1080,
 def dry(monkeypatch):
     """Dry run, with every effect replaced by a recorder. Anything that
     lands in `effects` is an action a dry run delivered."""
-    monkeypatch.setenv("HYPRUSE_DRYRUN", "1")
+    monkeypatch.setenv("AGENTIC_OS_DRYRUN", "1")
     effects: list[tuple] = []
     monkeypatch.setattr(srv.safety, "touch", lambda *a: None)
 
@@ -48,7 +48,7 @@ def dry(monkeypatch):
     monkeypatch.setattr(hyprctl, "snapshot", lambda: {"windows": [CLIENT]})
     for name in ("dispatch", "keyword"):
         monkeypatch.setattr(hyprctl, name, lambda *a, _n=name: effects.append((_n, *a)))
-    for name in ("move", "click", "drag", "scroll", "type_text", "key_combo"):
+    for name in ("move", "click", "drag", "type_text"):
         monkeypatch.setattr(hinput, name, lambda *a, _n=name, **k: effects.append((_n, a, k)))
     monkeypatch.setattr(clip, "write", lambda t: effects.append(("clipboard", t)))
     return effects
@@ -83,11 +83,6 @@ def test_pointer_click_without_coordinates_does_not_invent_a_target(dry):
 def test_pointer_drag(dry):
     out = plan(srv.pointer("drag", x=1, y=2, to_x=3, to_y=4))
     assert "would drag left from (1, 2) to (3, 4)" in out
-    assert dry == []
-
-
-def test_pointer_scroll(dry):
-    assert "would scroll dy=3" in plan(srv.pointer("scroll", scroll_dy=3, x=5, y=6))
     assert dry == []
 
 
@@ -150,14 +145,6 @@ def test_launch(dry):
     assert dry == []
 
 
-def test_use_bind(dry, monkeypatch):
-    monkeypatch.setattr(
-        hyprctl, "find_bind", lambda combo: {"combo": "SUPER+F", "action": "exec", "arg": "wofi"}
-    )
-    assert "would run SUPER+F: exec wofi" in plan(srv.use_bind("SUPER+F"))
-    assert dry == []
-
-
 def test_clipboard_write(dry):
     assert srv.clipboard("write", text="hello") == (
         "DRY RUN, nothing was delivered: would copy 5 characters to the clipboard"
@@ -179,7 +166,7 @@ def test_sequence_says_so_in_its_summary(dry):
 
 
 def test_confinement_still_refuses(dry, monkeypatch):
-    monkeypatch.setenv("HYPRUSE_CONFINE", "class:firefox")
+    monkeypatch.setenv("AGENTIC_OS_CONFINE", "class:firefox")
     with pytest.raises(trust.TrustError, match="confinement scope"):
         srv.pointer("click", x=10, y=10)
 
@@ -200,7 +187,7 @@ def test_a_locked_session_still_refuses(dry, monkeypatch):
 
 
 def test_the_seat_guard_still_refuses(dry, monkeypatch):
-    monkeypatch.setenv("HYPRUSE_STRICT", "1")
+    monkeypatch.setenv("AGENTIC_OS_STRICT", "1")
     monkeypatch.setattr(trust, "_seat", {"cursor": (0, 0), "active": "0xold"})
     with pytest.raises(trust.TrustError, match="seat moved"):
         srv.pointer("click", x=10, y=10)
@@ -245,15 +232,13 @@ def test_a_clipboard_read_still_reads(dry, monkeypatch):
         lambda: hinput.move(1, 2),
         lambda: hinput.click(1, 2),
         lambda: hinput.drag(1, 2, 3, 4),
-        lambda: hinput.scroll(dy=1),
         lambda: hinput.type_text("x"),
-        lambda: hinput.key_combo("ctrl+t"),
         lambda: hyprctl.dispatch("killactive"),
         lambda: clip.write("x"),
     ],
 )
 def test_the_effect_boundary_refuses_under_dry_run(monkeypatch, call):
-    monkeypatch.setenv("HYPRUSE_DRYRUN", "1")
+    monkeypatch.setenv("AGENTIC_OS_DRYRUN", "1")
     # If the barrier ever regresses, this test must FAIL, not dispatch
     # killactive at whatever the developer had focused. Every backend
     # below the barrier is replaced with something that says so.
@@ -269,14 +254,14 @@ def test_the_effect_boundary_refuses_under_dry_run(monkeypatch, call):
 
 
 def test_reads_are_never_barriered(monkeypatch):
-    monkeypatch.setenv("HYPRUSE_DRYRUN", "1")
+    monkeypatch.setenv("AGENTIC_OS_DRYRUN", "1")
     monkeypatch.setattr(hyprctl, "query", REAL_QUERY)  # conftest stubs it for unit tests
     monkeypatch.setattr(hyprctl, "_run", lambda *a: '{"x": 1, "y": 2}')
     assert hyprctl.cursor_pos() == (1, 2)
 
 
 def test_the_barrier_is_off_when_dry_run_is(monkeypatch):
-    monkeypatch.delenv("HYPRUSE_DRYRUN", raising=False)
+    monkeypatch.delenv("AGENTIC_OS_DRYRUN", raising=False)
     journal.refuse_if_dry("anything")  # no raise
 
 
@@ -295,11 +280,6 @@ def test_a_half_given_point_is_rejected(dry):
         srv.pointer("click", x=1)
 
 
-def test_a_scroll_of_nothing_is_rejected(dry):
-    with pytest.raises(hinput.InputError, match="non-zero"):
-        srv.pointer("scroll", x=1, y=1)
-
-
 def test_an_unknown_modifier_is_rejected(dry):
     with pytest.raises(hinput.InputError, match="unknown modifier"):
         srv.keyboard("key", keys="ctlr+t")
@@ -307,7 +287,7 @@ def test_an_unknown_modifier_is_rejected(dry):
 
 def test_a_bad_combo_does_not_focus_the_window_first(dry, monkeypatch):
     # a refused call must not have moved the human's focus on its way out
-    monkeypatch.delenv("HYPRUSE_DRYRUN", raising=False)
+    monkeypatch.delenv("AGENTIC_OS_DRYRUN", raising=False)
     with pytest.raises(hinput.InputError):
         srv.keyboard("key", keys="ctlr+t", window="0xabc")
     assert dry == []
@@ -320,9 +300,7 @@ def test_a_malformed_target_is_rejected_for_every_action(dry):
 
 
 def test_the_same_rejections_happen_for_real(dry, monkeypatch):
-    monkeypatch.delenv("HYPRUSE_DRYRUN", raising=False)
+    monkeypatch.delenv("AGENTIC_OS_DRYRUN", raising=False)
     with pytest.raises(hinput.InputError, match="unknown button"):
         srv.pointer("click", x=1, y=1, button="wheel")
-    with pytest.raises(hinput.InputError, match="non-zero"):
-        srv.pointer("scroll", x=1, y=1)
     assert dry == []

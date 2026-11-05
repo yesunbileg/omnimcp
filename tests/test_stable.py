@@ -3,7 +3,7 @@ mid-animation, and content that never settles must still return."""
 
 from itertools import count
 
-from hypruse import screenshot
+from agentic_os_mcp import screenshot
 
 
 def _feed(monkeypatch, frames):

@@ -10,10 +10,10 @@ import threading
 
 import pytest
 
-from hypruse import a11y, dbuswire
+from agentic_os_mcp import a11y, dbuswire
 
 # bound at import time, so conftest's autouse stub does not hide it
-from hypruse.dbuswire import connection as real_connection  # noqa: E402
+from agentic_os_mcp.dbuswire import connection as real_connection  # noqa: E402
 
 _BUS = "org.freedesktop.DBus"
 _BUS_PATH = "/org/freedesktop/DBus"

@@ -6,10 +6,11 @@ import os
 import stat
 import sys
 import time
-from typing import Annotated, TypedDict
+from typing import Annotated
 
 import pytest
 from pydantic import AliasPath, BaseModel, ConfigDict, Field
+from typing_extensions import TypedDict
 
 from omnimcp.adapters import build_registry
 from omnimcp.core.engine import Engine

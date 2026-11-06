@@ -18,7 +18,7 @@ classifiers = [
     "Topic :: Desktop Environment :: Window Managers",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-dependencies = ["mcp==1.30.0", "psutil>=7.0,<8"]
+dependencies = ["mcp==1.30.0", "psutil>=7.0,<8", "typing-extensions>=4.12"]
 
 [project.scripts]
 "omnimcp" = "omnimcp.cli:main"

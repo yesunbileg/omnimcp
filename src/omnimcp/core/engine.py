@@ -8,10 +8,11 @@ import threading
 import time
 import types
 from concurrent.futures import ThreadPoolExecutor
-from typing import Annotated, Any, Union, get_args, get_origin, is_typeddict
+from typing import Annotated, Any, Union, get_args, get_origin
 
 from pydantic import AliasChoices, AliasPath, BaseModel, TypeAdapter, ValidationError
 from pydantic_core import PydanticUndefined
+from typing_extensions import is_typeddict
 
 from .execution import Context, flag
 from .protocol import validate

@@ -13,6 +13,13 @@ def test_no_previous_project_name_remains():
         ".git", ".venv", ".agent-scratch", ".axiomcode", "__pycache__",
         ".pytest_cache", ".ruff_cache", "dist", "build",
     }
+    # Compatibility intentionally retains the previous identity in exactly
+    # these three places: translation, its regression tests, and migration help.
+    compatibility_files = {
+        Path("src/omnimcp/legacy_env.py"),
+        Path("tests/test_legacy_env.py"),
+        Path("docs/MIGRATION.md"),
+    }
     findings = []
     for directory, subdirs, files in os.walk(root):
         subdirs[:] = [name for name in subdirs if name not in excluded]
@@ -26,6 +33,6 @@ def test_no_previous_project_name_remains():
                     contents = path.read_text(encoding="utf-8")
                 except UnicodeDecodeError:
                     continue
-                if pattern.search(contents):
+                if relative not in compatibility_files and pattern.search(contents):
                     findings.append(str(relative))
     assert not findings, f"Previous identity still present in {len(findings)} paths: {findings[:8]}"

@@ -55,8 +55,7 @@ def _check_session() -> tuple[bool, str]:
     # which config manager is running decides the whole IPC dialect, so it
     # is the first thing to know when window ops misbehave
     return True, (
-        f"instance {sig[:12]}..., {len(monitors)} monitor(s), "
-        f"{hyprctl.provider()} config"
+        f"instance {sig[:12]}..., {len(monitors)} monitor(s), {hyprctl.provider()} config"
     )
 
 
@@ -202,18 +201,34 @@ def stop() -> int:
             print("no active omnimcp session (no beacon found)")
         return 0
     try:
-        pid = int(json.loads(path.read_text())["pid"])
-    except (json.JSONDecodeError, TypeError, ValueError, KeyError, AttributeError):
-        print(f"beacon at {path} is unreadable; run: pkill -f omnimcp")
+        for item in (path.parent, path):
+            info = item.lstat()
+            if info.st_uid != os.getuid() or info.st_mode & 0o022 or item.is_symlink():
+                print(f"beacon at {path} is not safely owned")
+                return 1
+        beacon = json.loads(path.read_text())
+        pid = int(beacon["pid"])
+    except (OSError, json.JSONDecodeError, TypeError, ValueError, KeyError, AttributeError):
+        print(f"beacon at {path} is unreadable; cannot safely identify the process")
         return 1
+    import psutil
+
     try:
+        if pid <= 1:
+            print(f"beacon identity for pid {pid} cannot be verified")
+            return 1
+        process = psutil.Process(pid)
+        birth = beacon.get("create_time")
+        if not isinstance(birth, (int, float)) or process.create_time() != birth:
+            print(f"beacon identity for pid {pid} cannot be verified")
+            return 1
         os.kill(pid, signal.SIGTERM)
-    except ProcessLookupError:
+    except (ProcessLookupError, psutil.NoSuchProcess):
         with contextlib.suppress(OSError):
             path.unlink()
         print(f"omnimcp pid {pid} was already gone; cleared the stale beacon")
         return 0
-    except PermissionError:
+    except (PermissionError, psutil.AccessDenied):
         print(f"not permitted to signal pid {pid}")
         return 1
     print(f"stopped omnimcp (pid {pid})")
@@ -427,9 +442,7 @@ def _replay_args(entry: dict[str, Any]) -> dict[str, Any]:
 def _redacted_steps(entries: list[dict[str, Any]]) -> list[int]:
     from omnimcp import journal
 
-    return [
-        e.get("seq", -1) for e in entries if journal.redacted_text(_args_of(e).get("text"))
-    ]
+    return [e.get("seq", -1) for e in entries if journal.redacted_text(_args_of(e).get("text"))]
 
 
 def _unreplayable(entries: list[dict[str, Any]]) -> list[str]:
@@ -453,9 +466,7 @@ def _unreplayable(entries: list[dict[str, Any]]) -> list[str]:
         elif tool == "clipboard" and not _flag_on("OMNIMCP_CLIPBOARD"):
             # the clipboard tool is opt-in on the SERVER; replay must not
             # be the way around that gate
-            reasons.append(
-                f"seq {seq}: clipboard is opt-in, set OMNIMCP_CLIPBOARD=1 to replay it"
-            )
+            reasons.append(f"seq {seq}: clipboard is opt-in, set OMNIMCP_CLIPBOARD=1 to replay it")
     return reasons
 
 
@@ -603,8 +614,10 @@ def replay(argv: list[str]) -> int:
         # every tool would return its "would have" plan, and reporting
         # "replayed N actions" for that is exactly the phantom success
         # this project ranks below an honest failure
-        print("OMNIMCP_DRYRUN is set: --execute would deliver nothing. Unset it to replay for "
-              "real, or drop --execute to see the plan.")
+        print(
+            "OMNIMCP_DRYRUN is set: --execute would deliver nothing. Unset it to replay for "
+            "real, or drop --execute to see the plan."
+        )
         return 1
 
     from omnimcp import input as hinput
@@ -633,13 +646,17 @@ def replay(argv: list[str]) -> int:
         try:
             result = tool(**_replay_args(entry))
         except KeyboardInterrupt:
-            print(f"\naborted after {done}/{len(plan)} action(s); the desktop is part-way "
-                  "through the journal")
+            print(
+                f"\naborted after {done}/{len(plan)} action(s); the desktop is part-way "
+                "through the journal"
+            )
             return 1
         except Exception as exc:
             print(f"  {seq:>5}  {_safe(entry.get('tool'))}: {type(exc).__name__}: {_safe(exc)}")
-            print(f"stopped after {done}/{len(plan)} action(s); the desktop is part-way "
-                  "through the journal")
+            print(
+                f"stopped after {done}/{len(plan)} action(s); the desktop is part-way "
+                "through the journal"
+            )
             return 1
         done += 1
         head = _safe(result if isinstance(result, str) else str(result)).splitlines()
@@ -705,6 +722,7 @@ def main() -> None:
 
         sys.exit(usage_main(argv[1:]))
     from omnimcp import core_cli
+
     if argv and argv[0] in core_cli.OPS | {"worker"}:
         sys.exit(core_cli.main(argv))
     if "--profile" in argv:
@@ -714,6 +732,7 @@ def main() -> None:
         profile = profile_parser.parse_args(argv).profile
         os.environ["OMNIMCP_PROFILE"] = profile
         from omnimcp.server import main as profile_main
+
         profile_main()
         return
     if not argv:

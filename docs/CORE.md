@@ -29,6 +29,22 @@ jobs with `job`; cancellation is cooperative and does not undo completed changes
 User services normally stop at logout; configuring systemd linger is a separate
 user choice. Jobs survive MCP/CLI disconnects while the worker remains running.
 
+To cancel current jobs while keeping the worker available, run
+`omnimcp worker stop-all`. This owner control uses the local authenticated Unix
+socket; it is not an MCP tool or an action/workflow capability. It reports
+`cancelled`, `groups_terminated`, `killed`, and `threads_still_busy`. Pending jobs
+are cancelled immediately. Recorded process groups are stopped after verifying
+their leader's PID and birth time; surviving recorded members are individually
+checked before SIGKILL. A handler thread that ignores cancellation may remain
+busy after the bounded response. Cancellation does not undo completed changes.
+An agent with local shell access can invoke the CLI too; this interface is not
+an authorization boundary against that agent.
+
+The legacy `omnimcp stop` also checks beacon ownership and the recorded process
+birth time before signaling. A live older beacon without a birth time is
+refused; restart that server through its owning client or service so it writes
+a new beacon. The stop command does not guess an identity from an old PID.
+
 Set `OMNIMCP_PROFILE=compact` or use `args = ["--profile", "compact"]` in
 an MCP client to opt in. The existing client configuration is retained until
 all benchmark gates have been measured. Reconnect clients after package updates.

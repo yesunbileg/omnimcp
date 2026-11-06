@@ -2,6 +2,7 @@ import json
 import tomllib
 from pathlib import Path
 
+import psutil
 import pytest
 
 import omnimcp
@@ -63,12 +64,15 @@ def test_stop_signals_beacon_pid(tmp_path, monkeypatch, capsys):
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
     d = tmp_path / "omnimcp"
     d.mkdir()
-    (d / "state.json").write_text(json.dumps({"pid": 4242, "started": 1}))
+    pid = cli.os.getpid()
+    (d / "state.json").write_text(
+        json.dumps({"pid": pid, "create_time": psutil.Process(pid).create_time(), "started": 1})
+    )
     killed = []
     monkeypatch.setattr(cli.os, "kill", lambda pid, sig: killed.append((pid, sig)))
     assert cli.stop() == 0
-    assert killed == [(4242, cli.signal.SIGTERM)]
-    assert "stopped omnimcp (pid 4242)" in capsys.readouterr().out
+    assert killed == [(pid, cli.signal.SIGTERM)]
+    assert f"stopped omnimcp (pid {pid})" in capsys.readouterr().out
 
 
 def test_stop_handles_non_dict_beacon(tmp_path, monkeypatch, capsys):
@@ -100,7 +104,10 @@ def test_stop_reaches_a_verb_acting_beside_a_server(tmp_path, monkeypatch, capsy
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
     d = tmp_path / "omnimcp"
     d.mkdir()
-    (d / "state.json").write_text(json.dumps({"pid": 4242, "started": 1}))
+    pid = cli.os.getpid()
+    (d / "state.json").write_text(
+        json.dumps({"pid": pid, "create_time": psutil.Process(pid).create_time(), "started": 1})
+    )
     held = verbs._lock()  # this process stands in for the verb
     held.seek(0)
     held.truncate()
@@ -113,10 +120,10 @@ def test_stop_reaches_a_verb_acting_beside_a_server(tmp_path, monkeypatch, capsy
         assert cli.stop() == 0
     finally:
         held.close()
-    assert killed == [(7777, cli.signal.SIGTERM), (4242, cli.signal.SIGTERM)]
+    assert killed == [(7777, cli.signal.SIGTERM), (pid, cli.signal.SIGTERM)]
     out = capsys.readouterr().out
     assert "stopped a running omnimcp verb (pid 7777)" in out
-    assert "stopped omnimcp (pid 4242)" in out
+    assert f"stopped omnimcp (pid {pid})" in out
     # lock released: nothing acting any more
     assert cli._running_verb_pid() is None
 
@@ -155,8 +162,10 @@ def test_stop_clears_stale_beacon(tmp_path, monkeypatch, capsys):
 
 @pytest.mark.parametrize(
     "help_text, expect",
-    [("  -T <identifier> Set the identifier of a foreign toplevel", "even hidden or covered"),
-     ("  -o <output> Set the output name to capture.", "crop the screen")],
+    [
+        ("  -T <identifier> Set the identifier of a foreign toplevel", "even hidden or covered"),
+        ("  -o <output> Set the output name to capture.", "crop the screen"),
+    ],
 )
 def test_doctor_says_whether_grim_can_capture_a_window_itself(monkeypatch, help_text, expect):
     class Done:

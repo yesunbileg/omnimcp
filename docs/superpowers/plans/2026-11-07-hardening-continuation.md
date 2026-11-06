@@ -20,38 +20,38 @@
 
 Files: `tests/test_validation_errors.py`.
 
-- [ ] Capture existing real subprocess failures caused by omitted XDG_RUNTIME_DIR.
-- [ ] Pass each test's private tmp_path explicitly into child environments; retain all validation/redaction assertions.
-- [ ] Run the complete file and commit/push the independent correction.
+- [x] Capture existing real subprocess failures caused by omitted XDG_RUNTIME_DIR.
+- [x] Pass each test's private tmp_path explicitly into child environments; retain all validation/redaction assertions.
+- [x] Run the complete file and commit/push the independent correction.
 
 ## Task 2: Trusted allowlist special files
 
 Files: `src/omnimcp/server.py`, `tests/test_launch_allowlist.py`.
 
-- [ ] Reproduce a configured FIFO blocking before fstat in a bounded subprocess.
-- [ ] Add a regression and nonblocking open, preserving existing regular-file and ownership checks.
-- [ ] Run allowlist/auth tests, review, commit and push.
+- [x] Reproduce a configured FIFO blocking before fstat in a bounded subprocess.
+- [x] Add a regression and nonblocking open, preserving existing regular-file and ownership checks.
+- [x] Run allowlist/auth tests, review, commit and push.
 
 ## Task 3: Preserve old owner settings
 
 Files: `src/omnimcp/__init__.py`, `src/omnimcp/legacy_env.py`, `tests/test_legacy_env.py`, `docs/MIGRATION.md`.
 
-- [ ] Fail fresh-interpreter tests for old-only, conflicting/empty new settings, safe stderr, CLI help, and actual readonly MCP discovery.
-- [ ] Implement generic prefix migration at package import; write documented manual migration/rollback steps without touching user configuration.
-- [ ] Run tests and review packaging before commit/push.
+- [x] Fail fresh-interpreter tests for old-only, conflicting/empty new settings, safe stderr, CLI help, and actual readonly MCP discovery.
+- [x] Implement generic prefix migration at package import; write documented manual migration/rollback steps without touching user configuration.
+- [x] Run tests and review packaging before commit/push.
 
 ## Task 4: Safe owner cancellation
 
 Files: `src/omnimcp/core/{state,execution,engine,worker}.py`, `src/omnimcp/{core_cli,cli,safety}.py`, recovery tests and new stop-all tests.
 
-- [ ] Demonstrate normal cancellation leaking a TERM-ignoring descendant after its leader exits; test queued and blocked-handler stop-all behavior.
-- [ ] Share the verified group cleanup routine and coordinate cancellation races; never KILL a group based on a departed leader.
-- [ ] Implement local socket owner control and CLI counts: cancelled, groups_terminated, killed, threads_still_busy. Verify no MCP/act/workflow path exposes the control request.
-- [ ] Protect legacy beacon stop against PID reuse/unrelated processes if feasible within this change.
-- [ ] Run real integration tests, review signal sites, commit and push.
+- [x] Demonstrate normal cancellation leaking a TERM-ignoring descendant after its leader exits; test queued and blocked-handler stop-all behavior.
+- [x] Share the verified group cleanup routine and coordinate cancellation races; never KILL a group based on a departed leader.
+- [x] Implement local socket owner control and CLI counts: cancelled, groups_terminated, killed, threads_still_busy. Verify no MCP/act/workflow path exposes the control request.
+- [x] Protect legacy beacon stop against PID reuse/unrelated processes if feasible within this change.
+- [x] Run real integration tests, review signal sites, commit and push.
 
 ## Final validation
 
-- [ ] Run full pytest suite, full Ruff check, wheel/sdist builds, and verify no unintended files are tracked.
-- [ ] Exercise fresh worker startup and MCP round trips with independent file readback and process-exit checks.
-- [ ] Record actual outcomes, limitations, and remaining A17/A18/audit work without claiming those follow-up projects complete.
+- [x] Run full pytest suite, full Ruff check, wheel/sdist builds, and verify no unintended files are tracked.
+- [x] Exercise fresh worker startup and MCP round trips with independent file readback and process-exit checks.
+- [x] Record actual outcomes, limitations, and remaining A17/A18/audit work without claiming those follow-up projects complete.

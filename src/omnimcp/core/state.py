@@ -22,8 +22,7 @@ BUDGET = 16 * 1024
 def state_dir() -> Path:
     return Path(
         os.environ.get("OMNIMCP_STATE_DIR")
-        or Path(os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local/state")))
-        / "omnimcp"
+        or Path(os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local/state"))) / "omnimcp"
     )
 
 
@@ -43,6 +42,8 @@ class Store:
         self.artifacts = self.root / "artifacts"
         self.artifacts.mkdir(mode=0o700, exist_ok=True)
         self.lock = threading.RLock()
+        self.process_locks = {}
+        self.process_results = {}
         self.db = sqlite3.connect(self.root / "state.sqlite3", check_same_thread=False)
         os.chmod(self.root / "state.sqlite3", 0o600)
         self.db.row_factory = sqlite3.Row
@@ -106,9 +107,9 @@ class Store:
 
     def update_job(self, ref: str, status: str, result=None, progress=None):
         with self.lock:
-            self.db.execute(
+            cursor = self.db.execute(
                 "UPDATE jobs SET status=?, updated=?, result=COALESCE(?,result), "
-                "progress=COALESCE(?,progress) WHERE id=?",
+                "progress=COALESCE(?,progress) WHERE id=? AND status != 'cancelled'",
                 (
                     status,
                     time.time(),
@@ -118,7 +119,8 @@ class Store:
                 ),
             )
             self.db.commit()
-        self.event("job", {"job_id": ref, "status": status})
+        if cursor.rowcount:
+            self.event("job", {"job_id": ref, "status": status})
 
     def job(self, ref: str = "", offset: int = 0, limit: int = 30):
         with self.lock:
@@ -177,9 +179,20 @@ class Store:
 
     def stop_process_group(self, pid: int, pgid: int, birth: float) -> dict:
         """Terminate a verified group and individually kill its surviving snapshot."""
+        identity = (pid, pgid, birth)
+        with self.lock:
+            lock = self.process_locks.setdefault(identity, threading.Lock())
+        with lock:
+            if identity not in self.process_results:
+                result = self._stop_process_group(pid, pgid, birth)
+                if result["status"] != "termination_denied":
+                    self.process_results[identity] = result
+                return result
+            return self.process_results[identity]
+
+    def _stop_process_group(self, pid: int, pgid: int, birth: float) -> dict:
         result = {"status": "unsafe_identity", "killed": 0}
-        if (pid <= 1 or pgid <= 1 or pid != pgid or pid == os.getpid()
-                or pgid == os.getpgrp()):
+        if pid <= 1 or pgid <= 1 or pid != pgid or pid == os.getpid() or pgid == os.getpgrp():
             return result
         try:
             leader = psutil.Process(pid)
@@ -193,12 +206,20 @@ class Store:
                 try:
                     if os.getpgid(process.pid) == pgid:
                         members.append((process.pid, process.create_time()))
-                except (psutil.NoSuchProcess, ProcessLookupError):
+                except (
+                    psutil.NoSuchProcess,
+                    psutil.AccessDenied,
+                    ProcessLookupError,
+                    PermissionError,
+                ):
                     continue
             # Revalidate after the snapshot, immediately before the group signal.
             leader = psutil.Process(pid)
-            if (leader.create_time() != birth or os.getpgid(pid) != pgid
-                    or leader.status() == psutil.STATUS_ZOMBIE):
+            if (
+                leader.create_time() != birth
+                or os.getpgid(pid) != pgid
+                or leader.status() == psutil.STATUS_ZOMBIE
+            ):
                 result["status"] = "pid_reused"
                 return result
             os.killpg(pgid, signal.SIGTERM)
@@ -209,23 +230,31 @@ class Store:
                 for member_pid, member_birth in members:
                     try:
                         member = psutil.Process(member_pid)
-                        if (member.create_time() == member_birth
-                                and member.status() != psutil.STATUS_ZOMBIE):
+                        if (
+                            member.create_time() == member_birth
+                            and member.status() != psutil.STATUS_ZOMBIE
+                        ):
                             remaining.append((member_pid, member_birth))
                     except psutil.NoSuchProcess:
                         pass
+                    except (psutil.AccessDenied, PermissionError, OSError):
+                        result["status"] = "termination_denied"
                 if not remaining:
                     break
                 time.sleep(0.05)
             for member_pid, member_birth in remaining:
                 try:
                     member = psutil.Process(member_pid)
-                    if (member.create_time() == member_birth
-                            and member.status() != psutil.STATUS_ZOMBIE):
+                    if (
+                        member.create_time() == member_birth
+                        and member.status() != psutil.STATUS_ZOMBIE
+                    ):
                         os.kill(member_pid, signal.SIGKILL)
                         result["killed"] += 1
                 except (psutil.NoSuchProcess, ProcessLookupError):
                     pass
+                except (psutil.AccessDenied, PermissionError, OSError):
+                    result["status"] = "termination_denied"
         except (psutil.NoSuchProcess, ProcessLookupError):
             result["status"] = "already_exited"
             result["message"] = "group leader gone; members not verified"
@@ -240,7 +269,7 @@ class Store:
         with self.lock:
             rows = self.db.execute(
                 "SELECT id,pid,pgid,create_time FROM jobs "
-                "WHERE status IN ('queued','running') AND pid IS NOT NULL"
+                "WHERE status IN ('queued','running','cancelled') AND pid IS NOT NULL"
             ).fetchall()
         for job_id, pid, pgid, birth in rows:
             result = self.stop_process_group(pid, pgid, birth)

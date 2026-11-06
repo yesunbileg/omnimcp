@@ -205,6 +205,7 @@ class Engine:
         self.lock = threading.RLock()
         self.resources: dict[str, threading.Lock] = {}
         self.contexts: dict[str, Context] = {}
+        self.futures = {}
         self.foreground: dict[int, Context] = {}
         self.stopping = False
         self.readonly = flag("OMNIMCP_READONLY")
@@ -223,6 +224,70 @@ class Engine:
             time.sleep(0.02)
         for hook in getattr(self.registry, "close_hooks", []):
             hook()
+
+    def stop_all(self):
+        """Request cancellation without waiting indefinitely for uncooperative handlers."""
+        with self.lock:
+            jobs = [(ref, ctx) for ref, ctx in self.contexts.items() if not ctx.stop_requested]
+            foreground = [ctx for ctx in self.foreground.values() if not ctx.stop_requested]
+            for _, ctx in jobs:
+                ctx.stop_requested = True
+                ctx.cancelled.set()
+            for ctx in foreground:
+                ctx.stop_requested = True
+                ctx.cancelled.set()
+            for ref, _ in jobs:
+                future = self.futures.get(ref)
+                if future and future.cancel():
+                    self.contexts.pop(ref, None)
+                    self.futures.pop(ref, None)
+                self.store.update_job(ref, "cancelled", {"status": "cancelled"})
+        all_contexts = [ctx for _, ctx in jobs] + foreground
+        for ref, ctx in jobs:
+            row = self.store.job(ref)
+            if (
+                row["pid"] is not None
+                and row["pgid"] is not None
+                and row["create_time"] is not None
+            ):
+                ctx.process_identity = (row["pid"], row["pgid"], row["create_time"])
+
+        def terminate(ctx):
+            if ctx.process_identity:
+                ctx.termination = self.store.stop_process_group(*ctx.process_identity)
+
+        terminators = [
+            threading.Thread(target=terminate, args=(ctx,), daemon=True)
+            for ctx in all_contexts
+            if ctx.process_identity
+        ]
+        for thread in terminators:
+            thread.start()
+        deadline = time.monotonic() + 6.5
+        while time.monotonic() < deadline:
+            with self.lock:
+                if (
+                    not any(ref in self.contexts for ref, _ in jobs)
+                    and not any(id(ctx) in self.foreground for ctx in foreground)
+                    and not any(thread.is_alive() for thread in terminators)
+                ):
+                    break
+            time.sleep(0.05)
+        with self.lock:
+            busy = sum(
+                future.running()
+                for ref, future in self.futures.items()
+                if ref in self.contexts
+            ) + len(self.foreground)
+        terminations = [ctx.termination for _, ctx in jobs if ctx.termination]
+        terminations += [ctx.termination for ctx in foreground if ctx.termination]
+        return {
+            "status": "ok",
+            "cancelled": len(jobs) + len(foreground),
+            "groups_terminated": sum(t["status"] == "stopped" for t in terminations),
+            "killed": sum(t["killed"] for t in terminations),
+            "threads_still_busy": busy,
+        }
 
     def execute(self, name: str, params: dict, ctx: Context, readonly=False):
         action = self.registry.get(name)
@@ -275,8 +340,9 @@ class Engine:
 
         def run():
             try:
-                ctx.check()
-                self.store.update_job(ref, "running")
+                with self.lock:
+                    ctx.check()
+                    self.store.update_job(ref, "running")
                 result = runner(ctx)
                 status = result.get("status", "ok") if isinstance(result, dict) else "ok"
                 state = (
@@ -288,11 +354,16 @@ class Engine:
                 result, state = exc.result(), "cancelled" if exc.code == "cancelled" else "failed"
             except Exception as exc:
                 result, state = {"status": "backend_error", "message": str(exc)}, "failed"
-            self.store.update_job(ref, state, self.store.bound(result))
             with self.lock:
+                if not ctx.cancelled.is_set():
+                    self.store.update_job(ref, state, self.store.bound(result))
+                elif self.store.job(ref)["status"] != "cancelled":
+                    self.store.update_job(ref, "cancelled", self.store.bound(result))
                 self.contexts.pop(ref, None)
+                self.futures.pop(ref, None)
 
-        self.pool.submit(run)
+        with self.lock:
+            self.futures[ref] = self.pool.submit(run)
         return {"status": "queued", "job_id": ref}
 
     def validate_workflow(self, steps):
@@ -313,6 +384,7 @@ class Engine:
             previous = set(ids)
             ids.add(step["id"])
             action = self.registry.get(step["action"])
+
             def check_refs(value, allowed=previous):
                 if isinstance(value, dict):
                     if "$ref" in value:

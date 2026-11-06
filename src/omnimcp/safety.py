@@ -28,8 +28,11 @@ import time
 from collections.abc import Callable
 from pathlib import Path
 
+import psutil
+
 _state_path: Path | None = None
 _started: float = 0.0
+_birth: float = 0.0
 _cleanups: list[Callable[[], None]] = []
 _write_lock = threading.Lock()  # concurrent tool calls share one tmp file
 
@@ -76,17 +79,26 @@ def arm() -> None:
     # Ctrl+C gracefully, and overriding it with sys.exit() deadlocks the
     # interpreter against the stdin-reader thread at shutdown ("could not
     # acquire lock for stdin"). A lingering beacon after SIGTERM is harmless
-    #; the beacon is removed automatically when this process exits.
+    # ; the beacon is removed automatically when this process exits.
     with contextlib.suppress(ValueError):  # signal() only works on the main thread
         signal.signal(signal.SIGTERM, _on_sigterm)
 
 
 def init() -> None:
     """Start the beacon; safe to call once at server startup."""
-    global _state_path, _started
+    global _state_path, _started, _birth
     _state_path = state_path()
     _started = time.time()
-    _write({"pid": os.getpid(), "started": _started, "last_action": "", "last_ts": 0})
+    _birth = psutil.Process(os.getpid()).create_time()
+    _write(
+        {
+            "pid": os.getpid(),
+            "create_time": _birth,
+            "started": _started,
+            "last_action": "",
+            "last_ts": 0,
+        }
+    )
     arm()
 
 
@@ -97,6 +109,7 @@ def touch(action: str) -> None:
     _write(
         {
             "pid": os.getpid(),
+            "create_time": _birth,
             "started": _started,
             "last_action": _ACTION_JUNK.sub("", action)[:64],
             "last_ts": time.time(),

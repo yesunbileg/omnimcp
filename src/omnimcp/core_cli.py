@@ -18,8 +18,14 @@ OPS = {"discover", "observe", "act", "workflow", "job", "events", "artifact"}
 
 def worker(argv):
     parser = argparse.ArgumentParser(prog="omnimcp worker")
-    parser.add_argument("operation", choices=["run", "install", "status", "start", "stop"])
+    parser.add_argument(
+        "operation", choices=["run", "install", "status", "start", "stop", "stop-all"]
+    )
     args = parser.parse_args(argv)
+    if args.operation == "stop-all":
+        result = rpc({"op": "worker_stop_all"}, timeout=10)
+        print(encode(result))
+        return 0 if result.get("status") == "ok" else 1
     if args.operation == "run":
         from omnimcp.core.worker import main
 

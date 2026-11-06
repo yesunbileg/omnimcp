@@ -12,6 +12,7 @@ import os
 import signal
 import socket
 import struct
+import threading
 
 from omnimcp.adapters import build_registry
 
@@ -71,7 +72,21 @@ async def serve():
                     request = json.loads(raw)
                     if not isinstance(request, dict):
                         raise ValueError("Request must be an object.")
-                    response = await asyncio.to_thread(engine.request, request)
+                    if request == {"op": "worker_stop_all"}:
+                        # Dedicated thread: foreground RPCs can saturate the default executor.
+                        future = loop.create_future()
+
+                        def stop_all():
+                            try:
+                                result = engine.stop_all()
+                            except Exception as exc:
+                                result = {"status": "backend_error", "message": str(exc)}
+                            loop.call_soon_threadsafe(future.set_result, result)
+
+                        threading.Thread(target=stop_all, daemon=True).start()
+                        response = await future
+                    else:
+                        response = await asyncio.to_thread(engine.request, request)
                 except ValueError as exc:
                     response = {"status": "invalid_params", "message": str(exc)}
             writer.write(encode(response).encode() + b"\n")

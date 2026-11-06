@@ -1,0 +1,57 @@
+{
+  "result": "passed",
+  "installed_package": "/tmp/omnimcp-wheel-Gx3apO/venv/lib/python3.12/site-packages/omnimcp/__init__.py",
+  "run_directory": "/workspace/.omnimcp-runtime/real-acceptance-7vtch8to",
+  "checks": {
+    "real_mcp_system": {
+      "status": "passed",
+      "worker_pid": 10642,
+      "memory_bytes": 35743748096,
+      "cpu_count": 5
+    },
+    "file_patch_restore": {
+      "status": "passed",
+      "mode": "0640",
+      "independent_sha256": "b0742729747c4854fc4150a8853e779bd0d7bc072ceaa59339fab60bf293f111"
+    },
+    "command_survives_client_disconnect": {
+      "status": "passed",
+      "job": "jffec8ba60f824169",
+      "artifact_readback": "REAL_MCP_OK\n"
+    },
+    "normal_cancel_real_process": {
+      "status": "passed",
+      "pid": 10655,
+      "inactive": true
+    },
+    "owner_cli_real_process": {
+      "status": "ok",
+      "cancelled": 1,
+      "groups_terminated": 1,
+      "killed": 1,
+      "threads_still_busy": 0,
+      "elapsed_s": 5.154,
+      "pid": 10659,
+      "inactive": true
+    },
+    "worker_sigkill_restart": {
+      "status": "passed",
+      "old_worker_pid": 10642,
+      "new_worker_pid": 10664,
+      "job_status": "interrupted",
+      "child_inactive": true
+    },
+    "live_hyprland_desktop": {
+      "status": "unavailable",
+      "actual_response": {
+        "status": "unsupported",
+        "message": "Capability is unavailable.",
+        "availability": {
+          "status": "unsupported",
+          "reason": "Select a live Hyprland session explicitly."
+        }
+      }
+    }
+  },
+  "desktop_tested": false
+}

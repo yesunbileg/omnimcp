@@ -6,7 +6,7 @@ import threading
 
 import pytest
 
-from agentic_os_mcp import kanban, server
+from omnimcp import kanban, server
 
 BOARD = """---
 kanban-plugin: board
@@ -152,11 +152,11 @@ def test_two_agents_cannot_claim_same_revision(board):
 
 def test_readonly_and_dry_run_preserve_board(board, monkeypatch):
     before = kanban.read()
-    monkeypatch.setenv("AGENTIC_OS_READONLY", "1")
+    monkeypatch.setenv("OMNIMCP_READONLY", "1")
     with pytest.raises(ValueError, match="READONLY"):
         kanban.add("Хийх", "Not allowed", before["revision"])
-    monkeypatch.delenv("AGENTIC_OS_READONLY")
-    monkeypatch.setenv("AGENTIC_OS_DRYRUN", "1")
+    monkeypatch.delenv("OMNIMCP_READONLY")
+    monkeypatch.setenv("OMNIMCP_DRYRUN", "1")
     preview = kanban.add("Хийх", "Preview", before["revision"])
     assert preview["dry_run"] is True
     assert preview["revision"] == before["revision"]
@@ -282,11 +282,11 @@ def test_append_validation_conflicts_and_dry_run_cannot_lose_content(board, monk
         with pytest.raises(ValueError):
             kanban.update(task_id, before["revision"], **args)
     assert board.read_text() == BOARD
-    monkeypatch.setenv("AGENTIC_OS_DRYRUN", "1")
+    monkeypatch.setenv("OMNIMCP_DRYRUN", "1")
     preview = kanban.update(task_id, before["revision"], append_text="Preview")
     assert preview["dry_run"] and preview["task"]["text"].endswith("\nPreview")
     assert board.read_text() == BOARD
-    monkeypatch.delenv("AGENTIC_OS_DRYRUN")
+    monkeypatch.delenv("OMNIMCP_DRYRUN")
     external = BOARD.replace("Other card", "Human edited")
     board.write_text(external)
     with pytest.raises(ValueError, match="revision conflict"):

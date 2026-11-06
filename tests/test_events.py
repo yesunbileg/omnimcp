@@ -1,4 +1,4 @@
-from agentic_os_mcp import events
+from omnimcp import events
 
 
 def test_parse_openwindow_normalizes_address_and_keeps_comma_titles():

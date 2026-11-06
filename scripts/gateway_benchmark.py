@@ -11,13 +11,13 @@ from pathlib import Path
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-from agentic_os_mcp.core.client import rpc
+from omnimcp.core.client import rpc
 
 
 async def measure():
     values = []
     params = StdioServerParameters(
-        command=str(Path.home() / ".local/bin/agentic-os-mcp"), args=["--profile", "compact"]
+        command=str(Path.home() / ".local/bin/omnimcp"), args=["--profile", "compact"]
     )
     with tempfile.TemporaryDirectory(prefix="aos-gateway-") as temp:
         path = Path(temp) / "fixture"

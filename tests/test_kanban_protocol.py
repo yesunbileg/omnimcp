@@ -15,10 +15,10 @@ def test_compact_kanban_stdio_lifecycle(tmp_path):
     path.write_text(original)
 
     async def exercise():
-        env = {**os.environ, "AGENTIC_OS_KANBAN_FILE": str(path),
-               "AGENTIC_OS_READONLY": "0", "AGENTIC_OS_DRYRUN": "0",
+        env = {**os.environ, "OMNIMCP_KANBAN_FILE": str(path),
+               "OMNIMCP_READONLY": "0", "OMNIMCP_DRYRUN": "0",
                "XDG_RUNTIME_DIR": str(tmp_path)}
-        params = StdioServerParameters(command=sys.executable, args=["-m", "agentic_os_mcp"],
+        params = StdioServerParameters(command=sys.executable, args=["-m", "omnimcp"],
                                        env=env)
         async with stdio_client(params) as (read, write), ClientSession(read, write) as client:
             await client.initialize()

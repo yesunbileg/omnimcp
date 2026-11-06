@@ -4,17 +4,17 @@ from pathlib import Path
 
 import pytest
 
-import agentic_os_mcp
-from agentic_os_mcp import cli
-from agentic_os_mcp import hyprctl as hyprctl_mod
+import omnimcp
+from omnimcp import cli
+from omnimcp import hyprctl as hyprctl_mod
 
 ROOT = Path(__file__).resolve().parent.parent
 
 
 def test_version_sources_agree():
     version = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]["version"]
-    assert agentic_os_mcp.__version__ == version
-    skill = (ROOT / "skills" / "agentic-os-mcp" / "SKILL.md").read_text()
+    assert omnimcp.__version__ == version
+    skill = (ROOT / "skills" / "omnimcp" / "SKILL.md").read_text()
     assert f'version: "{version}"' in skill
 
 
@@ -36,18 +36,18 @@ def test_doctor_never_crashes_on_broken_check(monkeypatch, capsys):
 
 def test_main_dispatch(monkeypatch):
     monkeypatch.setattr(cli, "doctor", lambda: 0)
-    monkeypatch.setattr(cli.sys, "argv", ["agentic-os-mcp", "doctor"])
+    monkeypatch.setattr(cli.sys, "argv", ["omnimcp", "doctor"])
     with pytest.raises(SystemExit) as e:
         cli.main()
     assert e.value.code == 0
 
     monkeypatch.setattr(cli, "stop", lambda: 0)
-    monkeypatch.setattr(cli.sys, "argv", ["agentic-os-mcp", "stop"])
+    monkeypatch.setattr(cli.sys, "argv", ["omnimcp", "stop"])
     with pytest.raises(SystemExit) as e:
         cli.main()
     assert e.value.code == 0
 
-    monkeypatch.setattr(cli.sys, "argv", ["agentic-os-mcp", "bogus"])
+    monkeypatch.setattr(cli.sys, "argv", ["omnimcp", "bogus"])
     with pytest.raises(SystemExit) as e:
         cli.main()
     assert e.value.code == 2
@@ -56,25 +56,25 @@ def test_main_dispatch(monkeypatch):
 def test_stop_no_beacon(tmp_path, monkeypatch, capsys):
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
     assert cli.stop() == 0
-    assert "no active agentic-os-mcp session" in capsys.readouterr().out
+    assert "no active omnimcp session" in capsys.readouterr().out
 
 
 def test_stop_signals_beacon_pid(tmp_path, monkeypatch, capsys):
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
-    d = tmp_path / "agentic-os-mcp"
+    d = tmp_path / "omnimcp"
     d.mkdir()
     (d / "state.json").write_text(json.dumps({"pid": 4242, "started": 1}))
     killed = []
     monkeypatch.setattr(cli.os, "kill", lambda pid, sig: killed.append((pid, sig)))
     assert cli.stop() == 0
     assert killed == [(4242, cli.signal.SIGTERM)]
-    assert "stopped agentic-os-mcp (pid 4242)" in capsys.readouterr().out
+    assert "stopped omnimcp (pid 4242)" in capsys.readouterr().out
 
 
 def test_stop_handles_non_dict_beacon(tmp_path, monkeypatch, capsys):
     # valid JSON that is not an object must not crash the emergency stop
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
-    d = tmp_path / "agentic-os-mcp"
+    d = tmp_path / "omnimcp"
     d.mkdir()
     (d / "state.json").write_text("[1, 2, 3]")
     assert cli.stop() == 1
@@ -85,7 +85,7 @@ def test_stop_handles_dict_beacon_missing_pid(tmp_path, monkeypatch, capsys):
     # a dict beacon without a pid key hits the KeyError branch the fix added
     # (int({...}["pid"]) raises KeyError, must be caught)
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
-    d = tmp_path / "agentic-os-mcp"
+    d = tmp_path / "omnimcp"
     d.mkdir()
     (d / "state.json").write_text('{"started": 1}')
     assert cli.stop() == 1
@@ -95,10 +95,10 @@ def test_stop_handles_dict_beacon_missing_pid(tmp_path, monkeypatch, capsys):
 def test_stop_reaches_a_verb_acting_beside_a_server(tmp_path, monkeypatch, capsys):
     # a verb acting while a server owns the beacon is findable only through
     # the lock it holds; the panic bind must stop it too
-    from agentic_os_mcp import verbs
+    from omnimcp import verbs
 
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
-    d = tmp_path / "agentic-os-mcp"
+    d = tmp_path / "omnimcp"
     d.mkdir()
     (d / "state.json").write_text(json.dumps({"pid": 4242, "started": 1}))
     held = verbs._lock()  # this process stands in for the verb
@@ -115,14 +115,14 @@ def test_stop_reaches_a_verb_acting_beside_a_server(tmp_path, monkeypatch, capsy
         held.close()
     assert killed == [(7777, cli.signal.SIGTERM), (4242, cli.signal.SIGTERM)]
     out = capsys.readouterr().out
-    assert "stopped a running agentic-os-mcp verb (pid 7777)" in out
-    assert "stopped agentic-os-mcp (pid 4242)" in out
+    assert "stopped a running omnimcp verb (pid 7777)" in out
+    assert "stopped omnimcp (pid 4242)" in out
     # lock released: nothing acting any more
     assert cli._running_verb_pid() is None
 
 
 def test_a_verbs_beacon_is_not_removed_once_a_server_took_the_file(tmp_path, monkeypatch):
-    from agentic_os_mcp import safety
+    from omnimcp import safety
 
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
     monkeypatch.setattr(safety, "_armed", True)  # keep atexit/signal out of the test process
@@ -139,7 +139,7 @@ def test_a_verbs_beacon_is_not_removed_once_a_server_took_the_file(tmp_path, mon
 
 def test_stop_clears_stale_beacon(tmp_path, monkeypatch, capsys):
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
-    d = tmp_path / "agentic-os-mcp"
+    d = tmp_path / "omnimcp"
     d.mkdir()
     beacon = d / "state.json"
     beacon.write_text(json.dumps({"pid": 999999, "started": 1}))

@@ -11,7 +11,7 @@ import pytest
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-from agentic_os_mcp import canvas, server, trust, verbs
+from omnimcp import canvas, server, trust, verbs
 
 
 @pytest.fixture
@@ -132,12 +132,12 @@ def test_stale_revision_readonly_dryrun_and_invalid_batch_write_nothing(saved, m
     with pytest.raises(ValueError, match="semantic"):
         canvas.run(str(path), "edit", revision=revision, changes=[
             change, {"op": "update_card", "id": "n2", "set": {"x": 9}}])
-    monkeypatch.setenv("AGENTIC_OS_READONLY", "1")
+    monkeypatch.setenv("OMNIMCP_READONLY", "1")
     assert canvas.run(str(path))["cards"]
     with pytest.raises(trust.TrustError, match="READONLY"):
         canvas.run(str(path), "edit", revision=revision, changes=[change])
-    monkeypatch.delenv("AGENTIC_OS_READONLY")
-    monkeypatch.setenv("AGENTIC_OS_DRYRUN", "1")
+    monkeypatch.delenv("OMNIMCP_READONLY")
+    monkeypatch.setenv("OMNIMCP_DRYRUN", "1")
     assert canvas.run(str(path), "edit", revision=revision, changes=[change])["dry_run"]
     assert path.read_bytes() == raw and list(path.parent.iterdir()) == [path]
 
@@ -154,7 +154,7 @@ def test_concurrent_change_prevents_replace(saved):
 
 
 def test_readonly_tool_schema_cannot_request_edits(monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_READONLY", "1")
+    monkeypatch.setenv("OMNIMCP_READONLY", "1")
     try:
         module = importlib.reload(server)
         tools = asyncio.run(module.build_app().list_tools())
@@ -163,7 +163,7 @@ def test_readonly_tool_schema_cannot_request_edits(monkeypatch):
         assert "changes" not in tool.inputSchema["properties"]
         assert "action" not in tool.inputSchema["properties"]
     finally:
-        monkeypatch.delenv("AGENTIC_OS_READONLY", raising=False)
+        monkeypatch.delenv("OMNIMCP_READONLY", raising=False)
         importlib.reload(server)
 
 
@@ -178,9 +178,9 @@ def test_stdio_one_tool_read_edit_roundtrip(saved):
     path, doc = saved
 
     async def go():
-        env = {k: v for k, v in os.environ.items() if not k.startswith("AGENTIC_OS_")}
+        env = {k: v for k, v in os.environ.items() if not k.startswith("OMNIMCP_")}
         params = StdioServerParameters(command=sys.executable,
-                                       args=["-m", "agentic_os_mcp"], env=env)
+                                       args=["-m", "omnimcp"], env=env)
         async with stdio_client(params) as (read, write), ClientSession(read, write) as session:
             await session.initialize()
             tools = (await session.list_tools()).tools

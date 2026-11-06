@@ -10,7 +10,7 @@ import itertools
 
 import pytest
 
-from agentic_os_mcp import server
+from omnimcp import server
 
 
 class FakeHyprctl:
@@ -206,3 +206,21 @@ def test_launch_reports_an_id_less_057_workspace_by_name(monkeypatch, no_sleep, 
     _patch(monkeypatch, fake)
     out = server.launch("google-chrome")
     assert out["workspace"] == expect
+
+
+@pytest.mark.parametrize("workspace", [
+    "3", "+1", "-1", "e+1", "name:research_1.a-b", "previous", "empty",
+    "special:notes_1.a-b",
+])
+def test_launch_workspace_safe_selectors(workspace):
+    server._validate_launch_workspace(workspace)
+
+
+@pytest.mark.parametrize("workspace", [
+    " name:foo", "name:foo ", "name:a b", "name:", "special:", "1,2", "1;2",
+    "1[2]", "1\n2", "1\x002", "1\t2", "name:a/b", "m1", "~", "bogus",
+    "m+1", "m-1", "e-1", "r+1", "r-1", "~2", "special",
+])
+def test_launch_workspace_rejects_unsafe_selectors(workspace):
+    with pytest.raises(ValueError, match="is not a workspace"):
+        server._validate_launch_workspace(workspace)

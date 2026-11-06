@@ -11,11 +11,11 @@ from typing import Annotated, TypedDict
 import pytest
 from pydantic import AliasPath, BaseModel, ConfigDict, Field
 
-from agentic_os_mcp.adapters import build_registry
-from agentic_os_mcp.core.engine import Engine
-from agentic_os_mcp.core.execution import Context
-from agentic_os_mcp.core.registry import Fault, Registry
-from agentic_os_mcp.core.state import BUDGET, Store, encode
+from omnimcp.adapters import build_registry
+from omnimcp.core.engine import Engine
+from omnimcp.core.execution import Context
+from omnimcp.core.registry import Fault, Registry
+from omnimcp.core.state import BUDGET, Store, encode
 
 
 @pytest.fixture
@@ -326,9 +326,9 @@ def test_stale_process_ref_is_rejected(engine):
 def test_compact_schema_has_seven_tools_and_no_duplicate_results(monkeypatch):
     import asyncio
 
-    from agentic_os_mcp import compact
+    from omnimcp import compact
 
-    monkeypatch.delenv("AGENTIC_OS_READONLY", raising=False)
+    monkeypatch.delenv("OMNIMCP_READONLY", raising=False)
 
     async def go():
         app = compact.build_app()
@@ -348,8 +348,8 @@ def test_compact_schema_has_seven_tools_and_no_duplicate_results(monkeypatch):
 
 
 def test_window_refs_reject_reused_addresses_and_previous_sessions(monkeypatch):
-    from agentic_os_mcp import hyprctl
-    from agentic_os_mcp.adapters.desktop import WindowRefs
+    from omnimcp import hyprctl
+    from omnimcp.adapters.desktop import WindowRefs
 
     refmap = WindowRefs()
     client = {"address": "0x123", "stableId": 1, "pid": 234}

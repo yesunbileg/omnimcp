@@ -1,4 +1,0 @@
-interface:
-  display_name: "agentic-os-mcp"
-  short_description: "See and drive the live Hyprland desktop"
-  default_prompt: "Use $agentic-os-mcp to look at the Hyprland desktop and operate it: read agentic-os-mcp desktop first, act by window address, click controls by name before estimating pixels, and verify every action before reporting it done."

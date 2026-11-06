@@ -9,7 +9,7 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
 SERVER = r'''
-from agentic_os_mcp import server as s
+from omnimcp import server as s
 
 actions = []
 s.safety.touch = lambda *a: None
@@ -49,8 +49,8 @@ app.run()
 def test_input_failures_stop_actions_over_stdio(tmp_path):
     async def exercise():
         env = {key: value for key, value in os.environ.items()
-               if not key.startswith("AGENTIC_OS_")}
-        env.update(AGENTIC_OS_BACKGROUND="0", AGENTIC_OS_AUTH_GUARD="1",
+               if not key.startswith("OMNIMCP_")}
+        env.update(OMNIMCP_BACKGROUND="0", OMNIMCP_AUTH_GUARD="1",
                    XDG_RUNTIME_DIR=str(tmp_path))
         params = StdioServerParameters(command=sys.executable, args=["-c", SERVER], env=env)
         async with stdio_client(params) as (read, write), ClientSession(read, write) as client:

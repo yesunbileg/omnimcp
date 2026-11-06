@@ -2,7 +2,7 @@
 
 from types import SimpleNamespace
 
-from agentic_os_mcp.adapters import native, system
+from omnimcp.adapters import native, system
 
 
 def test_service_restart_checks_actual_state():
@@ -58,7 +58,7 @@ def test_container_start_verifies_running_state():
 
 
 def test_browser_maps_ref_using_negotiated_backend_schema():
-    from agentic_os_mcp.adapters.browser import adapt_arguments
+    from omnimcp.adapters.browser import adapt_arguments
 
     params = {"ref": "e3", "element": "Name", "text": "Codex"}
     old = adapt_arguments({"properties": {"ref": {}, "text": {}}}, params)

@@ -1,4 +1,4 @@
-"""`agentic-os-mcp journal` and `agentic-os-mcp replay`: reading the record back, and
+"""`omnimcp journal` and `omnimcp replay`: reading the record back, and
 re-issuing it. Replay defaults to printing the plan and doing nothing,
 which is the same fail-toward-less-action rule the trust layers follow.
 """
@@ -8,8 +8,8 @@ import os
 
 import pytest
 
-from agentic_os_mcp import cli
-from agentic_os_mcp import server as srv
+from omnimcp import cli
+from omnimcp import server as srv
 
 ENTRIES = [
     {"v": 1, "seq": 1, "ts": "2026-08-02T09:00:00.000Z", "kind": "session",
@@ -43,7 +43,7 @@ def live(monkeypatch):
     monkeypatch.setattr(cli, "_countdown", lambda s: True)
     monkeypatch.setattr(cli, "_take_beacon", lambda: True)
     monkeypatch.setattr(srv.hyprctl, "query", lambda cmd: [{"address": "0xabc"}])
-    from agentic_os_mcp import safety, session
+    from omnimcp import safety, session
 
     monkeypatch.setattr(session, "ensure_session_env", lambda: None)
     monkeypatch.setattr(safety, "init", lambda: None)
@@ -60,7 +60,7 @@ def calls(monkeypatch):
     return seen
 
 
-# --- agentic-os-mcp journal ---------------------------------------------------------
+# --- omnimcp journal ---------------------------------------------------------
 
 
 def test_journal_lists_entries_and_counts_them(journal_file, capsys):
@@ -95,7 +95,7 @@ def test_journal_tails(journal_file, capsys):
 
 def test_journal_reports_a_missing_file(tmp_path, capsys):
     assert cli.journal_cmd([str(tmp_path / "nope.ndjson")]) == 1
-    assert "set AGENTIC_OS_JOURNAL=1" in capsys.readouterr().out
+    assert "set OMNIMCP_JOURNAL=1" in capsys.readouterr().out
 
 
 def test_journal_never_prints_redacted_text(tmp_path, capsys):
@@ -109,7 +109,7 @@ def test_journal_never_prints_redacted_text(tmp_path, capsys):
     assert "text=<7 chars>" in capsys.readouterr().out
 
 
-# --- agentic-os-mcp replay, the default: say what would happen ----------------------
+# --- omnimcp replay, the default: say what would happen ----------------------
 
 
 def test_replay_prints_the_plan_and_stops(journal_file, live, calls, capsys):
@@ -132,7 +132,7 @@ def test_replay_reports_an_empty_range(journal_file, live, capsys):
     assert "nothing to replay" in capsys.readouterr().out
 
 
-# --- agentic-os-mcp replay --execute ------------------------------------------------
+# --- omnimcp replay --execute ------------------------------------------------
 
 
 def test_execute_reissues_the_recorded_calls(journal_file, live, calls, capsys):
@@ -162,7 +162,7 @@ def test_execute_stops_at_the_first_failure(journal_file, live, calls, monkeypat
 
 
 def test_execute_refuses_a_tool_this_version_does_not_have(tmp_path, live, calls, capsys):
-    # a journal from a newer agentic-os-mcp. Skipping the unknown action and
+    # a journal from a newer omnimcp. Skipping the unknown action and
     # running the rest would report success for a different sequence of
     # events than the one recorded, so nothing runs at all
     path = tmp_path / "j.ndjson"
@@ -174,7 +174,7 @@ def test_execute_refuses_a_tool_this_version_does_not_have(tmp_path, live, calls
          "outcome": "ok", "ms": 1},
     ]))
     assert cli.replay([str(path), "--execute", "--yes"]) == 1
-    assert "teleport (recorded by a newer agentic-os-mcp)" in capsys.readouterr().out
+    assert "teleport (recorded by a newer omnimcp)" in capsys.readouterr().out
     assert calls == []
 
 
@@ -211,7 +211,7 @@ def test_execute_refuses_text_that_was_recorded_as_a_digest(tmp_path, live, call
         "args": {"action": "type", "text": {"redacted": True, "chars": 7, "sha256": "ab"}},
     }) + "\n")
     assert cli.replay([str(path), "--execute", "--yes"]) == 1
-    assert "AGENTIC_OS_JOURNAL_TEXT=1" in capsys.readouterr().out
+    assert "OMNIMCP_JOURNAL_TEXT=1" in capsys.readouterr().out
     assert calls == []
 
 
@@ -227,7 +227,7 @@ def test_a_digest_is_only_a_warning_without_execute(tmp_path, live, capsys):
 
 
 def test_execute_refuses_in_read_only_mode(journal_file, live, calls, monkeypatch, capsys):
-    monkeypatch.setenv("AGENTIC_OS_READONLY", "1")
+    monkeypatch.setenv("OMNIMCP_READONLY", "1")
     assert cli.replay([str(journal_file), "--execute", "--yes"]) == 1
     assert "read-only mode" in capsys.readouterr().out
     assert calls == []
@@ -321,9 +321,9 @@ def test_a_journal_whose_args_are_not_an_object_does_not_crash(tmp_path, live, c
 def test_execute_refuses_under_dry_run(journal_file, live, calls, monkeypatch, capsys):
     # every tool would return its "would have" plan and replay would
     # report "replayed 2 actions" for input nobody received
-    monkeypatch.setenv("AGENTIC_OS_DRYRUN", "1")
+    monkeypatch.setenv("OMNIMCP_DRYRUN", "1")
     assert cli.replay([str(journal_file), "--execute", "--yes"]) == 1
-    assert "AGENTIC_OS_DRYRUN is set" in capsys.readouterr().out
+    assert "OMNIMCP_DRYRUN is set" in capsys.readouterr().out
     assert calls == []
 
 
@@ -331,8 +331,8 @@ def test_a_replays_own_actions_are_marked_so_a_second_replay_skips_them(
     journal_file, live, calls, monkeypatch
 ):
     monkeypatch.setattr(cli, "_take_beacon", lambda: False)
-    monkeypatch.setenv("AGENTIC_OS_JOURNAL", str(journal_file))
-    from agentic_os_mcp import journal
+    monkeypatch.setenv("OMNIMCP_JOURNAL", str(journal_file))
+    from omnimcp import journal
 
     monkeypatch.setattr(journal, "_seq", 100)
     assert cli.replay([str(journal_file), "--execute", "--yes"]) == 0
@@ -344,7 +344,7 @@ def test_a_replays_own_actions_are_marked_so_a_second_replay_skips_them(
 
 
 def test_replay_does_not_steal_a_running_servers_beacon(tmp_path, monkeypatch):
-    from agentic_os_mcp import safety
+    from omnimcp import safety
 
     state = tmp_path / "state.json"
     state.write_text(json.dumps({"pid": os.getpid(), "started": 0, "last_action": ""}))
@@ -355,7 +355,7 @@ def test_replay_does_not_steal_a_running_servers_beacon(tmp_path, monkeypatch):
 
 
 def test_replay_takes_the_beacon_when_the_pid_is_stale(tmp_path, monkeypatch):
-    from agentic_os_mcp import safety
+    from omnimcp import safety
 
     state = tmp_path / "state.json"
     state.write_text(json.dumps({"pid": 999_999_999, "started": 0, "last_action": ""}))
@@ -366,10 +366,10 @@ def test_replay_takes_the_beacon_when_the_pid_is_stale(tmp_path, monkeypatch):
 
 def test_a_clipboard_write_needs_the_same_opt_in_the_server_needs(tmp_path, live, calls, capsys,
                                                                   monkeypatch):
-    monkeypatch.delenv("AGENTIC_OS_CLIPBOARD", raising=False)
+    monkeypatch.delenv("OMNIMCP_CLIPBOARD", raising=False)
     path = _one(tmp_path, tool="clipboard", args={"action": "write", "text": "x"})
     assert cli.replay([str(path), "--execute", "--yes"]) == 1
-    assert "AGENTIC_OS_CLIPBOARD=1" in capsys.readouterr().out
+    assert "OMNIMCP_CLIPBOARD=1" in capsys.readouterr().out
 
 
 def test_a_mark_click_is_refused_before_the_seat_is_taken(tmp_path, live, calls, capsys):

@@ -14,25 +14,25 @@ import pytest
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-from agentic_os_mcp.core.client import rpc
+from omnimcp.core.client import rpc
 
 
 class Worker:
     def __init__(self, root):
         self.env = {
             **os.environ,
-            "AGENTIC_OS_STATE_DIR": str(root / "state"),
-            "AGENTIC_OS_SOCKET": str(root / "worker.sock"),
-            "AGENTIC_OS_PROFILE": "compact",
+            "OMNIMCP_STATE_DIR": str(root / "state"),
+            "OMNIMCP_SOCKET": str(root / "worker.sock"),
+            "OMNIMCP_PROFILE": "compact",
         }
-        for key in ("AGENTIC_OS_READONLY", "AGENTIC_OS_DRYRUN", "AGENTIC_OS_BROWSER_COMMAND"):
+        for key in ("OMNIMCP_READONLY", "OMNIMCP_DRYRUN", "OMNIMCP_BROWSER_COMMAND"):
             self.env.pop(key, None)
         self.proc = None
         self.start()
 
     def start(self):
         self.proc = subprocess.Popen(
-            [sys.executable, "-m", "agentic_os_mcp.core.worker"],
+            [sys.executable, "-m", "omnimcp.core.worker"],
             env=self.env,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -41,11 +41,11 @@ class Worker:
         while time.monotonic() < deadline:
             if self.proc.poll() is not None:
                 pytest.fail(self.proc.communicate()[1].decode())
-            if Path(self.env["AGENTIC_OS_SOCKET"]).exists():
+            if Path(self.env["OMNIMCP_SOCKET"]).exists():
                 try:
                     with socket.socket(socket.AF_UNIX) as probe:
                         probe.settimeout(0.2)
-                        probe.connect(self.env["AGENTIC_OS_SOCKET"])
+                        probe.connect(self.env["OMNIMCP_SOCKET"])
                         probe.sendall(b'{"op":"discover","limit":1}\n')
                         if b"items" in probe.recv(16384):
                             return
@@ -66,7 +66,7 @@ class Worker:
 def worker(monkeypatch):
     with tempfile.TemporaryDirectory(prefix="aos-test-") as temp:
         value = Worker(Path(temp))
-        monkeypatch.setenv("AGENTIC_OS_SOCKET", value.env["AGENTIC_OS_SOCKET"])
+        monkeypatch.setenv("OMNIMCP_SOCKET", value.env["OMNIMCP_SOCKET"])
         yield value
         value.stop()
 
@@ -89,7 +89,7 @@ def test_mcp_wire_single_text_content_and_disconnect_keeps_job(worker):
     async def launch():
         params = StdioServerParameters(
             command=sys.executable,
-            args=["-m", "agentic_os_mcp", "--profile", "compact"],
+            args=["-m", "omnimcp", "--profile", "compact"],
             env=worker.env,
         )
         async with stdio_client(params) as (read, write), ClientSession(read, write) as session:
@@ -167,7 +167,7 @@ def test_file_write_restore_end_to_end(worker, tmp_path):
 def test_malformed_socket_requests_do_not_break_worker(worker):
     import socket
 
-    path = worker.env["AGENTIC_OS_SOCKET"]
+    path = worker.env["OMNIMCP_SOCKET"]
     for raw in (b"not-json\n", b"[]\n", b'{"op":"unknown"}\n'):
         with socket.socket(socket.AF_UNIX) as sock:
             sock.connect(path)

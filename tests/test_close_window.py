@@ -2,7 +2,7 @@
 the app), so the tool must wait for the compositor's word before the
 `then` observation, or that observation still lists the closed window."""
 
-from agentic_os_mcp import server as srv
+from omnimcp import server as srv
 
 
 class FakeStream:

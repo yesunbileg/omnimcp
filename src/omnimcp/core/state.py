@@ -1,0 +1,311 @@
+"""Private SQLite state and immutable artifacts. No command arguments in events."""
+
+from __future__ import annotations
+
+import base64
+import json
+import os
+import signal
+import sqlite3
+import threading
+import time
+import uuid
+from pathlib import Path
+
+import psutil
+
+from .registry import Fault
+
+BUDGET = 16 * 1024
+
+
+def state_dir() -> Path:
+    return Path(
+        os.environ.get("OMNIMCP_STATE_DIR")
+        or Path(os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local/state")))
+        / "omnimcp"
+    )
+
+
+def encode(value) -> str:
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":"), default=str)
+
+
+def new_id(prefix: str) -> str:
+    return prefix + uuid.uuid4().hex[:16]
+
+
+class Store:
+    def __init__(self, root: Path | None = None):
+        self.root = root or state_dir()
+        self.root.mkdir(mode=0o700, parents=True, exist_ok=True)
+        os.chmod(self.root, 0o700)
+        self.artifacts = self.root / "artifacts"
+        self.artifacts.mkdir(mode=0o700, exist_ok=True)
+        self.lock = threading.RLock()
+        self.db = sqlite3.connect(self.root / "state.sqlite3", check_same_thread=False)
+        os.chmod(self.root / "state.sqlite3", 0o600)
+        self.db.row_factory = sqlite3.Row
+        self.db.executescript("""
+            PRAGMA journal_mode=WAL;
+            CREATE TABLE IF NOT EXISTS jobs (
+                id TEXT PRIMARY KEY, action TEXT, status TEXT, created REAL,
+                updated REAL, result TEXT, progress TEXT, pid INTEGER, pgid INTEGER,
+                create_time REAL);
+            CREATE TABLE IF NOT EXISTS events (
+                cursor INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL, kind TEXT, data TEXT);
+            CREATE TABLE IF NOT EXISTS artifacts (
+                id TEXT PRIMARY KEY, path TEXT, kind TEXT, created REAL);
+            CREATE TABLE IF NOT EXISTS auth_blocks (key TEXT PRIMARY KEY, status TEXT);
+        """)
+        for name, kind in (("pid", "INTEGER"), ("pgid", "INTEGER"), ("create_time", "REAL")):
+            try:
+                self.db.execute(f"ALTER TABLE jobs ADD COLUMN {name} {kind}")
+            except sqlite3.OperationalError as exc:
+                if "duplicate column name" not in str(exc).lower():
+                    raise
+        self.db.commit()
+
+    def close(self):
+        self.db.close()
+
+    def event(self, kind: str, data: dict):
+        with self.lock:
+            self.db.execute(
+                "INSERT INTO events(ts,kind,data) VALUES(?,?,?)", (time.time(), kind, encode(data))
+            )
+            self.db.commit()
+
+    def events(self, since: int = 0, limit: int = 50, kind: str = "") -> dict:
+        with self.lock:
+            rows = self.db.execute(
+                "SELECT * FROM events WHERE cursor>? AND (?='' OR kind=?) ORDER BY cursor LIMIT ?",
+                (since, kind, kind, limit + 1),
+            ).fetchall()
+        items = [
+            {"cursor": r["cursor"], "time": r["ts"], "kind": r["kind"], **json.loads(r["data"])}
+            for r in rows[:limit]
+        ]
+        return {
+            "items": items,
+            "cursor": items[-1]["cursor"] if items else since,
+            "more": len(rows) > limit,
+        }
+
+    def create_job(self, action: str) -> str:
+        ref = new_id("j")
+        with self.lock:
+            self.db.execute(
+                "INSERT INTO jobs(id,action,status,created,updated,result,progress) "
+                "VALUES(?,?,?,?,?,?,?)",
+                (ref, action, "queued", time.time(), time.time(), None, None),
+            )
+            self.db.commit()
+        self.event("job", {"job_id": ref, "status": "queued", "action": action})
+        return ref
+
+    def update_job(self, ref: str, status: str, result=None, progress=None):
+        with self.lock:
+            self.db.execute(
+                "UPDATE jobs SET status=?, updated=?, result=COALESCE(?,result), "
+                "progress=COALESCE(?,progress) WHERE id=?",
+                (
+                    status,
+                    time.time(),
+                    encode(result) if result is not None else None,
+                    encode(progress) if progress is not None else None,
+                    ref,
+                ),
+            )
+            self.db.commit()
+        self.event("job", {"job_id": ref, "status": status})
+
+    def job(self, ref: str = "", offset: int = 0, limit: int = 30):
+        with self.lock:
+            if ref:
+                row = self.db.execute("SELECT * FROM jobs WHERE id=?", (ref,)).fetchone()
+                if not row:
+                    raise Fault("not_found", "Unknown job.")
+                rows = [row]
+            else:
+                rows = self.db.execute(
+                    "SELECT * FROM jobs ORDER BY created DESC LIMIT ? OFFSET ?", (limit, offset)
+                ).fetchall()
+        out = [
+            {
+                **dict(r),
+                "result": json.loads(r["result"]) if r["result"] else None,
+                "progress": json.loads(r["progress"]) if r["progress"] else None,
+            }
+            for r in rows
+        ]
+        return (
+            out[0] if ref else {"items": out, "next": offset + limit if len(out) == limit else None}
+        )
+
+    def recover(self):
+        with self.lock:
+            rows = self.db.execute(
+                "SELECT id FROM jobs WHERE status IN ('queued','running')"
+            ).fetchall()
+            for row in rows:
+                self.update_job(
+                    row["id"],
+                    "interrupted",
+                    {"status": "interrupted", "message": "Worker stopped; not replayed."},
+                )
+
+    def track_process(self, job_id: str, pid: int, pgid: int, create_time: float):
+        """Persist the identity of a process group on its durable job record."""
+        if not job_id:
+            return
+        with self.lock:
+            self.db.execute(
+                "UPDATE jobs SET pid=?,pgid=?,create_time=? WHERE id=?",
+                (pid, pgid, create_time, job_id),
+            )
+            self.db.commit()
+
+    def untrack_process(self, job_id: str):
+        if not job_id:
+            return
+        with self.lock:
+            self.db.execute(
+                "UPDATE jobs SET pid=NULL,pgid=NULL,create_time=NULL WHERE id=?", (job_id,)
+            )
+            self.db.commit()
+
+    def stop_process_group(self, pid: int, pgid: int, birth: float) -> dict:
+        """Terminate a verified group and individually kill its surviving snapshot."""
+        result = {"status": "unsafe_identity", "killed": 0}
+        if (pid <= 1 or pgid <= 1 or pid != pgid or pid == os.getpid()
+                or pgid == os.getpgrp()):
+            return result
+        try:
+            leader = psutil.Process(pid)
+            if leader.create_time() != birth or os.getpgid(pid) != pgid:
+                result["status"] = "pid_reused"
+                return result
+            if leader.status() == psutil.STATUS_ZOMBIE:
+                raise psutil.NoSuchProcess(pid)
+            members = []
+            for process in psutil.process_iter():
+                try:
+                    if os.getpgid(process.pid) == pgid:
+                        members.append((process.pid, process.create_time()))
+                except (psutil.NoSuchProcess, ProcessLookupError):
+                    continue
+            # Revalidate after the snapshot, immediately before the group signal.
+            leader = psutil.Process(pid)
+            if (leader.create_time() != birth or os.getpgid(pid) != pgid
+                    or leader.status() == psutil.STATUS_ZOMBIE):
+                result["status"] = "pid_reused"
+                return result
+            os.killpg(pgid, signal.SIGTERM)
+            result["status"] = "stopped"
+            deadline = time.monotonic() + 5
+            while time.monotonic() < deadline:
+                remaining = []
+                for member_pid, member_birth in members:
+                    try:
+                        member = psutil.Process(member_pid)
+                        if (member.create_time() == member_birth
+                                and member.status() != psutil.STATUS_ZOMBIE):
+                            remaining.append((member_pid, member_birth))
+                    except psutil.NoSuchProcess:
+                        pass
+                if not remaining:
+                    break
+                time.sleep(0.05)
+            for member_pid, member_birth in remaining:
+                try:
+                    member = psutil.Process(member_pid)
+                    if (member.create_time() == member_birth
+                            and member.status() != psutil.STATUS_ZOMBIE):
+                        os.kill(member_pid, signal.SIGKILL)
+                        result["killed"] += 1
+                except (psutil.NoSuchProcess, ProcessLookupError):
+                    pass
+        except (psutil.NoSuchProcess, ProcessLookupError):
+            result["status"] = "already_exited"
+            result["message"] = "group leader gone; members not verified"
+        except (psutil.AccessDenied, PermissionError, OSError):
+            result["status"] = "termination_denied"
+        return result
+
+    def recover_processes(self):
+        """Stop only saved process groups whose leader identity still matches."""
+        if self.root.stat().st_uid != os.getuid():
+            return
+        with self.lock:
+            rows = self.db.execute(
+                "SELECT id,pid,pgid,create_time FROM jobs "
+                "WHERE status IN ('queued','running') AND pid IS NOT NULL"
+            ).fetchall()
+        for job_id, pid, pgid, birth in rows:
+            result = self.stop_process_group(pid, pgid, birth)
+            self.event("process", {**result, "pid": pid, "pgid": pgid, "job_id": job_id})
+            if result["status"] != "termination_denied":
+                self.untrack_process(job_id)
+
+    def artifact_path(self, kind: str = "text") -> tuple[str, Path]:
+        ref = new_id("a")
+        path = self.artifacts / ref
+        path.touch(mode=0o600)
+        with self.lock:
+            self.db.execute(
+                "INSERT INTO artifacts VALUES(?,?,?,?)", (ref, str(path), kind, time.time())
+            )
+            self.db.commit()
+        return ref, path
+
+    def put(self, data: bytes, kind: str = "text") -> str:
+        ref, path = self.artifact_path(kind)
+        path.write_bytes(data)
+        return ref
+
+    def path(self, ref: str) -> Path:
+        with self.lock:
+            row = self.db.execute("SELECT path FROM artifacts WHERE id=?", (ref,)).fetchone()
+        if not row:
+            raise Fault("not_found", "Unknown artifact.")
+        return Path(row["path"])
+
+    def read(self, ref: str, offset: int = 0, length: int = 8192, binary: bool = False):
+        path = self.path(ref)
+        if not path.exists():
+            raise Fault("expired_artifact", "Artifact was removed or expired.")
+        with path.open("rb") as stream:
+            stream.seek(offset)
+            data = stream.read(length)
+        size = path.stat().st_size
+        return {
+            "artifact": ref,
+            "offset": offset,
+            "size": size,
+            "next": offset + len(data) if offset + len(data) < size else None,
+            "encoding": "base64" if binary else "utf-8",
+            "data": base64.b64encode(data).decode() if binary else data.decode("utf-8", "replace"),
+        }
+
+    def bound(self, result):
+        raw = encode(result).encode()
+        if len(raw) <= BUDGET:
+            return result
+        return {
+            "status": result.get("status", "ok") if isinstance(result, dict) else "ok",
+            "artifact": self.put(raw, "application/json"),
+            "bytes": len(raw),
+            "preview": raw[:2048].decode("utf-8", "replace"),
+            "complete": False,
+        }
+
+    def auth_block(self, key: str, status: str = "", clear: bool = False) -> str | None:
+        with self.lock:
+            if clear:
+                self.db.execute("DELETE FROM auth_blocks WHERE key=?", (key,))
+            elif status:
+                self.db.execute("INSERT OR REPLACE INTO auth_blocks VALUES(?,?)", (key, status))
+            self.db.commit()
+            row = self.db.execute("SELECT status FROM auth_blocks WHERE key=?", (key,)).fetchone()
+            return row[0] if row else None

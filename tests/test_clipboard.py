@@ -4,7 +4,7 @@ import subprocess
 
 import pytest
 
-from agentic_os_mcp import clipboard
+from omnimcp import clipboard
 
 
 class FakeRun:

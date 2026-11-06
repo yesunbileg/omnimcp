@@ -6,8 +6,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from agentic_os_mcp.adapters import files
-from agentic_os_mcp.core.registry import Fault
+from omnimcp.adapters import files
+from omnimcp.core.registry import Fault
 
 
 class ArtifactStore:

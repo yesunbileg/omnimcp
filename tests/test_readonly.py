@@ -4,7 +4,7 @@ import re
 
 import pytest
 
-from agentic_os_mcp import server as srv
+from omnimcp import server as srv
 
 OBSERVE = {
     "desktop", "screenshot", "zoom", "ui", "marks", "binds", "wait_for", "canvas", "codex_usage"
@@ -18,18 +18,18 @@ def _tool_names(module):
 
 @pytest.fixture
 def reloaded(monkeypatch):
-    """Reload agentic-os-mcp.server with a given AGENTIC_OS_READONLY value and always
+    """Reload omnimcp.server with a given OMNIMCP_READONLY value and always
     restore the full-tool module afterwards (other tests hold references)."""
 
     def _with_env(value: str | None):
         if value is None:
-            monkeypatch.delenv("AGENTIC_OS_READONLY", raising=False)
+            monkeypatch.delenv("OMNIMCP_READONLY", raising=False)
         else:
-            monkeypatch.setenv("AGENTIC_OS_READONLY", value)
+            monkeypatch.setenv("OMNIMCP_READONLY", value)
         return importlib.reload(srv)
 
     yield _with_env
-    monkeypatch.delenv("AGENTIC_OS_READONLY", raising=False)
+    monkeypatch.delenv("OMNIMCP_READONLY", raising=False)
     importlib.reload(srv)
 
 
@@ -65,14 +65,14 @@ def test_env_value_parsing(reloaded, value, expect_readonly):
 def test_clipboard_is_double_gated(reloaded, monkeypatch):
     # absent by default, present with the opt-in flag, never in read-only
     assert "clipboard" not in _tool_names(reloaded(None))
-    monkeypatch.setenv("AGENTIC_OS_CLIPBOARD", "1")
+    monkeypatch.setenv("OMNIMCP_CLIPBOARD", "1")
     assert "clipboard" in _tool_names(reloaded(None))
     assert _tool_names(reloaded("1")) == OBSERVE
-    monkeypatch.delenv("AGENTIC_OS_CLIPBOARD")
+    monkeypatch.delenv("OMNIMCP_CLIPBOARD")
     assert "clipboard" not in _tool_names(reloaded(None))
 
 
-# every acting tool name, as a word (so "agentic-os-mcp"/"Hyprland" do not match
+# every acting tool name, as a word (so "omnimcp"/"Hyprland" do not match
 # "hypr", and "launchers" does not match "launch")
 _ACT_REF = re.compile(
     r"\b(pointer|keyboard|click_ui|hypr|launch|sequence|clipboard|opencode)\b"
@@ -125,7 +125,7 @@ def test_every_tool_declares_a_title_and_whether_it_acts(reloaded, monkeypatch):
     # clients and directories read these hints (approval prompts, quality
     # scores); an observation tool must say it changes nothing, and an
     # acting one must not claim to be harmless
-    monkeypatch.setenv("AGENTIC_OS_CLIPBOARD", "1")
+    monkeypatch.setenv("OMNIMCP_CLIPBOARD", "1")
     tools = asyncio.run(reloaded(None).mcp.list_tools())
     assert {t.name for t in tools} == OBSERVE | ACT | {"clipboard"}
     for t in tools:
@@ -141,7 +141,7 @@ def test_every_tool_declares_a_title_and_whether_it_acts(reloaded, monkeypatch):
 
 
 def test_the_acting_tools_explain_background_mode(reloaded, monkeypatch):
-    monkeypatch.delenv("AGENTIC_OS_BACKGROUND", raising=False)
+    monkeypatch.delenv("OMNIMCP_BACKGROUND", raising=False)
     module = reloaded(None)
     tools = {t.name: t.description for t in asyncio.run(module.mcp.list_tools())}
     for name in ("click_ui", "keyboard", "pointer", "launch", "sequence", "hypr"):
@@ -150,9 +150,9 @@ def test_the_acting_tools_explain_background_mode(reloaded, monkeypatch):
 
 
 def test_the_instructions_follow_the_background_setting(reloaded, monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "1")
+    monkeypatch.setenv("OMNIMCP_BACKGROUND", "1")
     assert "GUARANTEED" in reloaded(None).mcp.instructions
-    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "0")
+    monkeypatch.setenv("OMNIMCP_BACKGROUND", "0")
     assert "off for this session" in reloaded(None).mcp.instructions
-    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "1")
+    monkeypatch.setenv("OMNIMCP_BACKGROUND", "1")
     assert "GUARANTEED" not in reloaded("1").mcp.instructions  # read-only acts on nothing

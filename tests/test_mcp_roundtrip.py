@@ -24,9 +24,9 @@ from mcp.types import ImageContent, TextContent
 pytestmark = pytest.mark.e2e
 
 # bound at import time: conftest stubs them for unit tests
-from agentic_os_mcp import hyprctl  # noqa: E402
-from agentic_os_mcp.hyprctl import batch_query as real_batch_query  # noqa: E402
-from agentic_os_mcp.hyprctl import query as real_query  # noqa: E402
+from omnimcp import hyprctl  # noqa: E402
+from omnimcp.hyprctl import batch_query as real_batch_query  # noqa: E402
+from omnimcp.hyprctl import query as real_query  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
@@ -46,8 +46,8 @@ def call(tool: str, args: dict, mode: str):
     async def go():
         params = StdioServerParameters(
             command=sys.executable,
-            args=["-m", "agentic_os_mcp"],
-            env={**os.environ, "AGENTIC_OS_SCREENSHOT_MODE": mode},
+            args=["-m", "omnimcp"],
+            env={**os.environ, "OMNIMCP_SCREENSHOT_MODE": mode},
         )
         async with stdio_client(params) as (read, write), ClientSession(read, write) as session:
             await session.initialize()
@@ -132,16 +132,16 @@ def test_ui_roundtrip_reads_a11y_tree():
     """Launch a real GTK dialog, ask the ui tool for its tree over MCP, and
     confirm it returns the named buttons with global click points inside
     the window. Exercises AT-SPI + busctl + coordinate mapping end to end."""
-    from agentic_os_mcp import hyprctl
+    from omnimcp import hyprctl
 
-    # through agentic-os-mcp's own dispatcher, not a raw shell-out: the legacy
+    # through omnimcp's own dispatcher, not a raw shell-out: the legacy
     # strings do not parse on a Lua config, and this is the only harness
     # that would catch a regression there. conftest pins the provider for
     # the unit suite, so drop that first and read the real session.
     hyprctl.forget_provider()
     hyprctl.dispatch(
         "exec",
-        "[float; center] yad --title=agentic-os-mcp-mcp-test --button=Approve:0 "
+        "[float; center] yad --title=omnimcp-mcp-test --button=Approve:0 "
         "--button=Deny:1 --width=400 --height=200",
     )
     try:

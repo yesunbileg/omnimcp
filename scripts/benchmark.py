@@ -18,11 +18,11 @@ COMPONENTS = {"schema", "discovery", "arguments", "results", "screenshots", "ret
 
 
 def local():
-    from agentic_os_mcp import compact, server
-    from agentic_os_mcp.core.engine import Engine
-    from agentic_os_mcp.core.execution import Context
-    from agentic_os_mcp.core.registry import Registry
-    from agentic_os_mcp.core.state import Store, encode
+    from omnimcp import compact, server
+    from omnimcp.core.engine import Engine
+    from omnimcp.core.execution import Context
+    from omnimcp.core.registry import Registry
+    from omnimcp.core.state import Store, encode
 
     async def schemas():
         result = {}

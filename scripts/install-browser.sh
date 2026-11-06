@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Explicit, user-local installation. No sudo, no user-browser attachment.
 set -euo pipefail
-backend_dir="${XDG_DATA_HOME:-$HOME/.local/share}/agentic-os-mcp/backends/playwright"
-config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/agentic-os-mcp"
+backend_dir="${XDG_DATA_HOME:-$HOME/.local/share}/omnimcp/backends/playwright"
+config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/omnimcp"
 if [[ -e "$config_dir/browser.json" ]]; then
     echo "Existing browser.json retained. Inspect it before installing a different backend." >&2
     exit 1
@@ -14,7 +14,7 @@ python3 - "$backend_dir" "$config_dir/browser.json" <<'PY'
 import json, os, pathlib, subprocess, sys
 backend=pathlib.Path(sys.argv[1])
 executable=subprocess.check_output(['node','-e',"console.log(require('playwright').chromium.executablePath())"],cwd=backend,text=True).strip()
-state=pathlib.Path(os.environ.get('XDG_STATE_HOME',str(pathlib.Path.home()/'.local/state')))/'agentic-os-mcp'
+state=pathlib.Path(os.environ.get('XDG_STATE_HOME',str(pathlib.Path.home()/'.local/state')))/'omnimcp'
 command=[str(backend/'node_modules/.bin/playwright-mcp'),'--headless','--executable-path',executable,
          '--user-data-dir',str(state/'browser-profile'),'--output-dir',str(state/'browser-output')]
 path=pathlib.Path(sys.argv[2])

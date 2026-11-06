@@ -1,6 +1,6 @@
 import pytest
 
-from agentic_os_mcp import hyprctl, server
+from omnimcp import hyprctl, server
 
 
 def test_wait_for_close_already_gone(monkeypatch):
@@ -47,7 +47,7 @@ def test_wait_for_workspace_already_active(monkeypatch):
 def test_hypr_focus_window_refused_out_of_scope(monkeypatch):
     # integration: hypr's guard_window(target) call site is real; focusing
     # an out-of-scope window by address is refused before dispatch
-    monkeypatch.setenv("AGENTIC_OS_CONFINE", "class:kitty")
+    monkeypatch.setenv("OMNIMCP_CONFINE", "class:kitty")
     monkeypatch.setattr(server.safety, "touch", lambda *a: None)
     firefox = {"address": "0xff", "class": "firefox", "workspace": {"id": 1},
                "at": [0, 0], "size": [10, 10], "mapped": True}

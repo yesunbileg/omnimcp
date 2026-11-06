@@ -6,7 +6,7 @@ Regression source: MCP clients may reject tool results over 1 MB, a
 
 import pytest
 
-from agentic_os_mcp import screenshot
+from omnimcp import screenshot
 
 
 class FakeGrim:

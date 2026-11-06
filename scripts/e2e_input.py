@@ -15,10 +15,10 @@ import tempfile
 import time
 from pathlib import Path
 
-from agentic_os_mcp import hyprctl
-from agentic_os_mcp import input as hinput
+from omnimcp import hyprctl
+from omnimcp import input as hinput
 
-MARKER = "agentic-os-mcp-e2e-ok"
+MARKER = "omnimcp-e2e-ok"
 
 
 def kitten_text(sock: str) -> str:
@@ -38,7 +38,7 @@ def main() -> int:
 
     restore_win = (hyprctl.query("activewindow") or {}).get("address")
     restore_cur = hyprctl.cursor_pos()
-    sock = str(Path(tempfile.gettempdir()) / f"agentic-os-mcp-e2e-{int(time.time())}.sock")
+    sock = str(Path(tempfile.gettempdir()) / f"omnimcp-e2e-{int(time.time())}.sock")
 
     # cat with mouse reporting on: every click/key becomes visible text
     inner = (
@@ -46,7 +46,7 @@ def main() -> int:
     )
     hyprctl.dispatch(
         "exec",
-        "[float; size 900 500; center] kitty --title agentic-os-mcp-e2e "
+        "[float; size 900 500; center] kitty --title omnimcp-e2e "
         f"-o allow_remote_control=yes --listen-on unix:{sock} bash -c \"{inner}\"",
     )
 
@@ -54,7 +54,7 @@ def main() -> int:
     for _ in range(40):
         time.sleep(0.15)
         win = next(
-            (c for c in hyprctl.query("clients") if c.get("title") == "agentic-os-mcp-e2e"), None
+            (c for c in hyprctl.query("clients") if c.get("title") == "omnimcp-e2e"), None
         )
         if win:
             break

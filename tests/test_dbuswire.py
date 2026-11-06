@@ -3,17 +3,19 @@ replies matched to their call, and a real bus (a private dbus-daemon, never
 the desktop's) for authentication and the calls a11y makes."""
 
 import os
+import select
 import shutil
 import socket
 import subprocess
+import tempfile
 import threading
 
 import pytest
 
-from agentic_os_mcp import a11y, dbuswire
+from omnimcp import a11y, dbuswire
 
 # bound at import time, so conftest's autouse stub does not hide it
-from agentic_os_mcp.dbuswire import connection as real_connection  # noqa: E402
+from omnimcp.dbuswire import connection as real_connection  # noqa: E402
 
 _BUS = "org.freedesktop.DBus"
 _BUS_PATH = "/org/freedesktop/DBus"
@@ -218,21 +220,43 @@ def test_bus_falls_back_to_busctl_when_the_socket_is_unreachable(monkeypatch):
 def private_bus(monkeypatch, tmp_path):
     if not shutil.which("dbus-daemon"):
         pytest.skip("needs dbus-daemon")
+    socket_dir = tempfile.TemporaryDirectory(prefix="a7dbus-", dir="/tmp")
     config = tmp_path / "bus.conf"
     config.write_text(
         "<!DOCTYPE busconfig PUBLIC \"-//freedesktop//DTD D-Bus Bus Configuration 1.0//EN\" "
         "\"http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd\">"
-        f"<busconfig><type>session</type><listen>unix:dir={tmp_path}</listen>"
+        f"<busconfig><type>session</type><listen>unix:dir={socket_dir.name}</listen>"
         "<auth>EXTERNAL</auth><policy context=\"default\"><allow send_destination=\"*\"/>"
         "<allow eavesdrop=\"true\"/><allow own=\"*\"/></policy></busconfig>")
+    stderr_path = tmp_path / "dbus-daemon.stderr"
+    stderr_file = stderr_path.open("w+")
     proc = subprocess.Popen(["dbus-daemon", "--nofork", "--print-address=1",
                              f"--config-file={config}"],
-                            stdout=subprocess.PIPE, text=True)
-    address = proc.stdout.readline().strip()
-    monkeypatch.setattr(dbuswire, "connection", real_connection)
-    yield address
-    proc.terminate()
-    proc.wait(timeout=5)
+                            stdout=subprocess.PIPE, stderr=stderr_file, text=True)
+    try:
+        ready, _, _ = select.select([proc.stdout], [], [], 5)
+        address = proc.stdout.readline().strip() if ready else ""
+        if not address:
+            if proc.poll() is None:
+                proc.kill()
+                proc.wait(timeout=5)
+            stderr_file.flush()
+            stderr = stderr_path.read_text(errors="replace")
+            pytest.fail(f"dbus-daemon failed to start: {stderr.strip() or 'no stderr output'}")
+        monkeypatch.setattr(dbuswire, "connection", real_connection)
+        yield address
+    finally:
+        if proc.poll() is None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait(timeout=5)
+        if proc.stdout is not None:
+            proc.stdout.close()
+        stderr_file.close()
+        socket_dir.cleanup()
 
 
 def test_a_real_bus_authenticates_and_answers(private_bus):

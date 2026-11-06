@@ -10,7 +10,7 @@ import pytest
 @pytest.fixture
 def codex_child(tmp_path, monkeypatch):
     """Install a fake codex executable that speaks the app-server JSONL protocol."""
-    import agentic_os_mcp.codex_usage as usage
+    import omnimcp.codex_usage as usage
 
     child = tmp_path / "codex"
     child.write_text(
@@ -159,7 +159,7 @@ def test_json_facade_is_compact_and_rejects_invalid_parameters(codex_child):
 
 
 def test_legacy_tool_is_registered_in_readonly_mode_without_structured_output(monkeypatch):
-    from agentic_os_mcp import server
+    from omnimcp import server
 
     monkeypatch.setattr(server, "READONLY", True)
     tools = asyncio.run(server.build_app().list_tools())
@@ -169,7 +169,7 @@ def test_legacy_tool_is_registered_in_readonly_mode_without_structured_output(mo
 
 
 def test_compact_registry_exposes_readonly_codex_usage(codex_child):
-    from agentic_os_mcp.adapters import build_registry
+    from omnimcp.adapters import build_registry
 
     action = build_registry().get("codex.usage")
     assert action.readonly is True
@@ -191,7 +191,7 @@ def test_stdio_discovery_and_call(codex_child):
         params = StdioServerParameters(
             command=sys.executable,
             # Real stdio transport; no compositor initialization needed for account reads.
-            args=["-c", "from agentic_os_mcp.server import build_app; build_app().run()"],
+            args=["-c", "from omnimcp.server import build_app; build_app().run()"],
             env=env,
         )
         async with stdio_client(params) as (read, write), ClientSession(read, write) as session:

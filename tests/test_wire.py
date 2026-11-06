@@ -2,7 +2,7 @@ import struct
 
 import pytest
 
-from agentic_os_mcp import wire
+from omnimcp import wire
 
 
 def test_wl_string_padding():
@@ -63,14 +63,14 @@ def test_linux_button_codes():
 
 
 def test_explicit_seat_is_refused_when_compositor_advertises_none(monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_SEAT", "agent-seat")
+    monkeypatch.setenv("OMNIMCP_SEAT", "agent-seat")
     pointer = object.__new__(wire.VirtualPointer)
     with pytest.raises(wire.WireError, match="agent-seat"):
         pointer._resolve_seat([])
 
 
 def test_explicit_seat_is_refused_when_only_another_seat_exists(monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_SEAT", "agent-seat")
+    monkeypatch.setenv("OMNIMCP_SEAT", "agent-seat")
     pointer = object.__new__(wire.VirtualPointer)
     pointer._registry = 2
     pointer._next_id = 3
@@ -90,7 +90,7 @@ def test_matching_explicit_seat_and_unset_default_still_resolve(monkeypatch):
     monkeypatch.setattr(
         pointer, "_roundtrip", lambda: pointer._seat_names.update({3: "agent-seat"})
     )
-    monkeypatch.setenv("AGENTIC_OS_SEAT", "agent-seat")
+    monkeypatch.setenv("OMNIMCP_SEAT", "agent-seat")
     assert pointer._resolve_seat([(7, "wl_seat", 9)]) == 3
-    monkeypatch.delenv("AGENTIC_OS_SEAT")
+    monkeypatch.delenv("OMNIMCP_SEAT")
     assert pointer._resolve_seat([]) == 0

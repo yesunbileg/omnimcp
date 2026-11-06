@@ -6,7 +6,7 @@ import json
 import pytest
 from mcp.types import TextContent
 
-from agentic_os_mcp import server as srv
+from omnimcp import server as srv
 
 
 def test_then_none_returns_bare_string():
@@ -107,9 +107,9 @@ def test_hypr_fuses_observation(monkeypatch):
 
 def test_hypr_targetless_fullscreen_honors_seat_guard(monkeypatch):
     # target-less fullscreen/toggle_floating act on the ACTIVE window; under
-    # AGENTIC_OS_STRICT, if the human refocused since agentic-os-mcp last acted, they
+    # OMNIMCP_STRICT, if the human refocused since omnimcp last acted, they
     # would hit the wrong window, so the seat guard must refuse
-    monkeypatch.setenv("AGENTIC_OS_STRICT", "1")
+    monkeypatch.setenv("OMNIMCP_STRICT", "1")
     monkeypatch.setattr(srv.hyprctl, "dispatch", lambda *a: None)
     monkeypatch.setattr(srv.safety, "touch", lambda *a: None)
     # seat baseline says cursor (1,1)/active 0xa; now it reads (9,9)/0xb -> moved
@@ -127,7 +127,7 @@ def test_desktop_rebaselines_the_strict_seat_guard(monkeypatch):
     # the lockout bug: once the human nudged the seat, the guard refused
     # forever, because its own advice ("re-read desktop() and retry") never
     # re-baselined anything. A desktop() read must re-arm the guard.
-    monkeypatch.setenv("AGENTIC_OS_STRICT", "1")
+    monkeypatch.setenv("OMNIMCP_STRICT", "1")
     srv.trust._seat.update(cursor=(1, 1), active="0xa")
     monkeypatch.setattr(srv.hyprctl, "cursor_pos", lambda: (9, 9))
     monkeypatch.setattr(srv.hyprctl, "query", lambda cmd: {"address": "0xb"})
@@ -141,7 +141,7 @@ def test_desktop_rebaselines_the_strict_seat_guard(monkeypatch):
 def test_capture_rebaselines_the_strict_seat_guard(monkeypatch):
     # same recovery path for screenshot/zoom: any fresh capture counts as
     # the re-observation the guard error asks for
-    monkeypatch.setenv("AGENTIC_OS_STRICT", "1")
+    monkeypatch.setenv("OMNIMCP_STRICT", "1")
     srv.trust._seat.update(cursor=(1, 1), active="0xa")
     monkeypatch.setattr(srv.hyprctl, "cursor_pos", lambda: (9, 9))
     monkeypatch.setattr(srv.hyprctl, "query", lambda cmd: {"address": "0xb"})
@@ -262,6 +262,7 @@ def test_pointer_move_is_allowed_while_locked(monkeypatch):
 
 
 def test_pointer_allow_auth_downgrades_lock_refusal_to_a_note(monkeypatch):
+    monkeypatch.setenv("OMNIMCP_ALLOW_AUTH_OVERRIDE", "1")
     monkeypatch.setattr(srv.safety, "touch", lambda *a: None)
     monkeypatch.setattr(srv.trust, "session_locked", lambda: "hyprlock")
     monkeypatch.setattr(srv.trust, "guard_pointer", lambda *a, **k: None)
@@ -276,7 +277,7 @@ def test_ui_rearms_the_strict_seat_guard(monkeypatch):
     # ui() is an observation of current state, so it must re-arm the strict
     # guard like desktop()/screenshot do, or the recommended read-then-act
     # flow stays locked after a human nudge
-    monkeypatch.setenv("AGENTIC_OS_STRICT", "1")
+    monkeypatch.setenv("OMNIMCP_STRICT", "1")
     monkeypatch.setattr(srv.safety, "touch", lambda *a: None)
     srv.trust._seat.update(cursor=(1, 1), active="0xa")
     monkeypatch.setattr(srv.hyprctl, "cursor_pos", lambda: (9, 9))
@@ -289,7 +290,7 @@ def test_ui_rearms_the_strict_seat_guard(monkeypatch):
 
 
 def test_marks_rearms_the_strict_seat_guard(monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_STRICT", "1")
+    monkeypatch.setenv("OMNIMCP_STRICT", "1")
     monkeypatch.setattr(srv.safety, "touch", lambda *a: None)
     srv.trust._seat.update(cursor=(1, 1), active="0xa")
     monkeypatch.setattr(srv.hyprctl, "cursor_pos", lambda: (9, 9))
@@ -336,8 +337,8 @@ def test_acted_ui_fallback_only_when_a_window_was_named(monkeypatch):
 def test_pointer_guard_pointer_wiring_refuses_out_of_scope(monkeypatch):
     # integration: guard_pointer is NOT stubbed here, so the real
     # confinement check runs on the windows under the click point
-    monkeypatch.setenv("AGENTIC_OS_CONFINE", "class:kitty")
-    monkeypatch.setenv("AGENTIC_OS_AUTH_GUARD", "0")
+    monkeypatch.setenv("OMNIMCP_CONFINE", "class:kitty")
+    monkeypatch.setenv("OMNIMCP_AUTH_GUARD", "0")
     monkeypatch.setattr(srv.safety, "touch", lambda *a: None)
     mon = [{"name": "m", "x": 0, "y": 0, "width": 1920, "height": 1080,
             "scale": 1.0, "activeWorkspace": {"id": 1}}]
@@ -367,6 +368,7 @@ def test_pointer_guard_pointer_wiring_refuses_auth_dialog(monkeypatch):
 
 
 def test_pointer_single_note_under_lock(monkeypatch):
+    monkeypatch.setenv("OMNIMCP_ALLOW_AUTH_OVERRIDE", "1")
     # a lock DOMINATES the layer note: only one note, not two contradictory
     # ones about where the input went
     monkeypatch.setattr(srv.safety, "touch", lambda *a: None)

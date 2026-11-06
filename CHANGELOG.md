@@ -24,5 +24,5 @@
 
 ## 0.1.0
 
-- Initial local Agentic OS MCP package for Hyprland and Wayland.
+- Initial local omnimcp package for Hyprland and Wayland.
 - Includes desktop observation, accessible UI, screenshots, input, and workspace tools.

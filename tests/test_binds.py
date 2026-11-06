@@ -1,6 +1,6 @@
 import pytest
 
-from agentic_os_mcp import hyprctl
+from omnimcp import hyprctl
 
 
 @pytest.mark.parametrize(

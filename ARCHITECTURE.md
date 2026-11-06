@@ -1,6 +1,6 @@
 # Architecture
 
-Agentic OS MCP is a Python MCP server for the local Linux desktop. The MCP
+omnimcp is a Python MCP server for the local Linux desktop. The MCP
 server, CLI verbs, and Python modules call the same validated tool functions.
 
 ## Main modules

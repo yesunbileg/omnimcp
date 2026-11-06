@@ -5,7 +5,7 @@ import subprocess
 
 import pytest
 
-from agentic_os_mcp import a11y
+from omnimcp import a11y
 
 # --- busctl JSON parsing (the shapes are easy to get subtly wrong) ---
 
@@ -750,7 +750,7 @@ def test_a_field_record_says_it_is_a_field():
 
 def test_the_effect_calls_refuse_in_a_dry_run(monkeypatch):
     # the second barrier, at the effect boundary, like input and dispatch
-    monkeypatch.setenv("AGENTIC_OS_DRYRUN", "1")
+    monkeypatch.setenv("OMNIMCP_DRYRUN", "1")
     entry = ("app", "/entry")
     bus = FakeBus({entry: {"role": 79, "name": "", "children": [], "text": "", "caret": 0}})
     for call in (lambda: a11y.do_action(bus, *entry),

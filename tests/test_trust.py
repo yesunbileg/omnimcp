@@ -3,17 +3,17 @@ ownership marking. Each is env-gated and fails toward less action."""
 
 import pytest
 
-from agentic_os_mcp import trust
+from omnimcp import trust
 
 # bound at import time, so conftest's autouse stub does not hide it
-from agentic_os_mcp.trust import _compositor_locked as real_compositor_locked
-from agentic_os_mcp.trust import session_locked as real_session_locked
+from omnimcp.trust import _compositor_locked as real_compositor_locked
+from omnimcp.trust import session_locked as real_session_locked
 
 
 @pytest.fixture(autouse=True)
 def clean_env(monkeypatch):
     for var in (
-        "AGENTIC_OS_CONFINE", "AGENTIC_OS_AUTH_GUARD", "AGENTIC_OS_STRICT", "AGENTIC_OS_MARK"
+        "OMNIMCP_CONFINE", "OMNIMCP_AUTH_GUARD", "OMNIMCP_STRICT", "OMNIMCP_MARK"
     ):
         monkeypatch.delenv(var, raising=False)
     trust._owned.clear()
@@ -36,7 +36,7 @@ def test_no_confine_allows_everything(monkeypatch):
 
 
 def test_confine_launched_only_owned(monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_CONFINE", "launched")
+    monkeypatch.setenv("OMNIMCP_CONFINE", "launched")
     trust.note_launched("0xowned")
     trust.guard_client(client(addr="0xowned"))  # ok
     with pytest.raises(trust.TrustError, match="confinement scope"):
@@ -44,21 +44,21 @@ def test_confine_launched_only_owned(monkeypatch):
 
 
 def test_confine_by_class(monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_CONFINE", "class:firefox,kitty")
+    monkeypatch.setenv("OMNIMCP_CONFINE", "class:firefox,kitty")
     trust.guard_client(client(cls="kitty"))
     with pytest.raises(trust.TrustError):
         trust.guard_client(client(cls="Signal"))
 
 
 def test_confine_by_workspace(monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_CONFINE", "workspace:3,special:notes")
+    monkeypatch.setenv("OMNIMCP_CONFINE", "workspace:3,special:notes")
     trust.guard_client(client(ws=3))
     with pytest.raises(trust.TrustError):
         trust.guard_client(client(ws=1))
 
 
 def test_malformed_confine_fails_closed(monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_CONFINE", "everything")
+    monkeypatch.setenv("OMNIMCP_CONFINE", "everything")
     with pytest.raises(trust.TrustError, match="malformed"):
         trust.guard_client(client())
 
@@ -72,8 +72,8 @@ MON = [{"name": "m", "x": 0, "y": 0, "width": 1920, "height": 1080,
 
 
 def test_guard_pointer_refuses_over_out_of_scope_window(monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_CONFINE", "class:kitty")
-    monkeypatch.setenv("AGENTIC_OS_AUTH_GUARD", "0")
+    monkeypatch.setenv("OMNIMCP_CONFINE", "class:kitty")
+    monkeypatch.setenv("OMNIMCP_AUTH_GUARD", "0")
     windows = [
         client(addr="0xk", cls="kitty"),
         {"address": "0xbank", "class": "firefox", "at": [50, 50], "size": [200, 200],
@@ -87,8 +87,8 @@ def test_guard_pointer_refuses_over_out_of_scope_window(monkeypatch):
 
 
 def test_guard_pointer_over_empty_space_allowed(monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_CONFINE", "class:kitty")
-    monkeypatch.setenv("AGENTIC_OS_AUTH_GUARD", "0")
+    monkeypatch.setenv("OMNIMCP_CONFINE", "class:kitty")
+    monkeypatch.setenv("OMNIMCP_AUTH_GUARD", "0")
     _batch(monkeypatch, MON, [])
     trust.guard_pointer(500, 500)  # no window there, nothing confined is touched
 
@@ -97,8 +97,8 @@ def test_guard_pointer_includes_special_workspace(monkeypatch):
     # a scratchpad password manager pulled up as a special workspace is
     # visibly on top; its (negative) ws id is not activeWorkspace, so the
     # coverage check must add specialWorkspace to the visible set
-    monkeypatch.setenv("AGENTIC_OS_CONFINE", "class:kitty")
-    monkeypatch.setenv("AGENTIC_OS_AUTH_GUARD", "0")
+    monkeypatch.setenv("OMNIMCP_CONFINE", "class:kitty")
+    monkeypatch.setenv("OMNIMCP_AUTH_GUARD", "0")
     monitors = [{"name": "m", "x": 0, "y": 0, "width": 1920, "height": 1080, "scale": 1.0,
                  "activeWorkspace": {"id": 1}, "specialWorkspace": {"id": -99}}]
     windows = [
@@ -113,8 +113,8 @@ def test_guard_pointer_includes_special_workspace(monkeypatch):
 def test_guard_pointer_includes_special_workspace_without_ids(monkeypatch):
     # Hyprland 0.57 drops "id" from special workspaces: the pulled-up
     # scratchpad is known only by name and must still count as on screen
-    monkeypatch.setenv("AGENTIC_OS_CONFINE", "class:kitty")
-    monkeypatch.setenv("AGENTIC_OS_AUTH_GUARD", "0")
+    monkeypatch.setenv("OMNIMCP_CONFINE", "class:kitty")
+    monkeypatch.setenv("OMNIMCP_AUTH_GUARD", "0")
     monitors = [{"name": "m", "x": 0, "y": 0, "width": 1920, "height": 1080, "scale": 1.0,
                  "activeWorkspace": {"id": 1, "type": "normal", "name": "1"},
                  "specialWorkspace": {"type": "special", "name": "special:vault"}}]
@@ -130,8 +130,8 @@ def test_guard_pointer_includes_special_workspace_without_ids(monkeypatch):
 def test_guard_pointer_coordinate_less_uses_cursor(monkeypatch):
     # a click with no x/y lands at the current cursor; the guard must
     # resolve and check THAT point, not skip
-    monkeypatch.setenv("AGENTIC_OS_CONFINE", "class:kitty")
-    monkeypatch.setenv("AGENTIC_OS_AUTH_GUARD", "0")
+    monkeypatch.setenv("OMNIMCP_CONFINE", "class:kitty")
+    monkeypatch.setenv("OMNIMCP_AUTH_GUARD", "0")
     windows = [{"address": "0xother", "class": "firefox", "at": [0, 0], "size": [100, 100],
                 "workspace": {"id": 1}, "mapped": True}]
     _batch(monkeypatch, MON, windows)
@@ -144,8 +144,8 @@ def test_guard_pointer_coordinate_less_fails_closed_on_cursor_error(monkeypatch)
     # the coordinate-less path resolves the cursor; if that read fails while
     # a guard is active, refuse (the wire delivers the click even when
     # hyprctl is down), never fire unchecked
-    monkeypatch.setenv("AGENTIC_OS_CONFINE", "class:kitty")
-    monkeypatch.setenv("AGENTIC_OS_AUTH_GUARD", "0")
+    monkeypatch.setenv("OMNIMCP_CONFINE", "class:kitty")
+    monkeypatch.setenv("OMNIMCP_AUTH_GUARD", "0")
 
     def boom():
         raise trust.hyprctl.HyprctlError("cursorpos timed out")
@@ -167,7 +167,7 @@ def test_guard_pointer_auth_over_polkit(monkeypatch):
 
 
 def test_guard_pointer_no_query_when_all_off(monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_AUTH_GUARD", "0")
+    monkeypatch.setenv("OMNIMCP_AUTH_GUARD", "0")
 
     def boom(cmds):
         raise AssertionError("must not query when no guard is active")
@@ -193,7 +193,7 @@ def test_allow_auth_overrides():
 
 
 def test_auth_guard_can_be_disabled(monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_AUTH_GUARD", "0")
+    monkeypatch.setenv("OMNIMCP_AUTH_GUARD", "0")
     trust.guard_auth_client(client(cls="hyprpolkitagent"), allow_auth=False)
 
 
@@ -206,7 +206,7 @@ def test_password_field_check_is_opt_in(monkeypatch):
 
 
 def test_password_field_blocks_in_strict_mode(monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_AUTH_GUARD", "strict")
+    monkeypatch.setenv("OMNIMCP_AUTH_GUARD", "strict")
     monkeypatch.setattr(trust.a11y, "connect", lambda: "bus")
     monkeypatch.setattr(trust.a11y, "app_for_pid", lambda *a: ("svc", "/p"))
     monkeypatch.setattr(trust.a11y, "focused_role", lambda *a: trust.a11y.PASSWORD_ROLE)
@@ -215,7 +215,7 @@ def test_password_field_blocks_in_strict_mode(monkeypatch):
 
 
 def test_password_field_fails_open_on_unreadable_tree(monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_AUTH_GUARD", "strict")
+    monkeypatch.setenv("OMNIMCP_AUTH_GUARD", "strict")
 
     def boom():
         raise trust.a11y.A11yError("no bus")
@@ -236,7 +236,7 @@ def test_seat_guard_off_by_default(monkeypatch):
 
 
 def test_seat_guard_detects_drift(monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_STRICT", "1")
+    monkeypatch.setenv("OMNIMCP_STRICT", "1")
     state = {"cursor": (10, 10), "active": "0xa"}
     monkeypatch.setattr(trust.hyprctl, "cursor_pos", lambda: state["cursor"])
     monkeypatch.setattr(trust.hyprctl, "query", lambda cmd: {"address": state["active"]})
@@ -251,7 +251,7 @@ def test_seat_guard_fails_closed_when_seat_unreadable(monkeypatch):
     # the module invariant is fail-toward-less-action: a seat that cannot
     # be read cannot be proven still ours, so strict mode must refuse,
     # not silently allow the action through
-    monkeypatch.setenv("AGENTIC_OS_STRICT", "1")
+    monkeypatch.setenv("OMNIMCP_STRICT", "1")
     monkeypatch.setattr(trust.hyprctl, "cursor_pos", lambda: (10, 10))
     monkeypatch.setattr(trust.hyprctl, "query", lambda cmd: {"address": "0xa"})
     trust.remember_seat()
@@ -268,27 +268,27 @@ def test_seat_guard_fails_closed_when_seat_unreadable(monkeypatch):
 
 
 def test_init_marking_installs_border_rule(monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_MARK", "1")
+    monkeypatch.setenv("OMNIMCP_MARK", "1")
     rules = []
     monkeypatch.setattr(trust.hyprctl, "keyword", lambda kw, rule: rules.append((kw, rule)))
     trust.init_marking()
-    assert rules == [("windowrule", "border_color rgb(ff5555), tag agentic-os-mcp-owned")]
+    assert rules == [("windowrule", "border_color rgb(ff5555), tag omnimcp-owned")]
 
 
 def test_init_marking_falls_back_to_legacy_matcher(monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_MARK", "1")
+    monkeypatch.setenv("OMNIMCP_MARK", "1")
     tried = []
 
     def keyword(kw, rule):
         tried.append(rule)
-        if "tag agentic-os-mcp-owned" in rule:  # modern form rejected on older Hyprland
+        if "tag omnimcp-owned" in rule:  # modern form rejected on older Hyprland
             raise trust.hyprctl.HyprctlError("invalid")
 
     monkeypatch.setattr(trust.hyprctl, "keyword", keyword)
     trust.init_marking()
     assert tried == [
-        "border_color rgb(ff5555), tag agentic-os-mcp-owned",
-        "border_color rgb(ff5555), tag:agentic-os-mcp-owned",
+        "border_color rgb(ff5555), tag omnimcp-owned",
+        "border_color rgb(ff5555), tag:omnimcp-owned",
     ]
 
 
@@ -300,14 +300,14 @@ def test_init_marking_noop_without_flag(monkeypatch):
 
 
 def test_note_launched_tags_and_notifies_when_marking(monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_MARK", "1")
+    monkeypatch.setenv("OMNIMCP_MARK", "1")
     dispatched, notes = [], []
     monkeypatch.setattr(trust.hyprctl, "dispatch", lambda *a: dispatched.append(a))
     monkeypatch.setattr(trust.hyprctl, "notify", lambda msg, **k: notes.append(msg))
     trust.note_launched("0xnew", "firefox")
     assert "0xnew" in trust.owned()
-    assert ("tagwindow", "+agentic-os-mcp-owned", "address:0xnew") in dispatched
-    assert notes == ["agentic-os-mcp opened firefox"]  # visible presence toast
+    assert ("tagwindow", "+omnimcp-owned", "address:0xnew") in dispatched
+    assert notes == ["omnimcp opened firefox"]  # visible presence toast
 
 
 def test_note_launched_no_tag_or_notify_without_marking(monkeypatch):
@@ -320,7 +320,7 @@ def test_note_launched_no_tag_or_notify_without_marking(monkeypatch):
 
 
 def test_notify_capture_rate_limited(monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_MARK", "1")
+    monkeypatch.setenv("OMNIMCP_MARK", "1")
     notes = []
     monkeypatch.setattr(trust.hyprctl, "notify", lambda msg, **k: notes.append(msg))
     ticks = iter([100.0, 100.5, 200.0])
@@ -424,7 +424,7 @@ def test_guard_keyboard_layer_window_target_refused_under_lock_despite_allow_aut
 def test_guard_keyboard_layer_refuses_launcher_under_confinement(monkeypatch):
     # a launcher runs whatever is typed into it and is not a window, so no
     # scope can contain it: arbitrary out-of-scope execution is refused
-    monkeypatch.setenv("AGENTIC_OS_CONFINE", "class:kitty")
+    monkeypatch.setenv("OMNIMCP_CONFINE", "class:kitty")
     monkeypatch.setattr(trust.hyprctl, "query", lambda cmd: LAYERS_RAW)
     with pytest.raises(trust.TrustError, match="cannot be confined"):
         trust.guard_keyboard_layer(False, False)
@@ -432,7 +432,7 @@ def test_guard_keyboard_layer_refuses_launcher_under_confinement(monkeypatch):
 
 def test_guard_keyboard_layer_confinement_outranks_allow_auth(monkeypatch):
     # allow_auth overrides the auth guard, never the confinement scope
-    monkeypatch.setenv("AGENTIC_OS_CONFINE", "class:kitty")
+    monkeypatch.setenv("OMNIMCP_CONFINE", "class:kitty")
     monkeypatch.setattr(trust.hyprctl, "query", lambda cmd: LOCK_RAW)
     with pytest.raises(trust.TrustError, match="cannot be confined"):
         trust.guard_keyboard_layer(False, True)
@@ -477,7 +477,7 @@ def test_guard_keyboard_layer_refuses_when_layers_unreadable(monkeypatch):
 def test_guard_keyboard_layer_unreadable_layers_pass_with_consent_or_guard_off(monkeypatch):
     _layers_down(monkeypatch)
     assert trust.guard_keyboard_layer(False, True) == ""  # a human intends it
-    monkeypatch.setenv("AGENTIC_OS_AUTH_GUARD", "0")
+    monkeypatch.setenv("OMNIMCP_AUTH_GUARD", "0")
     assert trust.guard_keyboard_layer(True, False) == ""
 
 
@@ -588,7 +588,7 @@ def test_guard_session_lock_window_target_refuses_despite_allow_auth(monkeypatch
 
 def test_guard_session_lock_refuses_under_confinement_despite_allow_auth(monkeypatch):
     # the credential prompt is not a confinable window
-    monkeypatch.setenv("AGENTIC_OS_CONFINE", "class:kitty")
+    monkeypatch.setenv("OMNIMCP_CONFINE", "class:kitty")
     monkeypatch.setattr(trust, "session_locked", lambda: "hyprlock")
     with pytest.raises(trust.TrustError, match="confinable window"):
         trust.guard_session_lock(window_given=False, allow_auth=True)
@@ -773,8 +773,8 @@ def test_guard_covering_layer_refusal_carries_the_dismiss_advice(monkeypatch):
 def test_windows_under_ignores_unmapped_clients(monkeypatch):
     # an unmapped (hidden/minimized) window is not really under the cursor;
     # counting it would make confinement refuse a click over empty space
-    monkeypatch.setenv("AGENTIC_OS_CONFINE", "class:kitty")
-    monkeypatch.setenv("AGENTIC_OS_AUTH_GUARD", "0")
+    monkeypatch.setenv("OMNIMCP_CONFINE", "class:kitty")
+    monkeypatch.setenv("OMNIMCP_AUTH_GUARD", "0")
     windows = [
         {"address": "0xhidden", "class": "firefox", "at": [0, 0], "size": [100, 100],
          "workspace": {"id": 1}, "mapped": False},
@@ -808,7 +808,7 @@ def test_guard_keyboard_layer_refusals_carry_dismiss_advice(monkeypatch):
     with pytest.raises(trust.TrustError) as exc1:
         trust.guard_keyboard_layer(True, False)
     assert trust._dismiss_advice("launcher") in str(exc1.value)
-    monkeypatch.setenv("AGENTIC_OS_CONFINE", "class:kitty")
+    monkeypatch.setenv("OMNIMCP_CONFINE", "class:kitty")
     with pytest.raises(trust.TrustError) as exc2:
         trust.guard_keyboard_layer(False, False)
     assert trust._dismiss_advice("launcher") in str(exc2.value)
@@ -824,7 +824,7 @@ def test_level_rank_orders_the_full_named_scale(monkeypatch):
 
 
 def test_init_marking_uses_the_lua_rule_on_a_lua_config(monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_MARK", "1")
+    monkeypatch.setenv("OMNIMCP_MARK", "1")
     monkeypatch.setattr(trust.hyprctl, "_provider", trust.hyprctl.LUA)
     evaluated = []
     monkeypatch.setattr(trust.hyprctl, "_run", lambda *a: evaluated.append(a) or "ok")
@@ -832,8 +832,8 @@ def test_init_marking_uses_the_lua_rule_on_a_lua_config(monkeypatch):
     assert evaluated == [
         (
             "eval",
-            'hl.window_rule({ name = "agentic-os-mcp-owned", '
-            'match = { tag = "agentic-os-mcp-owned" }, '
+            'hl.window_rule({ name = "omnimcp-owned", '
+            'match = { tag = "omnimcp-owned" }, '
             'border_color = "rgb(ff5555)" })',
         )
     ]
@@ -845,7 +845,7 @@ def test_init_marking_warns_instead_of_dying_when_the_rule_will_not_install(
     # marking makes the agent legible; it is not a containment boundary, so
     # losing it must not take the desktop's guards down with it. But a
     # visibility layer that quietly is not running is worse than none.
-    monkeypatch.setenv("AGENTIC_OS_MARK", "1")
+    monkeypatch.setenv("OMNIMCP_MARK", "1")
 
     def boom(*_a, **_k):
         raise trust.hyprctl.HyprctlError("keyword can't work with non-legacy parsers")
@@ -853,8 +853,8 @@ def test_init_marking_warns_instead_of_dying_when_the_rule_will_not_install(
     monkeypatch.setattr(trust.hyprctl, "border_rule", boom)
     trust.init_marking()  # returns, does not raise
     err = capsys.readouterr().err
-    assert "AGENTIC_OS_MARK is set but the border rule did not install" in err
-    assert "agentic-os-mcp-owned" in err  # the config-file workaround still works
+    assert "OMNIMCP_MARK is set but the border rule did not install" in err
+    assert "omnimcp-owned" in err  # the config-file workaround still works
 
 
 # --- Omarchy 4's Quickshell surfaces, and polkit prompts drawn as layers ------
@@ -916,7 +916,7 @@ def test_polkit_layer_outranks_a_launcher_for_the_keyboard(monkeypatch, order):
 
 
 def test_pointer_refuses_to_click_a_polkit_layer(monkeypatch):
-    monkeypatch.delenv("AGENTIC_OS_CONFINE", raising=False)
+    monkeypatch.delenv("OMNIMCP_CONFINE", raising=False)
     monkeypatch.setattr(trust.hyprctl, "query", lambda cmd: POLKIT_RAW)
     _batch(monkeypatch, MON, [])
     with pytest.raises(trust.TrustError, match="authentication"):
@@ -938,7 +938,7 @@ def test_pointer_refuses_a_polkit_prompt_under_an_on_screen_keyboard(monkeypatch
         {"namespace": "omarchy-polkit", "x": 0, "y": 0, "w": 1920, "h": 1080},
         {"namespace": "wvkbd-mobintl", "x": 0, "y": 700, "w": 1920, "h": 380},
     ]}}}
-    monkeypatch.delenv("AGENTIC_OS_CONFINE", raising=False)
+    monkeypatch.delenv("OMNIMCP_CONFINE", raising=False)
     monkeypatch.setattr(trust.hyprctl, "query", lambda cmd: raw)
     _batch(monkeypatch, MON, [])
     with pytest.raises(trust.TrustError, match="authentication"):
@@ -949,14 +949,14 @@ def test_pointer_refuses_a_polkit_prompt_under_an_on_screen_keyboard(monkeypatch
 def test_pointer_still_clicks_into_launchers_and_on_screen_keyboards(monkeypatch, namespace):
     raw = {"DP-1": {"levels": {"3": [
         {"namespace": namespace, "x": 0, "y": 0, "w": 1920, "h": 1080}]}}}
-    monkeypatch.delenv("AGENTIC_OS_CONFINE", raising=False)
+    monkeypatch.delenv("OMNIMCP_CONFINE", raising=False)
     monkeypatch.setattr(trust.hyprctl, "query", lambda cmd: raw)
     _batch(monkeypatch, MON, [])
     trust.guard_pointer(500, 500)  # driving the layer itself is legitimate
 
 
 def test_pointer_refuses_when_layers_unreadable_under_the_auth_guard(monkeypatch):
-    monkeypatch.delenv("AGENTIC_OS_CONFINE", raising=False)
+    monkeypatch.delenv("OMNIMCP_CONFINE", raising=False)
     _layers_down(monkeypatch)
     _batch(monkeypatch, MON, [])
     with pytest.raises(trust.TrustError, match="cannot read the layer list"):
@@ -968,13 +968,13 @@ def test_click_ui_refuses_when_layers_unreadable_under_the_auth_guard(monkeypatc
     _layers_down(monkeypatch)
     with pytest.raises(trust.TrustError, match="cannot read the layer list"):
         trust.guard_covering_layer(500, 500)
-    monkeypatch.setenv("AGENTIC_OS_AUTH_GUARD", "0")
+    monkeypatch.setenv("OMNIMCP_AUTH_GUARD", "0")
     trust.guard_covering_layer(500, 500)  # best-effort again
 
 
 def test_auth_guard_off_lets_typing_reach_a_polkit_layer_with_a_note(monkeypatch):
-    # README: AGENTIC_OS_AUTH_GUARD=0 disables the guard, for keys as for clicks
-    monkeypatch.setenv("AGENTIC_OS_AUTH_GUARD", "0")
+    # README: OMNIMCP_AUTH_GUARD=0 disables the guard, for keys as for clicks
+    monkeypatch.setenv("OMNIMCP_AUTH_GUARD", "0")
     monkeypatch.setattr(trust.hyprctl, "query", lambda cmd: POLKIT_RAW)
     assert "omarchy-polkit" in trust.guard_keyboard_layer(False, False)
 
@@ -1009,7 +1009,7 @@ def test_session_locked_survives_a_non_utf8_process_name(monkeypatch, tmp_path):
 def test_pointer_refuses_a_point_off_every_monitor_under_a_guard(monkeypatch):
     # Hyprland moves the cursor to the nearest monitor edge, where a window
     # the guard never checked would take the click
-    monkeypatch.setenv("AGENTIC_OS_CONFINE", "class:kitty")
+    monkeypatch.setenv("OMNIMCP_CONFINE", "class:kitty")
     full = {"address": "0xf", "class": "firefox", "at": [0, 0], "size": [1920, 1080],
             "workspace": {"id": 1}, "mapped": True}
     _batch(monkeypatch, MON, [full])
@@ -1026,7 +1026,7 @@ def test_click_ui_allow_auth_lifts_the_unreadable_layer_refusal(monkeypatch):
 def test_hyprland_dialogs_are_named_for_what_they_are(monkeypatch):
     # permission prompt, app-not-responding and safe mode share the class
     # and an empty title, so all three need allow_auth, under an honest name
-    monkeypatch.delenv("AGENTIC_OS_CONFINE", raising=False)
+    monkeypatch.delenv("OMNIMCP_CONFINE", raising=False)
     dialog = client(addr="0xh", cls="hyprland-dialog")
     _batch(monkeypatch, MON, [dialog])
     monkeypatch.setattr(trust.hyprctl, "query", lambda cmd: {})
@@ -1038,9 +1038,9 @@ def test_hyprland_dialogs_are_named_for_what_they_are(monkeypatch):
 
 
 def test_the_guarantee_confines_to_the_agent_workspaces(monkeypatch):
-    monkeypatch.delenv("AGENTIC_OS_CONFINE", raising=False)
-    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "1")
-    monkeypatch.setenv("AGENTIC_OS_AGENT_WORKSPACES", "99-98")
+    monkeypatch.delenv("OMNIMCP_CONFINE", raising=False)
+    monkeypatch.setenv("OMNIMCP_BACKGROUND", "1")
+    monkeypatch.setenv("OMNIMCP_AGENT_WORKSPACES", "99-98")
     trust.guard_client(client(addr="0xa", ws=98))
     with pytest.raises(trust.TrustError, match="agent's workspaces"):
         trust.guard_client(client(addr="0xb", ws=5))
@@ -1048,9 +1048,9 @@ def test_the_guarantee_confines_to_the_agent_workspaces(monkeypatch):
 
 def test_under_the_guarantee_an_explicit_confinement_narrows_never_widens(monkeypatch):
     # both must hold: a kitty on the human's workspace stays out of reach
-    monkeypatch.setenv("AGENTIC_OS_CONFINE", "class:kitty")
-    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "1")
-    monkeypatch.setenv("AGENTIC_OS_AGENT_WORKSPACES", "99-98")
+    monkeypatch.setenv("OMNIMCP_CONFINE", "class:kitty")
+    monkeypatch.setenv("OMNIMCP_BACKGROUND", "1")
+    monkeypatch.setenv("OMNIMCP_AGENT_WORKSPACES", "99-98")
     trust.guard_client(client(addr="0xa", cls="kitty", ws=99))
     with pytest.raises(trust.TrustError, match="agent's workspaces"):
         trust.guard_client(client(addr="0xb", cls="kitty", ws=5))

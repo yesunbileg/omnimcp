@@ -85,7 +85,7 @@ async def main(args):
             await asyncio.sleep(0.05)
         assert done["status"] == "succeeded", done
         checks["command_job"] = "passed"
-        name = "agentic-os-smoke-" + uuid.uuid4().hex[:8] + ".service"
+        name = "omnimcp-smoke-" + uuid.uuid4().hex[:8] + ".service"
         subprocess.run(
             ["systemd-run", "--user", "--unit", name, "/usr/bin/sleep", "60"],
             check=True,
@@ -132,7 +132,7 @@ async def main(args):
                 assert capture.get("status") == "ok", capture
                 checks["screenshot_preserves_focus"] = "passed"
                 if shutil.which("kitty"):
-                    unique = "agentic-os-smoke-" + uuid.uuid4().hex[:8]
+                    unique = "omnimcp-smoke-" + uuid.uuid4().hex[:8]
                     launched = await act(
                         "desktop.launch",
                         {
@@ -162,7 +162,7 @@ async def main(args):
             assert result["status"] == "ok", result
             snapshot = await call("observe", action="browser.snapshot")
             assert snapshot["status"] == "ok", snapshot
-            assert "Agentic OS Fixture" in json.dumps(snapshot), snapshot
+            assert "omnimcp Fixture" in json.dumps(snapshot), snapshot
             checks["browser_navigation_snapshot"] = "passed"
             text = "\n".join(c.get("text", "") for c in snapshot["content"])
             field = re.search(r'textbox "Name" \[ref=([^\]]+)\]', text)
@@ -188,7 +188,7 @@ async def main(args):
 
 @contextlib.contextmanager
 def fixture_server():
-    page = b"""<!doctype html><title>Agentic OS Fixture</title>
+    page = b"""<!doctype html><title>omnimcp Fixture</title>
     <label>Name <input id='name'></label>
     <button onclick="document.getElementById('result').textContent=
     'Saved '+document.getElementById('name').value">Save</button>
@@ -217,7 +217,7 @@ def fixture_server():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--command", default=str(Path.home() / ".local/bin/agentic-os-mcp"))
+    parser.add_argument("--command", default=str(Path.home() / ".local/bin/omnimcp"))
     parser.add_argument("--desktop", action="store_true")
     parser.add_argument("--browser", action="store_true")
     parser.add_argument("--browser-url", default="")

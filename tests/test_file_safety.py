@@ -7,10 +7,32 @@ from pathlib import Path
 
 import pytest
 
-from agentic_os_mcp.adapters import files
-from agentic_os_mcp.core.execution import Context
-from agentic_os_mcp.core.registry import Fault
-from agentic_os_mcp.core.state import Store
+from omnimcp.adapters import files
+from omnimcp.core.execution import Context
+from omnimcp.core.registry import Fault
+from omnimcp.core.state import Store
+
+
+def test_read_rejects_fifo_without_waiting_for_a_writer(tmp_path):
+    fifo = tmp_path / "pipe"
+    os.mkfifo(fifo)
+    code = (
+        "from omnimcp.adapters.files import read\n"
+        "from omnimcp.core.registry import Fault\n"
+        "import sys\n"
+        "try:\n"
+        "    read(None, sys.argv[1])\n"
+        "except Fault as exc:\n"
+        "    print(exc.code)\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", code, str(fifo)],
+        capture_output=True,
+        text=True,
+        timeout=10,
+        check=True,
+    )
+    assert result.stdout.strip() == "unsupported"
 
 
 def test_current_rejects_fifo_without_waiting_for_a_writer(tmp_path):
@@ -21,8 +43,8 @@ def test_current_rejects_fifo_without_waiting_for_a_writer(tmp_path):
             sys.executable,
             "-c",
             "from pathlib import Path; import sys; "
-            "from agentic_os_mcp.adapters.files import current; "
-            "from agentic_os_mcp.core.registry import Fault\n"
+            "from omnimcp.adapters.files import current; "
+            "from omnimcp.core.registry import Fault\n"
             "try: current(Path(sys.argv[1]))\n"
             "except Fault as exc: print(exc.code)\n",
             str(fifo),

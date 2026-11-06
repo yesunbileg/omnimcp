@@ -9,7 +9,7 @@ test that wants the interesting state opts in explicitly.
 
 import pytest
 
-from agentic_os_mcp import a11y, dbuswire, hyprctl, journal, server, trust
+from omnimcp import a11y, dbuswire, hyprctl, journal, server, trust
 
 
 @pytest.fixture(autouse=True)
@@ -17,13 +17,13 @@ def no_ambient_journal(monkeypatch):
     """No recording, no dry run, unless a test asks for it.
 
     Same rule as below, pointed at the developer's environment rather
-    than the machine's: a suite run with AGENTIC_OS_JOURNAL exported would
+    than the machine's: a suite run with OMNIMCP_JOURNAL exported would
     append hundreds of fabricated entries to a real audit trail, and one
-    with AGENTIC_OS_DRYRUN set would pass while every acting tool did
+    with OMNIMCP_DRYRUN set would pass while every acting tool did
     nothing.
     """
-    for var in ("AGENTIC_OS_JOURNAL", "AGENTIC_OS_JOURNAL_TEXT", "AGENTIC_OS_DRYRUN",
-                "AGENTIC_OS_KANBAN_FILE"):
+    for var in ("OMNIMCP_JOURNAL", "OMNIMCP_JOURNAL_TEXT", "OMNIMCP_DRYRUN",
+                "OMNIMCP_KANBAN_FILE"):
         monkeypatch.delenv(var, raising=False)
     journal._broken = False
     # replay marks its records `by: replay` and the CLI verbs stamp theirs
@@ -72,17 +72,17 @@ def compositor_lock_unknown(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def foreground_by_default(monkeypatch):
-    """AGENTIC_OS_BACKGROUND=0 (0.12 behaviour) unless a test says otherwise.
+    """OMNIMCP_BACKGROUND=0 (0.12 behaviour) unless a test says otherwise.
 
     The tests written before background mode assert foreground behaviour;
     background tests unset it to get the automatic default.
     """
-    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "0")
+    monkeypatch.setenv("OMNIMCP_BACKGROUND", "0")
     # and the documented defaults for the agent's workspaces, whatever the
     # developer's shell exports
-    monkeypatch.delenv("AGENTIC_OS_AGENT_WORKSPACES", raising=False)
-    monkeypatch.delenv("AGENTIC_OS_AGENT_FILL", raising=False)
-    monkeypatch.delenv("AGENTIC_OS_CONFINE", raising=False)
+    monkeypatch.delenv("OMNIMCP_AGENT_WORKSPACES", raising=False)
+    monkeypatch.delenv("OMNIMCP_AGENT_FILL", raising=False)
+    monkeypatch.delenv("OMNIMCP_CONFINE", raising=False)
 
 
 @pytest.fixture(autouse=True)
@@ -117,3 +117,40 @@ def no_live_accessibility(monkeypatch):
 
     monkeypatch.setattr(a11y, "connect", no_bus)
     monkeypatch.setattr(dbuswire, "connection", no_socket)
+
+
+@pytest.fixture
+def no_real_desktop(monkeypatch, no_ambient_journal, no_live_batch_query, no_live_accessibility):
+    """Fail loudly at every desktop/process boundary in isolated in-process tests."""
+    import os
+    import socket
+    import subprocess
+
+    from omnimcp import input as hinput
+    from omnimcp import wire
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("real desktop or process boundary reached", pytrace=False)
+
+    for name in ("HYPRLAND_INSTANCE_SIGNATURE", "WAYLAND_DISPLAY", "DISPLAY",
+                 "DBUS_SESSION_BUS_ADDRESS"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("OMNIMCP_DRYRUN", "1")
+    for name in ("run", "Popen", "check_output"):
+        monkeypatch.setattr(subprocess, name, forbidden)
+    for name in dir(os):
+        if name.startswith("exec") or name in ("posix_spawn", "posix_spawnp"):
+            monkeypatch.setattr(os, name, forbidden)
+    for name in ("connect", "connect_ex"):
+        monkeypatch.setattr(socket.socket, name, forbidden)
+    for name in ("_run", "query", "batch_query", "dispatch", "eval_lua"):
+        monkeypatch.setattr(hyprctl, name, forbidden)
+    monkeypatch.setattr(a11y, "connect", forbidden)
+    monkeypatch.setattr(dbuswire, "connection", forbidden)
+    monkeypatch.setattr(dbuswire, "Connection", forbidden)
+    monkeypatch.setattr(wire, "VirtualPointer", forbidden)
+    monkeypatch.setattr(wire, "VirtualKeyboard", forbidden)
+    monkeypatch.setattr(hinput, "VirtualPointer", forbidden)
+    monkeypatch.setattr(hinput, "VirtualKeyboard", forbidden)
+    monkeypatch.setattr(hinput, "_with_pointer", forbidden)
+    monkeypatch.setattr(hinput, "_with_keyboard", forbidden)

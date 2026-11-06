@@ -2,7 +2,7 @@ import ctypes.util
 
 import pytest
 
-from agentic_os_mcp import keymap
+from omnimcp import keymap
 
 pytestmark = pytest.mark.skipif(ctypes.util.find_library("xkbcommon") is None,
                                 reason="libxkbcommon not installed")

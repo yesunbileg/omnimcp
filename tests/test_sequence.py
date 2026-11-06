@@ -5,7 +5,7 @@ import json
 
 import pytest
 
-from agentic_os_mcp import server as srv
+from omnimcp import server as srv
 
 
 class FakeStream:
@@ -28,7 +28,7 @@ class FakeStream:
     def wait_for(self, names, matcher, timeout):
         self.wait_calls.append((set(names), timeout))
         if self.wait_error:
-            from agentic_os_mcp import events
+            from omnimcp import events
 
             raise events.EventError("socket died mid-wait")
         while self.waits:
@@ -520,3 +520,15 @@ def test_sequence_background_applies_to_every_step_that_takes_it(wired):
     assert wired[0]["background"] is True
     assert wired[1]["background"] is False  # a step's own choice wins
     assert "background" not in wired[2]  # hypr takes no background
+
+
+def test_middle_auth_override_is_rejected_before_any_step(wired, monkeypatch):
+    monkeypatch.delenv("OMNIMCP_ALLOW_AUTH_OVERRIDE", raising=False)
+    steps = [
+        {"op": "pointer", "action": "move", "x": 1, "y": 1},
+        {"op": "keyboard", "action": "type", "text": "hello", "allow_auth": True},
+        {"op": "pointer", "action": "click", "x": 2, "y": 2},
+    ]
+    with pytest.raises(srv.trust.TrustError, match="OMNIMCP_ALLOW_AUTH_OVERRIDE"):
+        srv.sequence(steps, stop_on_change=False, then="none")
+    assert wired == []

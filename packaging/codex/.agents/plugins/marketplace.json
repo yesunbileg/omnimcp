@@ -1,14 +1,14 @@
 {
-  "name": "agentic-os-local",
+  "name": "omnimcp-local",
   "interface": {
-    "displayName": "Agentic OS Local"
+    "displayName": "omnimcp Local"
   },
   "plugins": [
     {
-      "name": "agentic-os-mcp",
+      "name": "omnimcp",
       "source": {
         "source": "local",
-        "path": "./agentic-os-mcp"
+        "path": "./omnimcp"
       },
       "policy": {
         "installation": "AVAILABLE",

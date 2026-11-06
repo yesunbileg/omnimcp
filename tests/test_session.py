@@ -3,7 +3,7 @@ import time
 
 import pytest
 
-from agentic_os_mcp import session
+from omnimcp import session
 
 
 def make_instance(runtime, sig, age=0.0):

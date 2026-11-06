@@ -1,4 +1,4 @@
-# Agentic OS MCP
+# omnimcp
 
 An extensible local Linux MCP server: system measurements, commands and persistent
 terminals, files/configs, systemd, packages, network, storage, desktop, browser and
@@ -16,10 +16,10 @@ See [core setup and capability contracts](docs/CORE.md),
 [backend/source provenance](docs/PROVENANCE.md).
 
 ```sh
-agentic-os-mcp worker install
-agentic-os-mcp discover --action system.snapshot
-agentic-os-mcp observe system.snapshot
-agentic-os-mcp --profile compact  # MCP stdio entry point
+omnimcp worker install
+omnimcp discover --action system.snapshot
+omnimcp observe system.snapshot
+omnimcp --profile compact  # MCP stdio entry point
 ```
 
 Legacy remains the default until the paired token/latency and live validation gates
@@ -51,7 +51,7 @@ include `result.answer_artifact` for the full answer. To stop, call
 `{"action":"cancel","job_id":"j..."}` and poll status for termination.
 Cancellation does not undo completed edits. Replies are data; verify task effects.
 
-Requires authenticated OpenCode and a running user worker (`agentic-os-mcp worker
+Requires authenticated OpenCode and a running user worker (`omnimcp worker
 install`). Each run uses `--standalone`, so cancellation controls its own CLI/server
 process group. Jobs survive MCP disconnection while the worker runs. Read-only mode
 omits the tool; dry-run does not launch OpenCode. This is a user process, with the
@@ -61,14 +61,14 @@ Compact profile exposes the same capability through `act(action="opencode.run", 
 with existing `job` and `artifact` tools for results. CLI example:
 
 ```sh
-agentic-os-mcp discover --action opencode.run
-agentic-os-mcp act opencode.run --params '{"prompt":"Explain this project.","cwd":"/absolute/project"}'
-agentic-os-mcp job jRETURNED_ID
+omnimcp discover --action opencode.run
+omnimcp act opencode.run --params '{"prompt":"Explain this project.","cwd":"/absolute/project"}'
+omnimcp job jRETURNED_ID
 ```
 
 ### Markdown Kanban
 
-Set `AGENTIC_OS_KANBAN_FILE` to the absolute path of an existing Obsidian Kanban
+Set `OMNIMCP_KANBAN_FILE` to the absolute path of an existing Obsidian Kanban
 `.md` file to enable four additional MCP tools:
 
 | Tool | Purpose |
@@ -81,8 +81,8 @@ Set `AGENTIC_OS_KANBAN_FILE` to the absolute path of an existing Obsidian Kanban
 For example, merge the environment setting into the existing Codex MCP entry:
 
 ```toml
-[mcp_servers.agentic-os-mcp.env]
-AGENTIC_OS_KANBAN_FILE = "/absolute/path/to/kanban.md"
+[mcp_servers.omnimcp.env]
+OMNIMCP_KANBAN_FILE = "/absolute/path/to/kanban.md"
 ```
 
 Reconnect the MCP client after changing server configuration or installing an
@@ -150,20 +150,20 @@ Read-only mode exposes the same tool with only read parameters; dry-run validate
 edits without writing. No desktop session is needed for Canvas access.
 
 ```sh
-agentic-os-mcp canvas /path/Plan.canvas
-agentic-os-mcp canvas /path/Plan.canvas --card n2
-agentic-os-mcp canvas /path/Plan.canvas --action edit --revision HASH --changes @changes.json
+omnimcp canvas /path/Plan.canvas
+omnimcp canvas /path/Plan.canvas --card n2
+omnimcp canvas /path/Plan.canvas --action edit --revision HASH --changes @changes.json
 ```
 
 ## Install
 
 ```sh
-uv tool install --from /mnt/work/PROJECTS/LINUX/agentic-os-mcp agentic-os-mcp
-agentic-os-mcp --version
-agentic-os-mcp doctor
+uv tool install --from /mnt/work/PROJECTS/LINUX/omnimcp omnimcp
+omnimcp --version
+omnimcp doctor
 ```
 
-Register `agentic-os-mcp` as a stdio MCP server. Forward the active session's
+Register `omnimcp` as a stdio MCP server. Forward the active session's
 `WAYLAND_DISPLAY`, `HYPRLAND_INSTANCE_SIGNATURE`, `XDG_RUNTIME_DIR`, and
 `DBUS_SESSION_BUS_ADDRESS` environment variables.
 
@@ -174,8 +174,8 @@ also need an AT-SPI bus and an application that exposes accessible controls.
 
 The agent and user share the real desktop seat. Authentication prompts are
 guarded by default; clipboard access is opt-in. Read-only mode uses
-`AGENTIC_OS_READONLY=1`; confinement, background operation, strict focus checks,
-dry-run, and journaling are available through `AGENTIC_OS_*` settings. This is
+`OMNIMCP_READONLY=1`; confinement, background operation, strict focus checks,
+dry-run, and journaling are available through `OMNIMCP_*` settings. This is
 a desktop-control MCP server, not an operating-system sandbox.
 
 MIT license. The original upstream copyright and license terms are retained in

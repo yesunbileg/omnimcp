@@ -1,4 +1,4 @@
-# Agentic OS core
+# omnimcp core
 
 The local Arch/Hyprland implementation adds a transport-independent registry,
 SQLite state, owner-only Unix socket worker, jobs, events, artifacts, explicit
@@ -8,35 +8,35 @@ using its existing model and credentials. Core OS actions do not require an LLM.
 
 ## Profiles and installation
 
-`agentic-os-mcp` and all existing desktop/Canvas/Kanban verbs keep their previous
+`omnimcp` and all existing desktop/Canvas/Kanban verbs keep their previous
 behavior. `--profile legacy` explicitly selects that surface. Compact is opt-in:
 
 ```sh
 uv sync
-uv run agentic-os-mcp worker install
-uv run agentic-os-mcp --profile compact
+uv run omnimcp worker install
+uv run omnimcp --profile compact
 ```
 
-The worker installer writes and enables `~/.config/systemd/user/agentic-os-mcp.service`
+The worker installer writes and enables `~/.config/systemd/user/omnimcp.service`
 using the interpreter that ran installation. It does not require sudo. Use the
 installed package's CLI when installing the permanent unit; an interpreter in a
 removed checkout/virtualenv cannot start it. A user systemd manager must be
 available. `worker run` serves in the foreground for isolated development.
 
-Stop all compact work, including child processes: `agentic-os-mcp worker stop`.
+Stop all compact work, including child processes: `omnimcp worker stop`.
 The old `stop` command controls the legacy desktop beacon. Inspect individual
 jobs with `job`; cancellation is cooperative and does not undo completed changes.
 User services normally stop at logout; configuring systemd linger is a separate
 user choice. Jobs survive MCP/CLI disconnects while the worker remains running.
 
-Set `AGENTIC_OS_PROFILE=compact` or use `args = ["--profile", "compact"]` in
+Set `OMNIMCP_PROFILE=compact` or use `args = ["--profile", "compact"]` in
 an MCP client to opt in. The existing client configuration is retained until
 all benchmark gates have been measured. Reconnect clients after package updates.
 
-Worker state defaults to `~/.local/state/agentic-os-mcp/`; its SQLite database,
+Worker state defaults to `~/.local/state/omnimcp/`; its SQLite database,
 artifact files and directory are private. The socket defaults to
-`$XDG_RUNTIME_DIR/agentic-os-mcp-core/worker.sock`, mode 0600, with a peer UID
-check. Override `AGENTIC_OS_STATE_DIR`/`AGENTIC_OS_SOCKET` for isolated tests.
+`$XDG_RUNTIME_DIR/omnimcp-core/worker.sock`, mode 0600, with a peer UID
+check. Override `OMNIMCP_STATE_DIR`/`OMNIMCP_SOCKET` for isolated tests.
 Worker environment belongs in a systemd user drop-in. Environment on a later
 MCP bridge cannot silently change the worker's desktop session, credentials,
 Kanban file, browser profile or backend configuration.
@@ -62,19 +62,19 @@ remain until explicitly removed from the private state directory; there is no
 automatic retention policy or disk quota. State/backups can contain sensitive
 application data, so retain the same care as the source files.
 
-`AGENTIC_OS_READONLY=1` on the worker blocks changes for every client. On a compact
+`OMNIMCP_READONLY=1` on the worker blocks changes for every client. On a compact
 bridge it also filters discovery, removes act/workflow and disallows cancellation.
-`AGENTIC_OS_DRYRUN=1` on the worker validates capabilities but delivers no acting
+`OMNIMCP_DRYRUN=1` on the worker validates capabilities but delivers no acting
 operation. These policies are not an OS sandbox: a normal acting client has the
 signed-in user's authority, including arbitrary user commands and custom adapters.
 A CLI/bridge variable cannot reduce or expand the daemon's environment retroactively.
 
 ```sh
-agentic-os-mcp discover --action file.patch
-agentic-os-mcp observe system.snapshot --fields '["memory","load"]'
-agentic-os-mcp act command.exec --params '{"argv":["uname","-r"]}'
-agentic-os-mcp job jCOPY_RETURNED_ID
-agentic-os-mcp artifact aCOPY_RETURNED_ID --offset 0
+omnimcp discover --action file.patch
+omnimcp observe system.snapshot --fields '["memory","load"]'
+omnimcp act command.exec --params '{"argv":["uname","-r"]}'
+omnimcp job jCOPY_RETURNED_ID
+omnimcp artifact aCOPY_RETURNED_ID --offset 0
 ```
 
 Action status must be checked. `queued` means accepted, not completed.
@@ -133,7 +133,7 @@ on older Hyprland; that fallback cannot prove same-process window-address reuse.
 ## Native capabilities and extension contract
 
 Codex native account quotas: [`codex.usage` / `codex_usage`](CODEX-USAGE.md),
-with direct `agentic-os-mcp codex-usage` access, requires no model invocation.
+with direct `omnimcp codex-usage` access, requires no model invocation.
 
 Use `discover` for the current catalog and each parameter schema. Included domains:
 
@@ -162,7 +162,7 @@ Destructive disk/network scenarios require disposable
 VM validation. There is no claim of whole-disk/package-upgrade rollback.
 
 A custom installed Python package can export an entry point in
-`agentic_os_mcp.adapters`, pointing to `register(registry)`. A capability handler
+`omnimcp.adapters`, pointing to `register(registry)`. A capability handler
 receives `ctx` and typed parameters. `registry.add` records readonly, dependencies,
 availability, privilege, resource locks, verification, undo, idempotency and example.
 Pydantic rejects unknown fields and incompatible types. `ctx.run` provides retained
@@ -180,11 +180,11 @@ GUI admin prompts in SQLite. Only after asking the human may a caller set
 Installing/enabling the user worker itself needs no elevated privileges.
 
 `admin.install_helper` explicitly installs the standalone `root_helper.py` to
-`/usr/local/libexec/agentic-os-mcp-file-helper` with root ownership using a GUI prompt.
+`/usr/local/libexec/omnimcp-file-helper` with root ownership using a GUI prompt.
 It is optional and is not installed silently. `config.admin_update` refuses a missing,
 user-writable or incorrectly owned helper/ancestor. The helper uses `/usr/bin/python3 -I`
 and only standard-library imports, so elevated execution never imports the editable
-Python package. Root backups stay under `/var/lib/agentic-os-mcp/backups/<uid>/`.
+Python package. Root backups stay under `/var/lib/omnimcp/backups/<uid>/`.
 Each use goes through pkexec again, preserving native authentication policy.
 
 User file edits check SHA-256 revisions, produce diffs, retain and verify backups,
@@ -202,8 +202,8 @@ back. This is not an internet-connectivity or VPN-reachability guarantee.
 
 Run `scripts/install-browser.sh` explicitly to install pinned `@playwright/mcp@0.0.83`
 and its Chromium under the current user, writing private
-`~/.config/agentic-os-mcp/browser.json`. No root package installation is involved.
-Alternatively set `AGENTIC_OS_BROWSER_COMMAND` to a JSON argv list. The backend
+`~/.config/omnimcp/browser.json`. No root package installation is involved.
+Alternatively set `OMNIMCP_BROWSER_COMMAND` to a JSON argv list. The backend
 starts on the first browser action, not on worker startup. Default installation
 uses headless Chromium and a separate persistent automation profile. Connecting
 a user's browser/CDP session requires explicit configuration. Browser data/DOM

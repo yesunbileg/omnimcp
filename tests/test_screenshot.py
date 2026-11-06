@@ -4,13 +4,13 @@ from pathlib import Path
 
 import pytest
 
-from agentic_os_mcp import screenshot
+from omnimcp import screenshot
 
 
 def test_same_clock_capture_paths_keep_distinct_private_payloads(tmp_path, monkeypatch):
-    from agentic_os_mcp import server
+    from omnimcp import server
 
-    monkeypatch.setenv("AGENTIC_OS_SCREENSHOT_MODE", "file")
+    monkeypatch.setenv("OMNIMCP_SCREENSHOT_MODE", "file")
     monkeypatch.setattr(server, "_runtime_dir", lambda: tmp_path)
     monkeypatch.setattr(server.time, "time", lambda: 1000.0)
     first, second = {"format": "jpeg"}, {"format": "jpeg"}
@@ -23,9 +23,9 @@ def test_same_clock_capture_paths_keep_distinct_private_payloads(tmp_path, monke
 
 
 def test_capture_write_failure_removes_partial_file(tmp_path, monkeypatch):
-    from agentic_os_mcp import server
+    from omnimcp import server
 
-    monkeypatch.setenv("AGENTIC_OS_SCREENSHOT_MODE", "file")
+    monkeypatch.setenv("OMNIMCP_SCREENSHOT_MODE", "file")
     monkeypatch.setattr(server, "_runtime_dir", lambda: tmp_path)
     fdopen = os.fdopen
 
@@ -50,9 +50,9 @@ def test_capture_write_failure_removes_partial_file(tmp_path, monkeypatch):
 
 
 def test_same_millisecond_capture_burst_retains_newest_twenty(tmp_path, monkeypatch):
-    from agentic_os_mcp import server
+    from omnimcp import server
 
-    monkeypatch.setenv("AGENTIC_OS_SCREENSHOT_MODE", "file")
+    monkeypatch.setenv("OMNIMCP_SCREENSHOT_MODE", "file")
     monkeypatch.setattr(server, "_runtime_dir", lambda: tmp_path)
     monkeypatch.setattr(server.time, "time", lambda: 1000.0)
     ticks, suffixes = iter(range(22)), iter(range(21, -1, -1))
@@ -419,7 +419,7 @@ def test_hidden_window_hints_never_promise_the_old_coordinates(monkeypatch):
 
 
 def test_read_only_hints_do_not_name_tools_that_are_not_there(monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_READONLY", "1")
+    monkeypatch.setenv("OMNIMCP_READONLY", "1")
     _scene(monkeypatch, [SHOWN, HIDDEN])
     _, meta = screenshot.capture(window="0xb")
     assert "hypr(" not in meta["coords"] and "ask the human" in meta["coords"]

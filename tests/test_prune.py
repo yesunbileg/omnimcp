@@ -1,4 +1,4 @@
-from agentic_os_mcp import server
+from omnimcp import server
 
 
 def test_prune_keeps_newest_20(tmp_path):

@@ -22,9 +22,9 @@ actual MCP stdio conversion, bridge disconnect and controlling PTYs.
 
 ```sh
 uv run pytest -q
-uv run ruff check src/agentic_os_mcp/core src/agentic_os_mcp/adapters \
-  src/agentic_os_mcp/compact.py src/agentic_os_mcp/core_cli.py \
-  src/agentic_os_mcp/root_helper.py src/agentic_os_mcp/legacy_transport.py \
+uv run ruff check src/omnimcp/core src/omnimcp/adapters \
+  src/omnimcp/compact.py src/omnimcp/core_cli.py \
+  src/omnimcp/root_helper.py src/omnimcp/legacy_transport.py \
   tests/test_core.py tests/test_worker.py tests/test_native_adapters.py \
   scripts/benchmark.py scripts/gateway_benchmark.py scripts/live_smoke.py
 ```
@@ -72,7 +72,7 @@ availability status; they are not claimed to have passed integration.
 
 ## Installed state
 
-- User-local CLI reports `agentic-os-mcp 0.2.0`; user systemd worker is enabled/active.
+- User-local CLI reports `omnimcp 0.2.0`; user systemd worker is enabled/active.
 - Installed Python dependencies match the tested uv.lock (constraints exported for
   installation); mcp 1.28.1 and psutil 7.2.2.
 - Optional browser backend @playwright/mcp 0.0.83 and Chromium 1247 are installed

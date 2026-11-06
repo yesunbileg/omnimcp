@@ -15,7 +15,7 @@ No MemOS health/backup automation, model/provider changes or scheduled jobs.
 - Same separate live response comparison: raw API payload 1237 bytes; normalized
   helper payload 529 bytes (57.2% smaller). This compares output bytes, not tokens
   or model latency. No before/after speedup is claimed.
-- CLI supports `agentic-os-mcp codex-usage --timezone Asia/Ulaanbaatar`.
+- CLI supports `omnimcp codex-usage --timezone Asia/Ulaanbaatar`.
 - Five installed files equal source SHA-256 hashes; backed-up original hashes valid.
 
 Local installation is a selective patch to the existing 0.2.0 uv tool, not a
@@ -26,7 +26,7 @@ existing dirty source tree was preserved. Source docs/tests stay in this checkou
 Verified private patch backup and guarded rollback:
 
 ```bash
-python /home/home/.local/state/agentic-os-mcp/local-patches/codex-usage-20261028T221028Z/restore.py
+python /home/home/.local/state/omnimcp/local-patches/codex-usage-20261028T221028Z/restore.py
 ```
 
 The rollback refuses if patched installed files have changed since deployment.

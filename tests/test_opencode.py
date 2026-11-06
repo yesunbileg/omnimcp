@@ -7,10 +7,10 @@ import time
 
 import pytest
 
-from agentic_os_mcp.adapters import build_registry
-from agentic_os_mcp.core.engine import Engine
-from agentic_os_mcp.core.state import Store
-from agentic_os_mcp.opencode import opencode
+from omnimcp.adapters import build_registry
+from omnimcp.core.engine import Engine
+from omnimcp.core.state import Store
+from omnimcp.opencode import opencode
 
 
 @pytest.fixture
@@ -34,8 +34,8 @@ def engine(tmp_path, monkeypatch):
     )
     child.chmod(0o700)
     monkeypatch.setenv("PATH", str(tmp_path) + ":" + os.environ["PATH"])
-    monkeypatch.delenv("AGENTIC_OS_DRYRUN", raising=False)
-    monkeypatch.delenv("AGENTIC_OS_READONLY", raising=False)
+    monkeypatch.delenv("OMNIMCP_DRYRUN", raising=False)
+    monkeypatch.delenv("OMNIMCP_READONLY", raising=False)
     store = Store(tmp_path / "state")
     value = Engine(build_registry(), store)
     yield value
@@ -112,7 +112,7 @@ def test_invalid_arguments(engine, tmp_path, params):
     "prompt,status", [("error", "failed"), ("empty", "invalid_response"), ("sleep", "timeout")]
 )
 def test_backend_failure_is_not_success(engine, tmp_path, prompt, status):
-    result = run(engine, tmp_path, prompt=prompt, timeout_s=0.1)
+    result = run(engine, tmp_path, prompt=prompt, timeout_s=0.1 if prompt == "sleep" else 5)
     assert result["status"] == status
 
 
@@ -134,12 +134,12 @@ def test_cancel_job_and_read_raw_output(engine, tmp_path):
 
 
 def test_facade_refuses_unrelated_job_and_readonly(engine, monkeypatch):
-    import agentic_os_mcp.opencode as facade
+    import omnimcp.opencode as facade
 
     monkeypatch.setattr(facade, "rpc", engine.request)
     unrelated = engine.store.create_job("command.exec")
     assert json.loads(opencode(action="cancel", job_id=unrelated))["status"] == "invalid_params"
-    monkeypatch.setenv("AGENTIC_OS_READONLY", "1")
+    monkeypatch.setenv("OMNIMCP_READONLY", "1")
     assert json.loads(opencode(prompt="hello", cwd="/tmp"))["status"] == "permission_required"
     assert engine.request(
         {"op": "observe", "action": "opencode.run", "params": {"prompt": "hello", "cwd": "/tmp"}}
@@ -147,7 +147,7 @@ def test_facade_refuses_unrelated_job_and_readonly(engine, monkeypatch):
 
 
 def test_mcp_tool_registered_without_structured_duplicate(monkeypatch):
-    from agentic_os_mcp import server
+    from omnimcp import server
 
     monkeypatch.setattr(server, "READONLY", False)
     tools = asyncio.run(server.build_app().list_tools())
@@ -159,10 +159,10 @@ def test_mcp_tool_registered_without_structured_duplicate(monkeypatch):
 
 
 def test_dryrun_never_calls_worker(monkeypatch):
-    import agentic_os_mcp.opencode as facade
+    import omnimcp.opencode as facade
 
-    monkeypatch.setenv("AGENTIC_OS_DRYRUN", "1")
-    monkeypatch.delenv("AGENTIC_OS_READONLY", raising=False)
+    monkeypatch.setenv("OMNIMCP_DRYRUN", "1")
+    monkeypatch.delenv("OMNIMCP_READONLY", raising=False)
 
     def unexpected(request):
         pytest.fail("dry run contacted worker")

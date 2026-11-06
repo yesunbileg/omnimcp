@@ -21,7 +21,7 @@ If future work copies donor code, add its exact source URL, immutable commit,
 license, destination paths and the reason for modification here before shipping.
 
 The baseline archive of the dirty working tree was created outside the checkout at
-`~/.local/state/agentic-os-mcp-baselines/20261021-192742/` with source SHA-256,
+`~/.local/state/omnimcp-baselines/20261021-192742/` with source SHA-256,
 Git diff/status, original HEAD and installed dependency versions. It includes the
 pre-existing uncommitted files and excludes the virtualenv and top-level tool caches. The
 baseline is host-local recovery evidence, not part of a distributable package.

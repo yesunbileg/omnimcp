@@ -3,7 +3,7 @@ is not in, with every desktop and accessibility call stubbed."""
 
 import pytest
 
-from agentic_os_mcp import server as srv
+from omnimcp import server as srv
 
 REAL_UI_READ = srv._ui_read  # bound before the fixture stubs it
 REAL_PROVEN_FRAME = srv._proven_frame
@@ -21,7 +21,7 @@ def wired_bg(monkeypatch):
          "has_action": True, "role": "push button", "values": [{}, {}], "gone": False,
          "inserted": [], "typed": [], "shortcuts": [], "focused_text": None,
          "xwayland": False, "window_at_point": "0xhuman"}
-    monkeypatch.delenv("AGENTIC_OS_BACKGROUND", raising=False)
+    monkeypatch.delenv("OMNIMCP_BACKGROUND", raising=False)
     monkeypatch.setattr(srv.safety, "touch", lambda *a: None)
     monkeypatch.setattr(srv.time, "sleep", lambda s_: None)
 
@@ -192,7 +192,7 @@ def test_a_dry_run_names_the_method_and_does_nothing(wired_bg, monkeypatch):
 
 
 def test_the_guarantee_never_clicks_even_the_active_window(wired_bg, monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "1")
+    monkeypatch.setenv("OMNIMCP_BACKGROUND", "1")
     wired_bg["active"] = "0xa"
     srv.click_ui(name="Save", window="0xa")
     assert wired_bg["actions"] and not wired_bg["clicks"]
@@ -311,7 +311,7 @@ def test_keyboard_without_a_window_types_into_the_humans_window_in_automatic_mod
 
 
 def test_the_guarantee_requires_a_window(wired_bg, monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "1")
+    monkeypatch.setenv("OMNIMCP_BACKGROUND", "1")
     with pytest.raises(srv.trust.TrustError, match="window="):
         srv.keyboard("type", text="x")
 
@@ -331,7 +331,7 @@ def test_one_field_in_a_walk_cut_short_is_not_the_only_field(wired_bg):
     wired_bg["fields_complete"] = False
     srv.keyboard("type", text="hi", window="0xa")
     assert wired_bg["inserted"] == [] and len(wired_bg["shortcuts"]) == 2
-    with pytest.raises(srv.trust.TrustError, match="more elements than agentic-os-mcp reads"):
+    with pytest.raises(srv.trust.TrustError, match="more elements than omnimcp reads"):
         srv.keyboard("type", text="上", window="0xa")
 
 
@@ -400,7 +400,7 @@ def test_pointer_background_true_is_refused(wired_bg):
 
 
 def test_pointer_with_background_off_is_unchanged(wired_bg, monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "0")
+    monkeypatch.setenv("OMNIMCP_BACKGROUND", "0")
     wired_bg["window_at_point"] = "0xa"
     srv.pointer("click", x=100, y=100)
     assert wired_bg["clicks"] == [(100, 100)] and wired_bg["at_points"] == []
@@ -409,19 +409,19 @@ def test_pointer_with_background_off_is_unchanged(wired_bg, monkeypatch):
 def test_the_guarantee_refuses_pointer_workspace_focus_fullscreen_and_binds(
     wired_bg, monkeypatch
 ):
-    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "1")
+    monkeypatch.setenv("OMNIMCP_BACKGROUND", "1")
     for call in (lambda: srv.pointer("click", x=1, y=1),
                  lambda: srv.pointer("move", x=1, y=1),
                  lambda: srv.hypr("workspace", workspace="3"),
                  lambda: srv.hypr("focus_window", target="0xa"),
                  lambda: srv.hypr("fullscreen", target="0xa")):
-        with pytest.raises(srv.trust.TrustError, match="AGENTIC_OS_BACKGROUND"):
+        with pytest.raises(srv.trust.TrustError, match="OMNIMCP_BACKGROUND"):
             call()
     assert wired_bg["clicks"] == [] and wired_bg["dispatch"] == []
 
 
 def test_the_guarantee_keeps_agent_windows_on_agent_workspaces(wired_bg, monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "1")
+    monkeypatch.setenv("OMNIMCP_BACKGROUND", "1")
     with pytest.raises(srv.trust.TrustError, match="agent's workspaces"):
         srv.hypr("move_window", target="0xa", workspace="3")
     srv.hypr("move_window", target="0xa", workspace="98")
@@ -440,7 +440,7 @@ def test_automatic_mode_still_switches_workspaces_on_request(wired_bg):
 def launch_fake(monkeypatch):
     s = {"rule": None, "clients": [], "seat": 0, "active": ["0xhuman"],
          "lands": None, "dispatch": [], "monitors": MONS}
-    monkeypatch.delenv("AGENTIC_OS_BACKGROUND", raising=False)
+    monkeypatch.delenv("OMNIMCP_BACKGROUND", raising=False)
     monkeypatch.setattr(srv.safety, "touch", lambda *a: None)
 
     def launch_and_wait(rule_command, wait_s, accept=None):
@@ -489,16 +489,16 @@ def test_launch_with_a_workspace_keeps_it(launch_fake):
 
 
 def test_launch_with_background_off_is_unchanged(launch_fake, monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "0")
+    monkeypatch.setenv("OMNIMCP_BACKGROUND", "0")
     srv.launch("foot")
     assert launch_fake["rule"] == ""
 
 
 def test_the_guarantee_launches_only_onto_agent_workspaces(launch_fake, monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "1")
+    monkeypatch.setenv("OMNIMCP_BACKGROUND", "1")
     with pytest.raises(srv.trust.TrustError, match="agent's workspaces"):
         srv.launch("foot", workspace="3")
-    with pytest.raises(srv.trust.TrustError, match="AGENTIC_OS_BACKGROUND"):
+    with pytest.raises(srv.trust.TrustError, match="OMNIMCP_BACKGROUND"):
         srv.launch("foot", background=False)
     assert launch_fake["rule"] is None
     srv.launch("foot", workspace="98")
@@ -631,7 +631,8 @@ def test_ui_read_hands_out_controls_only_from_a_proven_frame(wired_bg, monkeypat
     assert "_unsure" not in REAL_UI_READ("0xa")[0]  # coordinates only: nothing to prove
 
 
-def test_a_password_field_among_several_is_refused_when_focus_is_unknown(wired_bg):
+def test_a_password_field_among_several_is_refused_when_focus_is_unknown(wired_bg, monkeypatch):
+    monkeypatch.setenv("OMNIMCP_ALLOW_AUTH_OVERRIDE", "1")
     wired_bg["fields"] = [("svc", "/user", 79), ("svc", "/pw", 40)]
     with pytest.raises(srv.trust.TrustError, match="password"):
         srv.keyboard("type", text="hunter2", window="0xa")
@@ -687,7 +688,7 @@ def test_launch_never_opens_on_an_agent_workspace_the_human_is_viewing(launch_fa
 
 
 def test_the_guarantee_refuses_a_workspace_on_screen(launch_fake, monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "1")
+    monkeypatch.setenv("OMNIMCP_BACKGROUND", "1")
     launch_fake["monitors"] = [dict(MONS[0], activeWorkspace={"id": 98, "name": "98"})]
     with pytest.raises(srv.trust.TrustError, match="on screen"):
         srv.launch("foot", workspace="98")
@@ -695,14 +696,14 @@ def test_the_guarantee_refuses_a_workspace_on_screen(launch_fake, monkeypatch):
 
 
 def test_a_named_agent_workspace_is_not_mistaken_for_a_move(launch_fake, monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_AGENT_WORKSPACES", "name:research")
+    monkeypatch.setenv("OMNIMCP_AGENT_WORKSPACES", "name:research")
     out = srv.launch("foot")
     assert launch_fake["rule"] == "[workspace name:research silent]"
     assert launch_fake["dispatch"] == [] and "elsewhere" not in out["note"]
 
 
 def test_with_background_off_launch_re_baselines_the_seat_as_before(launch_fake, monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "0")
+    monkeypatch.setenv("OMNIMCP_BACKGROUND", "0")
     srv.launch("foot", workspace="3")
     assert launch_fake["seat"] == 1
 
@@ -715,16 +716,16 @@ def test_a_launch_that_took_focus_re_baselines_the_seat(launch_fake):
 
 
 def test_confinement_to_workspaces_narrows_where_apps_open(launch_fake, monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_CONFINE", "workspace:3,97")
+    monkeypatch.setenv("OMNIMCP_CONFINE", "workspace:3,97")
     srv.launch("foot")
     assert launch_fake["rule"] == "[workspace 97 silent]"
 
 
 def test_confinement_without_an_agent_workspace_opens_as_before(launch_fake, monkeypatch):
     # the agent could not use, move or close an app outside its scope
-    monkeypatch.setenv("AGENTIC_OS_CONFINE", "workspace:3")
+    monkeypatch.setenv("OMNIMCP_CONFINE", "workspace:3")
     out = srv.launch("foot")
-    assert launch_fake["rule"] == "" and "AGENTIC_OS_CONFINE" in out["note"]
+    assert launch_fake["rule"] == "" and "OMNIMCP_CONFINE" in out["note"]
 
 
 def test_an_app_that_opened_on_screen_says_it_took_focus(launch_fake):
@@ -735,10 +736,10 @@ def test_an_app_that_opened_on_screen_says_it_took_focus(launch_fake):
 
 
 def test_under_the_guarantee_an_app_that_opened_on_screen_is_a_warning(launch_fake, monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "1")
+    monkeypatch.setenv("OMNIMCP_BACKGROUND", "1")
     launch_fake["lands"] = "1"
     out = srv.launch("foot")
-    assert "AGENTIC_OS_BACKGROUND" in out["warning"] and "separate" in out["warning"]
+    assert "OMNIMCP_BACKGROUND" in out["warning"] and "separate" in out["warning"]
 
 
 # --- which new window is the launched one -------------------------------------
@@ -856,7 +857,7 @@ def test_the_keyboard_on_the_humans_own_window_stays_in_the_foreground(wired_bg)
 
 
 def test_the_guarantee_keeps_click_and_keys_off_the_humans_windows(wired_bg, monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "1")
+    monkeypatch.setenv("OMNIMCP_BACKGROUND", "1")
     monkeypatch.setattr(srv, "_resolve_window", lambda w="": dict(CLIENT, workspace={"id": 1}))
     with pytest.raises(srv.trust.TrustError, match="agent's workspaces"):
         srv.click_ui(name="Save", window="0xa")
@@ -867,7 +868,7 @@ def test_the_guarantee_keeps_click_and_keys_off_the_humans_windows(wired_bg, mon
 
 
 def test_confinement_still_applies_to_background_input(wired_bg, monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_CONFINE", "class:kitty")
+    monkeypatch.setenv("OMNIMCP_CONFINE", "class:kitty")
     with pytest.raises(srv.trust.TrustError, match="confinement"):
         srv.click_ui(name="Save", window="0xa")
     with pytest.raises(srv.trust.TrustError, match="confinement"):
@@ -901,8 +902,8 @@ def test_sequence_background_refuses_steps_that_take_the_humans_view(wired_bg):
 
 
 def test_the_guarantee_refuses_toggle_floating_without_a_target(wired_bg, monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "1")
-    with pytest.raises(srv.trust.TrustError, match="AGENTIC_OS_BACKGROUND"):
+    monkeypatch.setenv("OMNIMCP_BACKGROUND", "1")
+    with pytest.raises(srv.trust.TrustError, match="OMNIMCP_BACKGROUND"):
         srv.hypr("toggle_floating")
     assert wired_bg["dispatch"] == []
 
@@ -978,7 +979,8 @@ def test_escape_and_delete_are_keys_too(wired_bg):
     assert wired_bg["inserted"] == [] and wired_bg["shortcuts"][-1] == ("", "Escape", "0xa")
 
 
-def test_typing_a_password_with_consent_is_not_read_back(wired_bg):
+def test_typing_a_password_with_consent_is_not_read_back(wired_bg, monkeypatch):
+    monkeypatch.setenv("OMNIMCP_ALLOW_AUTH_OVERRIDE", "1")
     wired_bg["focused_text"] = ("svc", "/pw", 40)
     out = str(srv.keyboard("type", text="hunter2", window="0xa", allow_auth=True))
     assert "password field" in out and "not read back" in out
@@ -1011,7 +1013,7 @@ def test_sequence_then_ui_reads_the_window_its_steps_named(wired_bg, monkeypatch
 
 
 def test_a_focus_change_that_was_not_the_new_window_stays_the_humans(launch_fake):
-    # under AGENTIC_OS_STRICT, re-baselining here would absorb the human's change
+    # under OMNIMCP_STRICT, re-baselining here would absorb the human's change
     launch_fake["active"][:] = ["0xhuman", "0xother"]
     srv.launch("foot")
     assert launch_fake["seat"] == 0
@@ -1024,20 +1026,20 @@ def test_a_launched_window_that_took_focus_says_so(launch_fake):
 
 
 def test_under_the_guarantee_a_window_that_took_focus_is_a_warning(launch_fake, monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "1")
+    monkeypatch.setenv("OMNIMCP_BACKGROUND", "1")
     launch_fake["active"][:] = ["0xhuman", "0xnew"]
-    assert "AGENTIC_OS_BACKGROUND" in srv.launch("foot")["warning"]
+    assert "OMNIMCP_BACKGROUND" in srv.launch("foot")["warning"]
 
 
 def test_the_guarantee_note_does_not_offer_background_false(launch_fake, monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "1")
+    monkeypatch.setenv("OMNIMCP_BACKGROUND", "1")
     assert "background=false" not in srv.launch("foot")["note"]
 
 
 def test_a_workspace_with_spaces_is_still_checked(launch_fake, monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "1")
+    monkeypatch.setenv("OMNIMCP_BACKGROUND", "1")
     launch_fake["monitors"] = [dict(MONS[0], activeWorkspace={"id": 98, "name": "98"})]
-    with pytest.raises(srv.trust.TrustError, match="on screen"):
+    with pytest.raises(ValueError, match="is not a workspace"):
         srv.launch("foot", workspace=" 98 ")
 
 
@@ -1049,14 +1051,14 @@ def test_background_true_refuses_an_explicit_workspace_on_screen(launch_fake):
 
 
 def test_a_disjoint_confinement_under_the_guarantee_says_why(launch_fake, monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "1")
-    monkeypatch.setenv("AGENTIC_OS_CONFINE", "workspace:3")
-    with pytest.raises(srv.trust.TrustError, match="AGENTIC_OS_CONFINE"):
+    monkeypatch.setenv("OMNIMCP_BACKGROUND", "1")
+    monkeypatch.setenv("OMNIMCP_CONFINE", "workspace:3")
+    with pytest.raises(srv.trust.TrustError, match="OMNIMCP_CONFINE"):
         srv.launch("foot")
 
 
 def test_the_guarantee_moves_windows_only_to_agent_workspaces_off_screen(wired_bg, monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "1")
+    monkeypatch.setenv("OMNIMCP_BACKGROUND", "1")
     monkeypatch.setattr(srv.hyprctl, "query", lambda what: (
         [dict(MONS[0], activeWorkspace={"id": 98, "name": "98"})] if what == "monitors"
         else [dict(CLIENT)]))

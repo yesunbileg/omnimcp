@@ -1,4 +1,4 @@
-"""AGENTIC_OS_DRYRUN: run every check, deliver nothing.
+"""OMNIMCP_DRYRUN: run every check, deliver nothing.
 
 Two properties matter and are tested separately. A dry run must produce
 the SAME refusals a real run would, or it is worth nothing as a
@@ -10,10 +10,10 @@ fires for any path nobody thought of.
 
 import pytest
 
-from agentic_os_mcp import clipboard as clip
-from agentic_os_mcp import hyprctl, journal, trust
-from agentic_os_mcp import input as hinput
-from agentic_os_mcp import server as srv
+from omnimcp import clipboard as clip
+from omnimcp import hyprctl, journal, trust
+from omnimcp import input as hinput
+from omnimcp import server as srv
 
 REAL_QUERY = hyprctl.query  # bound at import: conftest stubs it for unit tests
 
@@ -30,7 +30,7 @@ MONITORS = [{"name": "DP-1", "x": 0, "y": 0, "width": 1920, "height": 1080,
 def dry(monkeypatch):
     """Dry run, with every effect replaced by a recorder. Anything that
     lands in `effects` is an action a dry run delivered."""
-    monkeypatch.setenv("AGENTIC_OS_DRYRUN", "1")
+    monkeypatch.setenv("OMNIMCP_DRYRUN", "1")
     effects: list[tuple] = []
     monkeypatch.setattr(srv.safety, "touch", lambda *a: None)
 
@@ -166,7 +166,7 @@ def test_sequence_says_so_in_its_summary(dry):
 
 
 def test_confinement_still_refuses(dry, monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_CONFINE", "class:firefox")
+    monkeypatch.setenv("OMNIMCP_CONFINE", "class:firefox")
     with pytest.raises(trust.TrustError, match="confinement scope"):
         srv.pointer("click", x=10, y=10)
 
@@ -187,7 +187,7 @@ def test_a_locked_session_still_refuses(dry, monkeypatch):
 
 
 def test_the_seat_guard_still_refuses(dry, monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_STRICT", "1")
+    monkeypatch.setenv("OMNIMCP_STRICT", "1")
     monkeypatch.setattr(trust, "_seat", {"cursor": (0, 0), "active": "0xold"})
     with pytest.raises(trust.TrustError, match="seat moved"):
         srv.pointer("click", x=10, y=10)
@@ -238,7 +238,7 @@ def test_a_clipboard_read_still_reads(dry, monkeypatch):
     ],
 )
 def test_the_effect_boundary_refuses_under_dry_run(monkeypatch, call):
-    monkeypatch.setenv("AGENTIC_OS_DRYRUN", "1")
+    monkeypatch.setenv("OMNIMCP_DRYRUN", "1")
     # If the barrier ever regresses, this test must FAIL, not dispatch
     # killactive at whatever the developer had focused. Every backend
     # below the barrier is replaced with something that says so.
@@ -254,14 +254,14 @@ def test_the_effect_boundary_refuses_under_dry_run(monkeypatch, call):
 
 
 def test_reads_are_never_barriered(monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_DRYRUN", "1")
+    monkeypatch.setenv("OMNIMCP_DRYRUN", "1")
     monkeypatch.setattr(hyprctl, "query", REAL_QUERY)  # conftest stubs it for unit tests
     monkeypatch.setattr(hyprctl, "_run", lambda *a: '{"x": 1, "y": 2}')
     assert hyprctl.cursor_pos() == (1, 2)
 
 
 def test_the_barrier_is_off_when_dry_run_is(monkeypatch):
-    monkeypatch.delenv("AGENTIC_OS_DRYRUN", raising=False)
+    monkeypatch.delenv("OMNIMCP_DRYRUN", raising=False)
     journal.refuse_if_dry("anything")  # no raise
 
 
@@ -287,7 +287,7 @@ def test_an_unknown_modifier_is_rejected(dry):
 
 def test_a_bad_combo_does_not_focus_the_window_first(dry, monkeypatch):
     # a refused call must not have moved the human's focus on its way out
-    monkeypatch.delenv("AGENTIC_OS_DRYRUN", raising=False)
+    monkeypatch.delenv("OMNIMCP_DRYRUN", raising=False)
     with pytest.raises(hinput.InputError):
         srv.keyboard("key", keys="ctlr+t", window="0xabc")
     assert dry == []
@@ -300,7 +300,7 @@ def test_a_malformed_target_is_rejected_for_every_action(dry):
 
 
 def test_the_same_rejections_happen_for_real(dry, monkeypatch):
-    monkeypatch.delenv("AGENTIC_OS_DRYRUN", raising=False)
+    monkeypatch.delenv("OMNIMCP_DRYRUN", raising=False)
     with pytest.raises(hinput.InputError, match="unknown button"):
         srv.pointer("click", x=1, y=1, button="wheel")
     assert dry == []

@@ -3,16 +3,16 @@
 Capability ID: `codex.usage` (read-only compact catalog).
 Legacy MCP tool: `codex_usage` (also available in read-only mode).
 Purpose: return account quota usage without model generation or credential copying.
-Implementation: `src/agentic_os_mcp/codex_usage.py`; compact registration:
-`src/agentic_os_mcp/adapters/codex.py`.
+Implementation: `src/omnimcp/codex_usage.py`; compact registration:
+`src/omnimcp/adapters/codex.py`.
 
 ```bash
 # Direct CLI, no worker required:
-agentic-os-mcp codex-usage --timezone Asia/Ulaanbaatar
+omnimcp codex-usage --timezone Asia/Ulaanbaatar
 
 # Compact profile, after the worker has loaded the updated package:
-agentic-os-mcp discover --action codex.usage
-agentic-os-mcp observe codex.usage --params '{"timezone":"Asia/Ulaanbaatar"}'
+omnimcp discover --action codex.usage
+omnimcp observe codex.usage --params '{"timezone":"Asia/Ulaanbaatar"}'
 ```
 
 MCP call: `codex_usage({"timezone":"Asia/Ulaanbaatar"})`.

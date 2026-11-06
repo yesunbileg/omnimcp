@@ -1,10 +1,10 @@
-"""`agentic-os-mcp skill`: the packaged Agent Skill and where it gets linked."""
+"""`omnimcp skill`: the packaged Agent Skill and where it gets linked."""
 
 from pathlib import Path
 
 import pytest
 
-from agentic_os_mcp import skill
+from omnimcp import skill
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -17,10 +17,10 @@ def home(tmp_path, monkeypatch):
 
 def test_the_checkout_carries_the_skill_and_it_is_well_formed():
     src = skill.packaged_dir()
-    assert src == ROOT / "skills" / "agentic-os-mcp"
+    assert src == ROOT / "skills" / "omnimcp"
     text = (src / "SKILL.md").read_text()
     assert text.startswith("---\n")
-    assert "\nname: agentic-os-mcp\n" in text
+    assert "\nname: omnimcp\n" in text
     assert "description:" in text
     # the spec caps a skill body at 500 lines and the directory name must
     # match the name field
@@ -32,11 +32,11 @@ def test_install_links_only_agents_present_on_the_machine(home, capsys):
     (home / ".claude").mkdir()
     (home / ".codex").mkdir()
     assert skill.install([], copy=False) == 0
-    canonical = home / ".agents" / "skills" / "agentic-os-mcp"
+    canonical = home / ".agents" / "skills" / "omnimcp"
     assert (canonical / "SKILL.md").is_file()
     assert not canonical.is_symlink()  # a real copy: isolated tool environments are ephemeral
     for agent_dir in (home / ".claude" / "skills", home / ".codex" / "skills"):
-        link = agent_dir / "agentic-os-mcp"
+        link = agent_dir / "omnimcp"
         assert link.is_symlink() and link.resolve() == canonical.resolve()
     # nothing conjured for agents that are not installed
     assert not (home / ".cursor").exists()
@@ -47,7 +47,7 @@ def test_install_links_only_agents_present_on_the_machine(home, capsys):
 
 def test_naming_an_agent_creates_its_directory(home):
     assert skill.install(["pi"], copy=False) == 0
-    link = home / ".pi" / "agent" / "skills" / "agentic-os-mcp"
+    link = home / ".pi" / "agent" / "skills" / "omnimcp"
     assert link.is_symlink()
 
 
@@ -59,7 +59,7 @@ def test_unknown_agent_is_a_usage_error(home, capsys):
 def test_copy_mode_copies(home):
     (home / ".claude").mkdir()
     assert skill.install([], copy=True) == 0
-    target = home / ".claude" / "skills" / "agentic-os-mcp"
+    target = home / ".claude" / "skills" / "omnimcp"
     assert target.is_dir() and not target.is_symlink()
     assert (target / "SKILL.md").is_file()
 
@@ -70,21 +70,21 @@ def test_reinstall_is_idempotent(home, capsys):
     capsys.readouterr()
     assert skill.install([], copy=False) == 0
     assert "already linked" in capsys.readouterr().out
-    link = home / ".claude" / "skills" / "agentic-os-mcp"
+    link = home / ".claude" / "skills" / "omnimcp"
     assert link.is_symlink() and (link / "SKILL.md").is_file()
 
 
 def test_someone_elses_skill_is_never_replaced(home, capsys):
-    other = home / ".agents" / "skills" / "agentic-os-mcp"
+    other = home / ".agents" / "skills" / "omnimcp"
     other.mkdir(parents=True)
-    (other / "SKILL.md").write_text("---\nname: agentic-os-mcp-fork\n---\n")
+    (other / "SKILL.md").write_text("---\nname: omnimcp-fork\n---\n")
     assert skill.install([], copy=False) == 1
-    assert "not agentic-os-mcp's skill" in capsys.readouterr().err
-    assert (other / "SKILL.md").read_text().startswith("---\nname: agentic-os-mcp-fork")
+    assert "not omnimcp's skill" in capsys.readouterr().err
+    assert (other / "SKILL.md").read_text().startswith("---\nname: omnimcp-fork")
 
     # same at an agent's directory: linked elsewhere, that one left alone
-    (other / "SKILL.md").write_text("---\nname: agentic-os-mcp\n---\n")  # now ours, so install runs
-    foreign = home / ".claude" / "skills" / "agentic-os-mcp"
+    (other / "SKILL.md").write_text("---\nname: omnimcp\n---\n")  # now ours, so install runs
+    foreign = home / ".claude" / "skills" / "omnimcp"
     foreign.mkdir(parents=True)
     (foreign / "SKILL.md").write_text("---\nname: something-else\n---\n")
     assert skill.install([], copy=False) == 0
@@ -97,22 +97,22 @@ def test_hermes_profiles_each_get_a_link(home):
     (home / ".hermes" / "profiles" / "play").mkdir(parents=True)
     assert skill.install([], copy=False) == 0
     for profile in ("work", "play"):
-        assert (home / ".hermes" / "profiles" / profile / "skills" / "agentic-os-mcp").is_symlink()
-    assert (home / ".hermes" / "skills" / "agentic-os-mcp").is_symlink()
+        assert (home / ".hermes" / "profiles" / profile / "skills" / "omnimcp").is_symlink()
+    assert (home / ".hermes" / "skills" / "omnimcp").is_symlink()
 
 
 def test_uninstall_removes_ours_and_only_ours(home, capsys):
     (home / ".claude").mkdir()
     (home / ".codex").mkdir()
     skill.install([], copy=False)
-    foreign = home / ".codex" / "skills" / "agentic-os-mcp"
+    foreign = home / ".codex" / "skills" / "omnimcp"
     foreign.unlink()
     foreign.mkdir()
     (foreign / "SKILL.md").write_text("---\nname: mine\n---\n")
     capsys.readouterr()
     assert skill.uninstall() == 0
-    assert not (home / ".claude" / "skills" / "agentic-os-mcp").exists()
-    assert not (home / ".agents" / "skills" / "agentic-os-mcp").exists()
+    assert not (home / ".claude" / "skills" / "omnimcp").exists()
+    assert not (home / ".agents" / "skills" / "omnimcp").exists()
     assert (foreign / "SKILL.md").is_file()
     assert skill.uninstall() == 0
     assert "nothing to remove" in capsys.readouterr().out
@@ -120,7 +120,7 @@ def test_uninstall_removes_ours_and_only_ours(home, capsys):
 
 def test_main_path_prints_the_packaged_directory(capsys):
     assert skill.main(["path"]) == 0
-    assert capsys.readouterr().out.strip() == str(ROOT / "skills" / "agentic-os-mcp")
+    assert capsys.readouterr().out.strip() == str(ROOT / "skills" / "omnimcp")
 
 
 def test_a_build_without_the_skill_says_so(monkeypatch, capsys, home):

@@ -18,17 +18,17 @@ import time
 
 import pytest
 
-from agentic_os_mcp import background as bg
-from agentic_os_mcp import events, hyprctl, trust
-from agentic_os_mcp import server as srv
+from omnimcp import background as bg
+from omnimcp import events, hyprctl, trust
+from omnimcp import server as srv
 
 # bound at import time, so conftest's autouse stubs do not hide them
-from agentic_os_mcp.a11y import connect as real_a11y_connect  # noqa: E402
-from agentic_os_mcp.dbuswire import connection as real_dbus_connection  # noqa: E402
-from agentic_os_mcp.hyprctl import batch_query as real_batch_query  # noqa: E402
-from agentic_os_mcp.hyprctl import query as real_query  # noqa: E402
-from agentic_os_mcp.trust import _compositor_locked as real_compositor_locked  # noqa: E402
-from agentic_os_mcp.trust import session_locked as real_session_locked  # noqa: E402
+from omnimcp.a11y import connect as real_a11y_connect  # noqa: E402
+from omnimcp.dbuswire import connection as real_dbus_connection  # noqa: E402
+from omnimcp.hyprctl import batch_query as real_batch_query  # noqa: E402
+from omnimcp.hyprctl import query as real_query  # noqa: E402
+from omnimcp.trust import _compositor_locked as real_compositor_locked  # noqa: E402
+from omnimcp.trust import session_locked as real_session_locked  # noqa: E402
 
 pytestmark = [
     pytest.mark.background,
@@ -59,8 +59,8 @@ def live(monkeypatch):
     monkeypatch.setattr(srv.a11y, "connect", real_a11y_connect)
     monkeypatch.setattr(srv.a11y.dbuswire, "connection", real_dbus_connection)
     monkeypatch.setattr(trust, "_compositor_locked", real_compositor_locked)
-    monkeypatch.delenv("AGENTIC_OS_BACKGROUND", raising=False)
-    monkeypatch.delenv("AGENTIC_OS_CONFINE", raising=False)
+    monkeypatch.delenv("OMNIMCP_BACKGROUND", raising=False)
+    monkeypatch.delenv("OMNIMCP_CONFINE", raising=False)
     opened: list[str] = []
     stream = events.EventStream()
     before = _seat()
@@ -97,9 +97,9 @@ def _control(addr: str, name: str) -> dict:
 
 
 def test_an_app_opens_on_an_agent_workspace_and_is_driven_unseen(live):
-    addr = live["open"]("Agree:CHK", "Name", title="agentic-os-mcp-bg-one")
+    addr = live["open"]("Agree:CHK", "Name", title="omnimcp-bg-one")
     client = srv._resolve_window(addr)
-    from agentic_os_mcp import background as bg
+    from omnimcp import background as bg
 
     assert bg.on_agent_workspace(client), client.get("workspace")
     assert _seat() == live["before"], _MOVED
@@ -118,7 +118,7 @@ def test_an_app_opens_on_an_agent_workspace_and_is_driven_unseen(live):
 def test_keys_reach_a_hidden_window_through_sendshortcut(live):
     # two text fields and no focus report from the hidden window: typing
     # goes key by key to whatever field the app itself has focused
-    addr = live["open"]("Name", "City", title="agentic-os-mcp-bg-two")
+    addr = live["open"]("Name", "City", title="omnimcp-bg-two")
     srv.click_ui(name="City", window=addr)
     out = str(srv.keyboard("type", text="Paris 1@", window=addr))
     assert "sendshortcut" in out, out  # not through the accessibility interface
@@ -133,14 +133,14 @@ def test_keys_reach_a_hidden_window_through_sendshortcut(live):
 
 
 def test_the_guarantee_holds_live(live, monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_BACKGROUND", "1")
-    addr = live["open"]("Agree:CHK", title="agentic-os-mcp-bg-guarantee")
+    monkeypatch.setenv("OMNIMCP_BACKGROUND", "1")
+    addr = live["open"]("Agree:CHK", title="omnimcp-bg-guarantee")
     srv.click_ui(name="Agree", window=addr)
     assert _control(addr, "Agree").get("checked") is True
     x, y = hyprctl.cursor_pos()
-    with pytest.raises(trust.TrustError, match="AGENTIC_OS_BACKGROUND"):
+    with pytest.raises(trust.TrustError, match="OMNIMCP_BACKGROUND"):
         srv.pointer("click", x=x, y=y)
-    with pytest.raises(trust.TrustError, match="AGENTIC_OS_BACKGROUND"):
+    with pytest.raises(trust.TrustError, match="OMNIMCP_BACKGROUND"):
         srv.hypr("focus_window", target=addr)
     with pytest.raises(trust.TrustError, match="window="):
         srv.keyboard("type", text="x")

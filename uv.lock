@@ -9,7 +9,7 @@ resolution-markers = [
 ]
 
 [[package]]
-name = "agentic-os-mcp"
+name = "omnimcp"
 version = "0.2.0"
 source = { editable = "." }
 dependencies = [

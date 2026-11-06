@@ -10,13 +10,13 @@ import os
 
 import pytest
 
-from agentic_os_mcp import hyprctl, screenshot, wire
+from omnimcp import hyprctl, screenshot, wire
 
 # bound at import time, so conftest's autouse stubs do not hide them
-from agentic_os_mcp.hyprctl import batch_query as real_batch_query  # noqa: E402
-from agentic_os_mcp.hyprctl import query as real_query  # noqa: E402
-from agentic_os_mcp.trust import _compositor_locked as real_compositor_locked  # noqa: E402
-from agentic_os_mcp.trust import session_locked as real_session_locked  # noqa: E402
+from omnimcp.hyprctl import batch_query as real_batch_query  # noqa: E402
+from omnimcp.hyprctl import query as real_query  # noqa: E402
+from omnimcp.trust import _compositor_locked as real_compositor_locked  # noqa: E402
+from omnimcp.trust import session_locked as real_session_locked  # noqa: E402
 
 pytestmark = pytest.mark.e2e
 
@@ -122,7 +122,7 @@ def test_session_lock_detection_matches_reality(monkeypatch):
     import shutil as _shutil
     import subprocess as _sub
 
-    from agentic_os_mcp import trust
+    from omnimcp import trust
 
     monkeypatch.setattr(trust, "_compositor_locked", real_compositor_locked)
     # unlocked session (this test would never run under an actual lock):
@@ -147,7 +147,7 @@ def test_live_layers_shape_matches_the_parser():
     """parse_layers must handle what the live compositor actually emits:
     a per-monitor dict of level -> surface list, with each surface
     carrying namespace and x/y/w/h. Guards against fixture drift."""
-    from agentic_os_mcp import hyprctl
+    from omnimcp import hyprctl
 
     raw = hyprctl.query("layers")
     assert isinstance(raw, dict)

@@ -1,6 +1,0 @@
-#!/bin/sh
-# Codex plugin shim for the locally installed Agentic OS MCP server.
-# The portable Agent Plugins format only allows a bare executable name or a
-# plugin-contained "./" path, so this wrapper keeps the real runtime external.
-set -eu
-exec "${AGENTIC_OS_MCP_BIN:-/home/home/.local/bin/agentic-os-mcp}" "$@"

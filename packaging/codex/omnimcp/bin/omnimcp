@@ -1,0 +1,6 @@
+#!/bin/sh
+# Codex plugin shim for the locally installed omnimcp server.
+# The portable Agent Plugins format only allows a bare executable name or a
+# plugin-contained "./" path, so this wrapper keeps the real runtime external.
+set -eu
+exec "${OMNIMCP_BIN:-/home/home/.local/bin/omnimcp}" "$@"

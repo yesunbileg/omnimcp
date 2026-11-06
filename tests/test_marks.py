@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from agentic_os_mcp import server as srv
+from omnimcp import server as srv
 
 
 def make_client():
@@ -174,6 +174,7 @@ def test_click_ui_refuses_while_the_session_is_locked(wired, monkeypatch):
 
 
 def test_click_ui_refuses_under_lock_even_with_allow_auth(wired, monkeypatch):
+    monkeypatch.setenv("OMNIMCP_ALLOW_AUTH_OVERRIDE", "1")
     # click_ui always targets a specific window control, so under a lock
     # the click cannot reach it: allow_auth (drive the prompt) does not
     # apply, since there is no "click a control by name" on a lock screen
@@ -187,7 +188,7 @@ def test_click_ui_refuses_under_lock_even_with_allow_auth(wired, monkeypatch):
 def test_click_ui_confinement_wiring_refuses_out_of_scope(wired, monkeypatch):
     # integration: guard_client is real here; the 'gedit' target is out of
     # a kitty-only scope, so the click is refused before any side effect
-    monkeypatch.setenv("AGENTIC_OS_CONFINE", "class:kitty")
+    monkeypatch.setenv("OMNIMCP_CONFINE", "class:kitty")
     with pytest.raises(srv.trust.TrustError, match="confinement scope"):
         srv.click_ui(name="Save")
     assert wired["clicks"] == []
@@ -224,6 +225,7 @@ def test_click_ui_refuses_a_floating_auth_dialog_over_the_control(wired, monkeyp
 
 
 def test_click_ui_through_an_auth_dialog_needs_allow_auth(wired, monkeypatch):
+    monkeypatch.setenv("OMNIMCP_ALLOW_AUTH_OVERRIDE", "1")
     _scene(monkeypatch, [AUTH_DIALOG])
     srv.click_ui(name="Save", allow_auth=True)
     assert wired["clicks"] == [(150, 80, "left")]
@@ -242,7 +244,7 @@ def test_a_floating_target_does_not_hide_a_floating_auth_dialog(monkeypatch):
 
 
 def test_a_pinned_window_over_the_point_counts(monkeypatch):
-    monkeypatch.setenv("AGENTIC_OS_CONFINE", "class:gedit")
+    monkeypatch.setenv("OMNIMCP_CONFINE", "class:gedit")
     pip = {"address": "0xq", "class": "mpv", "floating": True, "pinned": True,
            "at": [120, 60], "size": [200, 120], "workspace": {"id": 5}, "monitor": 1}
     _scene(monkeypatch, [pip])
@@ -271,7 +273,7 @@ def test_windows_that_cannot_cover_the_target_do_not_count(monkeypatch):
 def test_a_scratchpad_focusing_will_hide_does_not_count_before_focus(monkeypatch):
     # with input:special_fallthrough 0 (the default), focusing a window on a
     # regular workspace hides the monitor's scratchpad
-    monkeypatch.setenv("AGENTIC_OS_CONFINE", "class:gedit")
+    monkeypatch.setenv("OMNIMCP_CONFINE", "class:gedit")
     pad = {"address": "0xk", "class": "kitty", "floating": False, "at": [0, 0],
            "size": [1920, 1080], "workspace": {"id": -98, "name": "special:term"},
            "monitor": 0}
@@ -337,7 +339,7 @@ def test_click_ui_refuses_when_focusing_moved_the_window(wired, monkeypatch):
 # pinned windows) at special_fallthrough 0, so the click cannot reach the
 # target; at 1 the scratchpad's windows come first.
 def _overhang(monkeypatch, fallthrough, pad_covers=True):
-    monkeypatch.setenv("AGENTIC_OS_CONFINE", "class:gedit")
+    monkeypatch.setenv("OMNIMCP_CONFINE", "class:gedit")
     target = dict(make_client(), floating=True, at=[1700, 200], size=[800, 500],
                   workspace={"id": 5}, monitor=1)
     mons = [dict(MONS[0], specialWorkspace={"id": -98, "name": "special:term"}), MONS[1]]
@@ -371,7 +373,7 @@ def test_at_fallthrough_1_the_scratchpads_own_windows_count(monkeypatch):
     ({"option": "input:special_fallthrough"}, None),
 ])
 def test_special_fallthrough_reads_both_config_managers(monkeypatch, reply, expect):
-    from agentic_os_mcp.trust import _special_fallthrough as real
+    from omnimcp.trust import _special_fallthrough as real
 
     monkeypatch.setattr(srv.trust.hyprctl, "query", lambda what: reply)
     assert real() == expect
@@ -419,8 +421,8 @@ def test_the_permission_prompt_counts_even_over_a_pinned_target(monkeypatch, foc
     pinned = dict(make_client(), floating=True, pinned=True)
     with pytest.raises(srv.trust.TrustError, match="Hyprland's own dialog"):
         _check(pinned, focused=focused)
-    monkeypatch.setenv("AGENTIC_OS_AUTH_GUARD", "0")
-    monkeypatch.setenv("AGENTIC_OS_CONFINE", "class:gedit")
+    monkeypatch.setenv("OMNIMCP_AUTH_GUARD", "0")
+    monkeypatch.setenv("OMNIMCP_CONFINE", "class:gedit")
     with pytest.raises(srv.trust.TrustError, match="confinement"):
         _check(pinned, focused=focused)
 

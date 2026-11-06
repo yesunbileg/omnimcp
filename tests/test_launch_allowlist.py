@@ -65,6 +65,25 @@ def test_allowlist_rejects_untrusted_file_permissions(no_real_desktop, monkeypat
         server._check_launch_allowed("good")
 
 
+def test_fifo_allowlist_is_refused_without_blocking(tmp_path):
+    import os
+    import subprocess
+    import sys
+
+    path = tmp_path / "allowlist.fifo"
+    os.mkfifo(path)
+    env = {**os.environ, "OMNIMCP_LAUNCH_ALLOW": str(path)}
+    result = subprocess.run(
+        [sys.executable, "-c", (
+            "from omnimcp.server import _check_launch_allowed, LaunchNotAllowedError\n"
+            "try:\n _check_launch_allowed('app')\n"
+            "except LaunchNotAllowedError:\n pass\n"
+            "else:\n raise AssertionError('FIFO accepted')\n"
+        )], env=env, capture_output=True, text=True, timeout=2,
+    )
+    assert result.returncode == 0, result.stderr
+
+
 def test_launch_policy_runs_before_dry_run(no_real_desktop, monkeypatch, tmp_path):
     _allowlist(tmp_path, ["allowed"], monkeypatch)
     with pytest.raises(server.LaunchNotAllowedError) as error:

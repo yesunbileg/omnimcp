@@ -1435,7 +1435,7 @@ def _check_launch_allowed(command: str) -> None:
     if not allow_path or not os.path.isabs(allow_path):
         refuse("OMNIMCP_LAUNCH_ALLOW must name an absolute allowlist file")
     try:
-        fd = os.open(allow_path, os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) |
+        fd = os.open(allow_path, os.O_RDONLY | os.O_NONBLOCK | getattr(os, "O_CLOEXEC", 0) |
                      getattr(os, "O_NOFOLLOW", 0))
         with os.fdopen(fd, "r", encoding="utf-8") as allow_file:
             info = os.fstat(allow_file.fileno())

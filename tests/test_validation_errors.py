@@ -18,7 +18,7 @@ from omnimcp.core.registry import Fault
 from omnimcp.core.state import Store
 
 
-def call_entrypoint(tool, args, profile):
+def call_entrypoint(tool, args, profile, runtime_dir):
     async def go():
         params = StdioServerParameters(
             command=sys.executable,
@@ -26,6 +26,7 @@ def call_entrypoint(tool, args, profile):
             env={
                 "PATH": os.environ.get("PATH", ""),
                 "HOME": os.environ.get("HOME", ""),
+                "XDG_RUNTIME_DIR": str(runtime_dir),
                 "OMNIMCP_PROFILE": profile,
                 "PYTHONPATH": str(Path(__file__).resolve().parents[1] / "src"),
                 "OMNIMCP_BACKGROUND": "1",
@@ -39,7 +40,7 @@ def call_entrypoint(tool, args, profile):
     return asyncio.run(go())
 
 
-def reject_every_tool(profile):
+def reject_every_tool(profile, runtime_dir):
     async def go():
         params = StdioServerParameters(
             command=sys.executable,
@@ -47,6 +48,7 @@ def reject_every_tool(profile):
             env={
                 "PATH": os.environ.get("PATH", ""),
                 "HOME": os.environ.get("HOME", ""),
+                "XDG_RUNTIME_DIR": str(runtime_dir),
                 "OMNIMCP_PROFILE": profile,
                 "PYTHONPATH": str(Path(__file__).resolve().parents[1] / "src"),
                 "OMNIMCP_BACKGROUND": "1",
@@ -65,9 +67,9 @@ def reject_every_tool(profile):
     return asyncio.run(go())
 
 
-def test_real_legacy_entrypoint_redacts_invalid_tool_input():
+def test_real_legacy_entrypoint_redacts_invalid_tool_input(tmp_path):
     result = call_entrypoint(
-        "canvas", {"path": "/tmp/a.canvas", "action": "R2_SECRET_MARKER"}, "legacy"
+        "canvas", {"path": "/tmp/a.canvas", "action": "R2_SECRET_MARKER"}, "legacy", tmp_path
     )
     message = " ".join(block.text for block in result.content if hasattr(block, "text"))
     assert result.isError
@@ -75,9 +77,9 @@ def test_real_legacy_entrypoint_redacts_invalid_tool_input():
     assert "R2_SECRET_MARKER" not in message
 
 
-def test_real_compact_entrypoint_redacts_invalid_tool_input():
+def test_real_compact_entrypoint_redacts_invalid_tool_input(tmp_path):
     result = call_entrypoint(
-        "observe", {"action": "desktop", "offset": "R2_SECRET_MARKER"}, "compact"
+        "observe", {"action": "desktop", "offset": "R2_SECRET_MARKER"}, "compact", tmp_path
     )
     message = " ".join(block.text for block in result.content if hasattr(block, "text"))
     assert result.isError
@@ -85,9 +87,9 @@ def test_real_compact_entrypoint_redacts_invalid_tool_input():
     assert "R2_SECRET_MARKER" not in message
 
 
-def test_real_entrypoints_reject_missing_required_args_for_every_listed_tool():
+def test_real_entrypoints_reject_missing_required_args_for_every_listed_tool(tmp_path):
     for profile in ("legacy", "compact"):
-        for name, result in reject_every_tool(profile):
+        for name, result in reject_every_tool(profile, tmp_path):
             message = " ".join(block.text for block in result.content if hasattr(block, "text"))
             assert result.isError, name
             assert "required" in message.lower() or "field required" in message.lower(), name
@@ -164,7 +166,7 @@ def _invalid_value(model, baseline, field):
     return None
 
 
-def test_compact_entrypoint_validates_discover_observe_act_and_workflow():
+def test_compact_entrypoint_validates_discover_observe_act_and_workflow(tmp_path):
     cases = [
         ("discover", {"offset": "R2_SECRET_MARKER"}, "offset"),
         ("observe", {"action": "desktop", "offset": "R2_SECRET_MARKER"}, "offset"),
@@ -172,7 +174,7 @@ def test_compact_entrypoint_validates_discover_observe_act_and_workflow():
         ("workflow", {"steps": "R2_SECRET_MARKER"}, "steps"),
     ]
     for tool, args, field in cases:
-        result = call_entrypoint(tool, args, "compact")
+        result = call_entrypoint(tool, args, "compact", tmp_path)
         message = " ".join(block.text for block in result.content if hasattr(block, "text"))
         assert result.isError
         assert field in message

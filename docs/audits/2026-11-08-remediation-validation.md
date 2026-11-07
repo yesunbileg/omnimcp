@@ -1,9 +1,9 @@
 # Verified external-audit fixes — 2026-11-08
 
-The primary agent completed the remaining implementation after the user's request
-to work directly. Earlier independent Terra review identified additional gaps;
-those review findings were addressed with new regressions. This report does not
-claim that Terra independently approved the final revised code.
+Verified external-audit defects were remediated on `wip/audit-fixes-20261107`.
+The tested code is `4b277c0`. Earlier independent Terra review identified additional
+gaps that were addressed with regressions. The final revised code was implemented
+and verified directly; no final independent Terra approval is claimed.
 
 ## Changes
 
@@ -30,14 +30,17 @@ claim that Terra independently approved the final revised code.
 - CI adds build, formatting, subprocess-aware coverage and real Hyprland acceptance.
   The coverage floor is 82%, from the measured audited baseline of 82.65%.
 
-## Verification so far
+## Verification
 
 - Complete native suite: **1,480 passed, 16 deselected**, 65.98 seconds.
 - Subprocess-aware coverage: **84.61%**. Worker and root-helper tests are measured;
   subprocess execution is not misreported as no tests.
 - Ruff check, format check and diff whitespace check passed; 133 Python files formatted.
-- Wheel and source distribution build passed before the final identity-read fix;
-  the VM staging command rebuilds the final wheel before installation.
+- The final wheel and source distribution were rebuilt during VM staging. All
+  **55 installed Python modules** in the fresh runtime image matched the checkout
+  byte for byte before that image was used for the disposable guest.
+- Measured module coverage: admin adapter **87.93%**, root helper **82.52%**,
+  worker **87.76%**, and state/process persistence **87.60%**.
 - The first integrated suite had two failures (1,468 passed): an old exact message
   assertion and a PID-reuse fixture that changed only legacy job metadata. The
   compatible message was retained and the fixture now changes the authoritative
@@ -46,11 +49,25 @@ claim that Terra independently approved the final revised code.
   16 deselected; 82.65% coverage, including worker 88.54%. An initial baseline run
   without that private runtime had two environment-path permission failures.
 
-Live VM validation is pending in this commit. The known Hyprland 0.53.3 /
-Aquamarine 0.10 teardown exit 139 remains a separate release gate. CI preserves
-raw exit 2 and accepts only the precisely identified known teardown signature as
-an explicit warning after actual desktop acceptance and evidence validation.
-Unexpected crashes, timeouts, missing evidence and failed desktop effects fail CI.
+## Actual Hyprland VM
+
+The new wheel was installed into a fresh runtime image and exported to a new VM
+disk. Actual MCP stdio, desktop snapshot, Foot launch, cursor readback at (320,240),
+screenshot, fresh terminal text/file readback and fixture close all **passed**.
+
+Compositor teardown still **failed with exit 139** in libaquamarine after those
+checks completed. The raw runner returned **2**; the CI desktop-only wrapper
+recorded `teardown=known_failure` and `release_ready=false`. This is a current
+observed failure, not just historical evidence. No clean full-VM lifecycle pass
+is claimed. Unexpected crashes, timeouts, missing evidence and failed desktop
+effects fail CI; only the exact known version/signature gets an explicit warning.
+
+[Raw VM JSON, screenshot, original serial bytes, coverage and test logs](../evidence/external-audit-2026-11-08/README.md)
+are preserved. The 16 excluded live pytest cases were not run. This acceptance
+uses file-mode screenshots; the image-duplication fix is separately verified
+through the actual pinned MCP client/server protocol with synthetic capture data:
+700,000 raw bytes produced one image block, no structuredContent, and a 933,599-byte
+response JSON.
 
 ## Limits
 

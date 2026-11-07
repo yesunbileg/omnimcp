@@ -1,0 +1,31 @@
+import asyncio
+import base64
+import json
+import os
+from pathlib import Path
+
+os.environ['OMNIMCP_SCREENSHOT_MODE'] = 'image'
+from mcp.shared.memory import create_connected_server_and_client_session
+from omnimcp import screenshot as shots
+from omnimcp import server
+
+payload = b'\xff\xd8\xff' + b'x' * 699997
+shots.capture = lambda *args, **kwargs: (payload, {'format':'jpeg', 'origin':[0,0], 'scale':1.0})
+shots.capture_stable = shots.capture
+app = server.build_app()
+
+async def main():
+    async with create_connected_server_and_client_session(app._mcp_server) as client:
+        result = await client.call_tool('screenshot', {})
+        images = [c for c in result.content if c.type == 'image']
+        assert not result.isError, result.content
+        assert result.structuredContent is None
+        assert len(images) == 1
+        assert base64.b64decode(images[0].data) == payload
+        receipt = {'status':'passed', 'capture':'synthetic JPEG bytes',
+                   'raw_bytes':len(payload), 'image_blocks':len(images),
+                   'structured_content':None, 'response_json_bytes':len(result.model_dump_json().encode())}
+        Path('/workspace/omnimcp/docs/evidence/external-audit-2026-11-08/image-protocol.json').write_text(json.dumps(receipt,indent=2)+'\n')
+        print(json.dumps(receipt))
+
+asyncio.run(main())

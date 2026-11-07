@@ -1,0 +1,8 @@
+{
+  "desktop": "passed",
+  "teardown": "known_failure",
+  "raw_exit_code": 2,
+  "compositor_exit": 139,
+  "release_ready": false,
+  "reason": "Hyprland 0.53.3/Aquamarine 0.10 teardown segfault; release gate remains open."
+}

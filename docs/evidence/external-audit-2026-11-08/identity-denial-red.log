@@ -1,0 +1,40 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+______ test_unreadable_group_identity_is_pending_denial_not_an_exception _______
+
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-109/test_unreadable_group_identity0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f2ad793c110>
+
+    def test_unreadable_group_identity_is_pending_denial_not_an_exception(tmp_path, monkeypatch):
+        import psutil
+
+        store = Store(tmp_path / "state")
+
+        def denied(pid):
+            raise psutil.AccessDenied(pid)
+
+        monkeypatch.setattr(psutil, "Process", denied)
+        try:
+>           result = store.stop_process_group(12345, 12345, 1.0)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_shutdown_boundaries.py:198:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src/omnimcp/core/state.py:239: in stop_process_group
+    result = self._stop_process_group(pid, pgid, birth)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/omnimcp/core/state.py:250: in _stop_process_group
+    leader = psutil.Process(pid)
+             ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+pid = 12345
+
+    def denied(pid):
+>       raise psutil.AccessDenied(pid)
+E       psutil.AccessDenied: (pid=12345)
+
+tests/test_shutdown_boundaries.py:194: AccessDenied
+=========================== short test summary info ============================
+FAILED tests/test_shutdown_boundaries.py::test_unreadable_group_identity_is_pending_denial_not_an_exception
+1 failed in 0.10s

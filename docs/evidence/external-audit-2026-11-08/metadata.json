@@ -1,0 +1,22 @@
+{
+  "code_commit": "4b277c0aa3c54c810f19cfc36994ba1bc747d0c6",
+  "wheel_sha256": "58936f994e8166f189035fae7fd4dbdf55592487ab2a27baebd8f1fbbe930d97",
+  "sdist_sha256": "a232005b74635b0545711cb806392ed09e6ee0f70b6304783a960ea53f791fb3",
+  "image_modules_verified": 55,
+  "full_suite": {
+    "passed": 1480,
+    "deselected": 16
+  },
+  "coverage_percent": 84.60769059791065,
+  "vm": {
+    "desktop": "passed",
+    "teardown": "known_failure",
+    "raw_exit_code": 2,
+    "compositor_exit": 139,
+    "release_ready": false,
+    "reason": "Hyprland 0.53.3/Aquamarine 0.10 teardown segfault; release gate remains open."
+  },
+  "native_python": "Python 3.12.14",
+  "vm_python": "Python 3.14 (Ubuntu 26.04 runtime image)",
+  "gui_auth_or_root_mutations_executed": false
+}

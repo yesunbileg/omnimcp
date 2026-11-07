@@ -1,0 +1,564 @@
+{
+  "total": {
+    "covered_lines": 7613,
+    "num_statements": 8998,
+    "percent_covered": 84.60769059791065,
+    "percent_covered_display": "85",
+    "missing_lines": 1385,
+    "excluded_lines": 0,
+    "percent_statements_covered": 84.60769059791065,
+    "percent_statements_covered_display": "85"
+  },
+  "modules": {
+    "src/omnimcp/__init__.py": {
+      "covered_lines": 3,
+      "num_statements": 3,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "src/omnimcp/__main__.py": {
+      "covered_lines": 2,
+      "num_statements": 2,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "src/omnimcp/a11y.py": {
+      "covered_lines": 376,
+      "num_statements": 449,
+      "percent_covered": 83.74164810690424,
+      "percent_covered_display": "84",
+      "missing_lines": 73,
+      "excluded_lines": 0,
+      "percent_statements_covered": 83.74164810690424,
+      "percent_statements_covered_display": "84"
+    },
+    "src/omnimcp/adapters/__init__.py": {
+      "covered_lines": 11,
+      "num_statements": 11,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "src/omnimcp/adapters/admin.py": {
+      "covered_lines": 51,
+      "num_statements": 58,
+      "percent_covered": 87.93103448275862,
+      "percent_covered_display": "88",
+      "missing_lines": 7,
+      "excluded_lines": 0,
+      "percent_statements_covered": 87.93103448275862,
+      "percent_statements_covered_display": "88"
+    },
+    "src/omnimcp/adapters/apps.py": {
+      "covered_lines": 18,
+      "num_statements": 63,
+      "percent_covered": 28.571428571428573,
+      "percent_covered_display": "29",
+      "missing_lines": 45,
+      "excluded_lines": 0,
+      "percent_statements_covered": 28.571428571428573,
+      "percent_statements_covered_display": "29"
+    },
+    "src/omnimcp/adapters/browser.py": {
+      "covered_lines": 41,
+      "num_statements": 124,
+      "percent_covered": 33.064516129032256,
+      "percent_covered_display": "33",
+      "missing_lines": 83,
+      "excluded_lines": 0,
+      "percent_statements_covered": 33.064516129032256,
+      "percent_statements_covered_display": "33"
+    },
+    "src/omnimcp/adapters/codex.py": {
+      "covered_lines": 5,
+      "num_statements": 5,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "src/omnimcp/adapters/desktop.py": {
+      "covered_lines": 98,
+      "num_statements": 145,
+      "percent_covered": 67.58620689655173,
+      "percent_covered_display": "68",
+      "missing_lines": 47,
+      "excluded_lines": 0,
+      "percent_statements_covered": 67.58620689655173,
+      "percent_statements_covered_display": "68"
+    },
+    "src/omnimcp/adapters/files.py": {
+      "covered_lines": 227,
+      "num_statements": 276,
+      "percent_covered": 82.2463768115942,
+      "percent_covered_display": "82",
+      "missing_lines": 49,
+      "excluded_lines": 0,
+      "percent_statements_covered": 82.2463768115942,
+      "percent_statements_covered_display": "82"
+    },
+    "src/omnimcp/adapters/native.py": {
+      "covered_lines": 94,
+      "num_statements": 178,
+      "percent_covered": 52.80898876404494,
+      "percent_covered_display": "53",
+      "missing_lines": 84,
+      "excluded_lines": 0,
+      "percent_statements_covered": 52.80898876404494,
+      "percent_statements_covered_display": "53"
+    },
+    "src/omnimcp/adapters/opencode.py": {
+      "covered_lines": 62,
+      "num_statements": 70,
+      "percent_covered": 88.57142857142857,
+      "percent_covered_display": "89",
+      "missing_lines": 8,
+      "excluded_lines": 0,
+      "percent_statements_covered": 88.57142857142857,
+      "percent_statements_covered_display": "89"
+    },
+    "src/omnimcp/adapters/processes.py": {
+      "covered_lines": 105,
+      "num_statements": 167,
+      "percent_covered": 62.874251497005986,
+      "percent_covered_display": "63",
+      "missing_lines": 62,
+      "excluded_lines": 0,
+      "percent_statements_covered": 62.874251497005986,
+      "percent_statements_covered_display": "63"
+    },
+    "src/omnimcp/adapters/recipes.py": {
+      "covered_lines": 18,
+      "num_statements": 26,
+      "percent_covered": 69.23076923076923,
+      "percent_covered_display": "69",
+      "missing_lines": 8,
+      "excluded_lines": 0,
+      "percent_statements_covered": 69.23076923076923,
+      "percent_statements_covered_display": "69"
+    },
+    "src/omnimcp/adapters/shell.py": {
+      "covered_lines": 19,
+      "num_statements": 53,
+      "percent_covered": 35.84905660377358,
+      "percent_covered_display": "36",
+      "missing_lines": 34,
+      "excluded_lines": 0,
+      "percent_statements_covered": 35.84905660377358,
+      "percent_statements_covered_display": "36"
+    },
+    "src/omnimcp/adapters/system.py": {
+      "covered_lines": 53,
+      "num_statements": 78,
+      "percent_covered": 67.94871794871794,
+      "percent_covered_display": "68",
+      "missing_lines": 25,
+      "excluded_lines": 0,
+      "percent_statements_covered": 67.94871794871794,
+      "percent_statements_covered_display": "68"
+    },
+    "src/omnimcp/background.py": {
+      "covered_lines": 99,
+      "num_statements": 100,
+      "percent_covered": 99.0,
+      "percent_covered_display": "99",
+      "missing_lines": 1,
+      "excluded_lines": 0,
+      "percent_statements_covered": 99.0,
+      "percent_statements_covered_display": "99"
+    },
+    "src/omnimcp/canvas.py": {
+      "covered_lines": 228,
+      "num_statements": 274,
+      "percent_covered": 83.21167883211679,
+      "percent_covered_display": "83",
+      "missing_lines": 46,
+      "excluded_lines": 0,
+      "percent_statements_covered": 83.21167883211679,
+      "percent_statements_covered_display": "83"
+    },
+    "src/omnimcp/cli.py": {
+      "covered_lines": 366,
+      "num_statements": 457,
+      "percent_covered": 80.0875273522976,
+      "percent_covered_display": "80",
+      "missing_lines": 91,
+      "excluded_lines": 0,
+      "percent_statements_covered": 80.0875273522976,
+      "percent_statements_covered_display": "80"
+    },
+    "src/omnimcp/cli_state.py": {
+      "covered_lines": 86,
+      "num_statements": 87,
+      "percent_covered": 98.85057471264368,
+      "percent_covered_display": "99",
+      "missing_lines": 1,
+      "excluded_lines": 0,
+      "percent_statements_covered": 98.85057471264368,
+      "percent_statements_covered_display": "99"
+    },
+    "src/omnimcp/clipboard.py": {
+      "covered_lines": 25,
+      "num_statements": 25,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "src/omnimcp/codex_usage.py": {
+      "covered_lines": 130,
+      "num_statements": 168,
+      "percent_covered": 77.38095238095238,
+      "percent_covered_display": "77",
+      "missing_lines": 38,
+      "excluded_lines": 0,
+      "percent_statements_covered": 77.38095238095238,
+      "percent_statements_covered_display": "77"
+    },
+    "src/omnimcp/compact.py": {
+      "covered_lines": 46,
+      "num_statements": 49,
+      "percent_covered": 93.87755102040816,
+      "percent_covered_display": "94",
+      "missing_lines": 3,
+      "excluded_lines": 0,
+      "percent_statements_covered": 93.87755102040816,
+      "percent_statements_covered_display": "94"
+    },
+    "src/omnimcp/core/__init__.py": {
+      "covered_lines": 0,
+      "num_statements": 0,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "src/omnimcp/core/client.py": {
+      "covered_lines": 44,
+      "num_statements": 54,
+      "percent_covered": 81.48148148148148,
+      "percent_covered_display": "81",
+      "missing_lines": 10,
+      "excluded_lines": 0,
+      "percent_statements_covered": 81.48148148148148,
+      "percent_statements_covered_display": "81"
+    },
+    "src/omnimcp/core/engine.py": {
+      "covered_lines": 471,
+      "num_statements": 548,
+      "percent_covered": 85.94890510948905,
+      "percent_covered_display": "86",
+      "missing_lines": 77,
+      "excluded_lines": 0,
+      "percent_statements_covered": 85.94890510948905,
+      "percent_statements_covered_display": "86"
+    },
+    "src/omnimcp/core/execution.py": {
+      "covered_lines": 112,
+      "num_statements": 129,
+      "percent_covered": 86.82170542635659,
+      "percent_covered_display": "87",
+      "missing_lines": 17,
+      "excluded_lines": 0,
+      "percent_statements_covered": 86.82170542635659,
+      "percent_statements_covered_display": "87"
+    },
+    "src/omnimcp/core/fastmcp.py": {
+      "covered_lines": 20,
+      "num_statements": 20,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "src/omnimcp/core/protocol.py": {
+      "covered_lines": 14,
+      "num_statements": 14,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "src/omnimcp/core/pty_child.py": {
+      "covered_lines": 0,
+      "num_statements": 8,
+      "percent_covered": 0.0,
+      "percent_covered_display": "0",
+      "missing_lines": 8,
+      "excluded_lines": 0,
+      "percent_statements_covered": 0.0,
+      "percent_statements_covered_display": "0"
+    },
+    "src/omnimcp/core/registry.py": {
+      "covered_lines": 70,
+      "num_statements": 71,
+      "percent_covered": 98.59154929577464,
+      "percent_covered_display": "99",
+      "missing_lines": 1,
+      "excluded_lines": 0,
+      "percent_statements_covered": 98.59154929577464,
+      "percent_statements_covered_display": "99"
+    },
+    "src/omnimcp/core/state.py": {
+      "covered_lines": 226,
+      "num_statements": 258,
+      "percent_covered": 87.59689922480621,
+      "percent_covered_display": "88",
+      "missing_lines": 32,
+      "excluded_lines": 0,
+      "percent_statements_covered": 87.59689922480621,
+      "percent_statements_covered_display": "88"
+    },
+    "src/omnimcp/core/worker.py": {
+      "covered_lines": 86,
+      "num_statements": 98,
+      "percent_covered": 87.75510204081633,
+      "percent_covered_display": "88",
+      "missing_lines": 12,
+      "excluded_lines": 0,
+      "percent_statements_covered": 87.75510204081633,
+      "percent_statements_covered_display": "88"
+    },
+    "src/omnimcp/core_cli.py": {
+      "covered_lines": 60,
+      "num_statements": 93,
+      "percent_covered": 64.51612903225806,
+      "percent_covered_display": "65",
+      "missing_lines": 33,
+      "excluded_lines": 0,
+      "percent_statements_covered": 64.51612903225806,
+      "percent_statements_covered_display": "65"
+    },
+    "src/omnimcp/dbuswire.py": {
+      "covered_lines": 240,
+      "num_statements": 254,
+      "percent_covered": 94.48818897637796,
+      "percent_covered_display": "94",
+      "missing_lines": 14,
+      "excluded_lines": 0,
+      "percent_statements_covered": 94.48818897637796,
+      "percent_statements_covered_display": "94"
+    },
+    "src/omnimcp/events.py": {
+      "covered_lines": 33,
+      "num_statements": 93,
+      "percent_covered": 35.483870967741936,
+      "percent_covered_display": "35",
+      "missing_lines": 60,
+      "excluded_lines": 0,
+      "percent_statements_covered": 35.483870967741936,
+      "percent_statements_covered_display": "35"
+    },
+    "src/omnimcp/hyprctl.py": {
+      "covered_lines": 259,
+      "num_statements": 267,
+      "percent_covered": 97.00374531835206,
+      "percent_covered_display": "97",
+      "missing_lines": 8,
+      "excluded_lines": 0,
+      "percent_statements_covered": 97.00374531835206,
+      "percent_statements_covered_display": "97"
+    },
+    "src/omnimcp/input.py": {
+      "covered_lines": 132,
+      "num_statements": 158,
+      "percent_covered": 83.54430379746836,
+      "percent_covered_display": "84",
+      "missing_lines": 26,
+      "excluded_lines": 0,
+      "percent_statements_covered": 83.54430379746836,
+      "percent_statements_covered_display": "84"
+    },
+    "src/omnimcp/journal.py": {
+      "covered_lines": 253,
+      "num_statements": 264,
+      "percent_covered": 95.83333333333333,
+      "percent_covered_display": "96",
+      "missing_lines": 11,
+      "excluded_lines": 0,
+      "percent_statements_covered": 95.83333333333333,
+      "percent_statements_covered_display": "96"
+    },
+    "src/omnimcp/kanban.py": {
+      "covered_lines": 282,
+      "num_statements": 301,
+      "percent_covered": 93.68770764119601,
+      "percent_covered_display": "94",
+      "missing_lines": 19,
+      "excluded_lines": 0,
+      "percent_statements_covered": 93.68770764119601,
+      "percent_statements_covered_display": "94"
+    },
+    "src/omnimcp/keymap.py": {
+      "covered_lines": 68,
+      "num_statements": 71,
+      "percent_covered": 95.77464788732394,
+      "percent_covered_display": "96",
+      "missing_lines": 3,
+      "excluded_lines": 0,
+      "percent_statements_covered": 95.77464788732394,
+      "percent_statements_covered_display": "96"
+    },
+    "src/omnimcp/legacy_env.py": {
+      "covered_lines": 8,
+      "num_statements": 8,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "src/omnimcp/legacy_result.py": {
+      "covered_lines": 6,
+      "num_statements": 6,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "src/omnimcp/legacy_transport.py": {
+      "covered_lines": 34,
+      "num_statements": 34,
+      "percent_covered": 100.0,
+      "percent_covered_display": "100",
+      "missing_lines": 0,
+      "excluded_lines": 0,
+      "percent_statements_covered": 100.0,
+      "percent_statements_covered_display": "100"
+    },
+    "src/omnimcp/opencode.py": {
+      "covered_lines": 24,
+      "num_statements": 35,
+      "percent_covered": 68.57142857142857,
+      "percent_covered_display": "69",
+      "missing_lines": 11,
+      "excluded_lines": 0,
+      "percent_statements_covered": 68.57142857142857,
+      "percent_statements_covered_display": "69"
+    },
+    "src/omnimcp/private_paths.py": {
+      "covered_lines": 105,
+      "num_statements": 114,
+      "percent_covered": 92.10526315789474,
+      "percent_covered_display": "92",
+      "missing_lines": 9,
+      "excluded_lines": 0,
+      "percent_statements_covered": 92.10526315789474,
+      "percent_statements_covered_display": "92"
+    },
+    "src/omnimcp/root_helper.py": {
+      "covered_lines": 203,
+      "num_statements": 246,
+      "percent_covered": 82.52032520325203,
+      "percent_covered_display": "83",
+      "missing_lines": 43,
+      "excluded_lines": 0,
+      "percent_statements_covered": 82.52032520325203,
+      "percent_statements_covered_display": "83"
+    },
+    "src/omnimcp/safety.py": {
+      "covered_lines": 67,
+      "num_statements": 71,
+      "percent_covered": 94.36619718309859,
+      "percent_covered_display": "94",
+      "missing_lines": 4,
+      "excluded_lines": 0,
+      "percent_statements_covered": 94.36619718309859,
+      "percent_statements_covered_display": "94"
+    },
+    "src/omnimcp/screenshot.py": {
+      "covered_lines": 268,
+      "num_statements": 280,
+      "percent_covered": 95.71428571428571,
+      "percent_covered_display": "96",
+      "missing_lines": 12,
+      "excluded_lines": 0,
+      "percent_statements_covered": 95.71428571428571,
+      "percent_statements_covered_display": "96"
+    },
+    "src/omnimcp/server.py": {
+      "covered_lines": 1258,
+      "num_statements": 1348,
+      "percent_covered": 93.32344213649851,
+      "percent_covered_display": "93",
+      "missing_lines": 90,
+      "excluded_lines": 0,
+      "percent_statements_covered": 93.32344213649851,
+      "percent_statements_covered_display": "93"
+    },
+    "src/omnimcp/session.py": {
+      "covered_lines": 30,
+      "num_statements": 31,
+      "percent_covered": 96.7741935483871,
+      "percent_covered_display": "97",
+      "missing_lines": 1,
+      "excluded_lines": 0,
+      "percent_statements_covered": 96.7741935483871,
+      "percent_statements_covered_display": "97"
+    },
+    "src/omnimcp/skill.py": {
+      "covered_lines": 109,
+      "num_statements": 116,
+      "percent_covered": 93.96551724137932,
+      "percent_covered_display": "94",
+      "missing_lines": 7,
+      "excluded_lines": 0,
+      "percent_statements_covered": 93.96551724137932,
+      "percent_statements_covered_display": "94"
+    },
+    "src/omnimcp/trust.py": {
+      "covered_lines": 395,
+      "num_statements": 407,
+      "percent_covered": 97.05159705159706,
+      "percent_covered_display": "97",
+      "missing_lines": 12,
+      "excluded_lines": 0,
+      "percent_statements_covered": 97.05159705159706,
+      "percent_statements_covered_display": "97"
+    },
+    "src/omnimcp/verbs.py": {
+      "covered_lines": 478,
+      "num_statements": 507,
+      "percent_covered": 94.2800788954635,
+      "percent_covered_display": "94",
+      "missing_lines": 29,
+      "excluded_lines": 0,
+      "percent_statements_covered": 94.2800788954635,
+      "percent_statements_covered_display": "94"
+    },
+    "src/omnimcp/wire.py": {
+      "covered_lines": 95,
+      "num_statements": 226,
+      "percent_covered": 42.0353982300885,
+      "percent_covered_display": "42",
+      "missing_lines": 131,
+      "excluded_lines": 0,
+      "percent_statements_covered": 42.0353982300885,
+      "percent_statements_covered_display": "42"
+    }
+  }
+}

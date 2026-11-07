@@ -1,0 +1,18 @@
+#!/bin/bash
+set -eu
+cp /boot/vmlinuz-* /output/kernel
+e2fsck -fy /output/root.img > /output/fsck.log 2>&1 || status=$?
+if [ "${status:-0}" -gt 1 ]; then cat /output/fsck.log; exit 1; fi
+for entry in 'guest-init.sh /root/guest-init.sh' 'run-desktop.sh /home/tester/run-desktop.sh' 'hyprland.conf /home/tester/hyprland.conf' 'base_acceptance.py /home/tester/base_acceptance.py' 'fix_acceptance.py /home/tester/desktop_acceptance.py'; do
+    read -r source target <<< "$entry"
+    debugfs -w -R "rm $target" /output/root.img >/dev/null 2>&1 || true
+    debugfs -w -R "write /output/$source $target" /output/root.img >/dev/null 2>&1
+    debugfs -w -R "set_inode_field $target mode 0100755" /output/root.img >/dev/null 2>&1
+    debugfs -R "dump $target /output/verify-$source" /output/root.img >/dev/null 2>&1
+    cmp "/output/$source" "/output/verify-$source"
+done
+debugfs -w -R 'mkdir /home/tester/bin' /output/root.img >/dev/null 2>&1 || true
+debugfs -w -R 'rm /home/tester/bin/foot' /output/root.img >/dev/null 2>&1 || true
+debugfs -w -R 'write /output/foot /home/tester/bin/foot' /output/root.img >/dev/null 2>&1
+debugfs -w -R 'set_inode_field /home/tester/bin/foot mode 0100755' /output/root.img >/dev/null 2>&1
+chmod -R a+rX /output/update

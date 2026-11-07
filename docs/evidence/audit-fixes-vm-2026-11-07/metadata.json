@@ -1,0 +1,14 @@
+{
+  "code_commit": "49cf9f7c9305b6c0abe81bfed8e29576ab67aa26",
+  "wheel": "omnimcp-0.2.0-py3-none-any.whl",
+  "wheel_sha256": "b37326fb12227a97d21052b5599c8727d8b9e9707ff37f57cc8290e96609224c",
+  "source_modules": 53,
+  "full_pytest": {
+    "passed": 1400,
+    "deselected": 16
+  },
+  "selection": "not e2e and not background",
+  "network_during_vm": "none",
+  "reviewer": "gpt-6.1-terra high",
+  "implementer": "gpt-6-luna high"
+}

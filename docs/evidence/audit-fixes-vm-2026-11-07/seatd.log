@@ -1,0 +1,8 @@
+00:00:00.000 [INFO] [seatd/seat.c:50] Created seat seat0
+00:00:00.007 [INFO] [seatd/seatd.c:194] seatd started
+00:00:00.765 [INFO] [seatd/server.c:145] New client connected (pid: 238, uid: 1000, gid: 1001)
+00:00:00.767 [INFO] [seatd/seat.c:239] Added client 0 to seat0
+00:00:00.768 [INFO] [seatd/seat.c:563] Opened client 0 on seat0
+00:01:07.693 [INFO] [seatd/client.c:496] Client disconnected
+00:01:07.758 [INFO] [seatd/seat.c:158] No clients on seat0 to activate
+00:01:07.761 [INFO] [seatd/seat.c:290] Removed client 0 from seat0

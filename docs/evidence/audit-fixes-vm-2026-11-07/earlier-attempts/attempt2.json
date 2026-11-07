@@ -1,0 +1,278 @@
+{
+  "status": "passed",
+  "checks": {
+    "F3_launch_concurrent_same_class": {
+      "status": "passed",
+      "human_before": {
+        "address": "0x5fb2031f65e0",
+        "mapped": true,
+        "hidden": false,
+        "at": [
+          0,
+          0
+        ],
+        "size": [
+          1280,
+          720
+        ],
+        "workspace": {
+          "id": 1,
+          "name": "1"
+        },
+        "floating": false,
+        "pseudo": false,
+        "monitor": 0,
+        "class": "foot",
+        "title": "HUMAN-F3",
+        "initialClass": "foot",
+        "initialTitle": "HUMAN-F3",
+        "pid": 370,
+        "xwayland": false,
+        "pinned": false,
+        "fullscreen": 0,
+        "fullscreenClient": 0,
+        "grouped": [],
+        "tags": [],
+        "swallowing": "0x0",
+        "focusHistoryID": 0,
+        "inhibitingIdle": false,
+        "xdgTag": "",
+        "xdgDescription": "",
+        "contentType": "none"
+      },
+      "human_after": {
+        "address": "0x5fb2031f65e0",
+        "mapped": true,
+        "hidden": false,
+        "at": [
+          0,
+          0
+        ],
+        "size": [
+          1280,
+          720
+        ],
+        "workspace": {
+          "id": 1,
+          "name": "1"
+        },
+        "floating": false,
+        "pseudo": false,
+        "monitor": 0,
+        "class": "foot",
+        "title": "HUMAN-F3",
+        "initialClass": "foot",
+        "initialTitle": "HUMAN-F3",
+        "pid": 370,
+        "xwayland": false,
+        "pinned": false,
+        "fullscreen": 0,
+        "fullscreenClient": 0,
+        "grouped": [],
+        "tags": [],
+        "swallowing": "0x0",
+        "focusHistoryID": 0,
+        "inhibitingIdle": false,
+        "xdgTag": "",
+        "xdgDescription": "",
+        "contentType": "none"
+      },
+      "intended": {
+        "address": "0x5fb2032e25c0",
+        "mapped": true,
+        "hidden": false,
+        "at": [
+          0,
+          0
+        ],
+        "size": [
+          1280,
+          720
+        ],
+        "workspace": {
+          "id": 2,
+          "name": "2"
+        },
+        "floating": false,
+        "pseudo": false,
+        "monitor": 0,
+        "class": "foot",
+        "title": "INTENDED-F3",
+        "initialClass": "foot",
+        "initialTitle": "INTENDED-F3",
+        "pid": 368,
+        "xwayland": false,
+        "pinned": false,
+        "fullscreen": 0,
+        "fullscreenClient": 0,
+        "grouped": [],
+        "tags": [],
+        "swallowing": "0x0",
+        "focusHistoryID": 1,
+        "inhibitingIdle": false,
+        "xdgTag": "",
+        "xdgDescription": "",
+        "contentType": "none"
+      },
+      "result": {
+        "address": "0x5fb2032e25c0",
+        "class": "foot",
+        "title": "INTENDED-F3",
+        "workspace": 2
+      }
+    },
+    "F1_foreground_receipt": {
+      "status": "passed",
+      "before": {
+        "normal": {
+          "id": 2,
+          "name": "2"
+        },
+        "special": {
+          "id": -98,
+          "name": "special:notes"
+        },
+        "active": "0x5fb2032b9aa0",
+        "class": "probe-special-f1"
+      },
+      "after": {
+        "normal": {
+          "id": 1,
+          "name": "1"
+        },
+        "special": {
+          "id": 0,
+          "name": ""
+        },
+        "active": "0x5fb2031f65e0",
+        "class": "foot"
+      },
+      "receipt": "sent Escape to 0x5fb2031f65e0 (foot) with sendshortcut, to the control the app has focused; foreground focus requested from 0x5fb2032b9aa0 on workspace special:notes; after focus dispatch: 0x5fb2031f65e0 on workspace 1; after keyboard delivery: 0x5fb2031f65e0 on workspace 1"
+    },
+    "background_preserves_special": {
+      "status": "passed",
+      "before": {
+        "normal": {
+          "id": 1,
+          "name": "1"
+        },
+        "special": {
+          "id": -98,
+          "name": "special:notes"
+        },
+        "active": "0x5fb2032b9aa0",
+        "class": "probe-special-f1"
+      },
+      "after": {
+        "normal": {
+          "id": 1,
+          "name": "1"
+        },
+        "special": {
+          "id": -98,
+          "name": "special:notes"
+        },
+        "active": "0x5fb2032b9aa0",
+        "class": "probe-special-f1"
+      },
+      "receipt": "sent Escape to 0x5fb2031f65e0 (foot) with sendshortcut, to the control the app has focused (the human's focus untouched)"
+    },
+    "F4_default_boundary_refused": {
+      "status": "passed",
+      "requested": [
+        639.6,
+        100
+      ],
+      "rounded": [
+        640,
+        100
+      ],
+      "cursor_before": {
+        "x": 100,
+        "y": 100
+      },
+      "cursor_after": {
+        "x": 100,
+        "y": 100
+      },
+      "error": [
+        "Error executing tool pointer: (640, 100) is over a window outside the confinement scope (probe-blocked; class in ['probe-allowed']); clicking there is refused"
+      ],
+      "allowed": {
+        "address": "0x5fb2032e25c0",
+        "mapped": true,
+        "hidden": false,
+        "at": [
+          0,
+          0
+        ],
+        "size": [
+          640,
+          720
+        ],
+        "workspace": {
+          "id": 1,
+          "name": "1"
+        },
+        "floating": true,
+        "pseudo": false,
+        "monitor": 0,
+        "class": "probe-allowed",
+        "title": "ALLOWED-F4",
+        "initialClass": "probe-allowed",
+        "initialTitle": "ALLOWED-F4",
+        "pid": 452,
+        "xwayland": false,
+        "pinned": false,
+        "fullscreen": 0,
+        "fullscreenClient": 0,
+        "grouped": [],
+        "tags": [],
+        "swallowing": "0x0",
+        "focusHistoryID": 0,
+        "inhibitingIdle": false,
+        "xdgTag": "",
+        "xdgDescription": "",
+        "contentType": "none"
+      },
+      "blocked": {
+        "address": "0x5fb2032e2d60",
+        "mapped": true,
+        "hidden": false,
+        "at": [
+          640,
+          0
+        ],
+        "size": [
+          640,
+          720
+        ],
+        "workspace": {
+          "id": 1,
+          "name": "1"
+        },
+        "floating": true,
+        "pseudo": false,
+        "monitor": 0,
+        "class": "probe-blocked",
+        "title": "BLOCKED-F4",
+        "initialClass": "probe-blocked",
+        "initialTitle": "BLOCKED-F4",
+        "pid": 463,
+        "xwayland": false,
+        "pinned": false,
+        "fullscreen": 0,
+        "fullscreenClient": 0,
+        "grouped": [],
+        "tags": [],
+        "swallowing": "0x0",
+        "focusHistoryID": 1,
+        "inhibitingIdle": false,
+        "xdgTag": "",
+        "xdgDescription": "",
+        "contentType": "none"
+      }
+    }
+  },
+  "updated_source_files_verified": 53
+}

@@ -1,0 +1,6 @@
+#!/bin/sh
+case "$*" in
+    *INTENDED-F3*) date +%s.%N > /mnt/results/intended-launch-started; sleep 3 ;;
+    *) sleep 2 ;;
+esac
+exec /usr/bin/foot "$@"

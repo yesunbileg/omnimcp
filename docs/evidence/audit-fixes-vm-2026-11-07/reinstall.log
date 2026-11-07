@@ -1,0 +1,7 @@
+Processing /mnt/update/omnimcp-0.2.0-py3-none-any.whl
+Installing collected packages: omnimcp
+  Attempting uninstall: omnimcp
+    Found existing installation: omnimcp 0.2.0
+    Uninstalling omnimcp-0.2.0:
+      Successfully uninstalled omnimcp-0.2.0
+Successfully installed omnimcp-0.2.0

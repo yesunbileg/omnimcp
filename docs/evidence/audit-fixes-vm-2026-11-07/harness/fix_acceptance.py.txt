@@ -1,0 +1,176 @@
+import asyncio
+import hashlib
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import time
+
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
+import base_acceptance as base
+import omnimcp
+
+OUT = Path('/mnt/results')
+report = {'status': 'failed', 'checks': {}}
+fixtures = []
+
+def query(name):
+    return json.loads(subprocess.check_output(['hyprctl', '-j', name], text=True, timeout=10))
+
+def dispatch(name, arg):
+    if name == 'workspace' and str(query('activeworkspace').get('id')) == arg:
+        return
+    r = subprocess.run(['hyprctl', 'dispatch', name, arg], text=True, capture_output=True, timeout=10)
+    assert r.returncode == 0 and r.stdout.strip() == 'ok', (r.stdout, r.stderr)
+
+def launch_fixture(title, cls):
+    p = subprocess.Popen(['/usr/bin/foot', '--app-id', cls, '-T', title, '/bin/sh', '-i'],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    fixtures.append(p)
+    return p
+
+async def find_window(title):
+    deadline = time.monotonic() + 15
+    while time.monotonic() < deadline:
+        found = next((w for w in query('clients') if w.get('title') == title), None)
+        if found:
+            return found
+        await asyncio.sleep(.1)
+    raise RuntimeError('window not found: '+title)
+
+def state():
+    m = query('monitors')[0]
+    a = query('activewindow')
+    return {'normal': m['activeWorkspace'], 'special': m['specialWorkspace'],
+            'active': a.get('address'), 'class': a.get('class')}
+
+async def run():
+    params = StdioServerParameters(command=sys.executable, args=['-m', 'omnimcp.server'],
+                                  env=dict(os.environ, OMNIMCP_PROFILE='legacy'))
+    async with stdio_client(params) as (read, write), ClientSession(read, write) as client:
+        await client.initialize()
+        async def call(tool, args):
+            r = await asyncio.wait_for(client.call_tool(tool, args), 35)
+            return r, base.response(r) if not r.isError else [getattr(c,'text','') for c in r.content]
+
+        # A real same-class human fixture appears before the delayed intended launch.
+        dispatch('workspace', '1')
+        started = OUT/'intended-launch-started'
+        started.unlink(missing_ok=True)
+        pending = asyncio.create_task(call('launch', {
+            'command': 'foot -T INTENDED-F3 /bin/sh -i', 'workspace':'2',
+            'background':False, 'wait_s':20}))
+        deadline = time.monotonic() + 10
+        while not started.exists():
+            assert not pending.done(), 'launch finished before wrapper start marker'
+            assert time.monotonic() < deadline, 'delayed wrapper did not start'
+            await asyncio.sleep(.05)
+        launch_fixture('HUMAN-F3', 'foot')
+        human = await find_window('HUMAN-F3')
+        r, launch_result = await pending
+        intended = await find_window('INTENDED-F3')
+        human_after = next(w for w in query('clients') if w['address']==human['address'])
+        assert human['workspace']['id'] == 1, human
+        assert human_after['workspace']['id'] == 1, human_after
+        assert intended['workspace']['id'] == 2, intended
+        assert not r.isError, launch_result
+        if isinstance(launch_result, dict):
+            assert launch_result['address'] == intended['address'], launch_result
+        else:
+            assert 'safely associate' in str(launch_result) or 'no new window' in str(launch_result)
+        report['checks']['F3_launch_concurrent_same_class'] = {
+            'status':'passed', 'launch_started_marker':started.read_text().strip(),
+            'human_before':human, 'human_after':human_after,
+            'intended':intended, 'result':launch_result}
+
+        # Foreground key must describe changing a special workspace to the old target.
+        dispatch('workspace', '1')
+        launch_fixture('SPECIAL-F1', 'probe-special-f1')
+        special = await find_window('SPECIAL-F1')
+        dispatch('movetoworkspacesilent', 'special:notes,address:'+special['address'])
+        dispatch('workspace', '2')
+        dispatch('togglespecialworkspace', 'notes')
+        before = state()
+        assert before['special']['name'] == 'special:notes', before
+        subprocess.run(['grim', str(OUT/'special-before-key.png')], check=True, timeout=15)
+        r, receipt = await call('keyboard', {'action':'key', 'keys':'Escape',
+            'window':human['address'], 'background':False})
+        after = state()
+        assert not r.isError and after['active'] == human['address'], (receipt, after)
+        assert after['normal']['id'] == 1 and not after['special']['name'], after
+        assert 'focus untouched' not in str(receipt)
+        assert 'special:notes' in str(receipt) and 'after keyboard delivery' in str(receipt), receipt
+        subprocess.run(['grim', str(OUT/'foreground-after-key.png')], check=True, timeout=15)
+        report['checks']['F1_foreground_receipt'] = {
+            'status':'passed', 'before':before, 'after':after, 'receipt':receipt}
+        dispatch('togglespecialworkspace', 'notes')
+        bg_before = state()
+        r, bg_receipt = await call('keyboard', {'action':'key', 'keys':'Escape',
+            'window':human['address'], 'background':True})
+        bg_after = state()
+        assert not r.isError and bg_before == bg_after, (bg_receipt, bg_before, bg_after)
+        subprocess.run(['grim', str(OUT/'background-preserved-special.png')], check=True, timeout=15)
+        report['checks']['background_preserves_special'] = {
+            'status':'passed', 'before':bg_before, 'after':bg_after, 'receipt':bg_receipt}
+        dispatch('togglespecialworkspace', 'notes')
+
+    # Build adjacent, real floating rectangles for the rounding guard regression.
+    for w in query('clients'):
+        if w.get('title') in {'HUMAN-F3', 'INTENDED-F3', 'SPECIAL-F1'}:
+            dispatch('closewindow', 'address:'+w['address'])
+    await asyncio.sleep(.5)
+    dispatch('workspace', '1')
+    launch_fixture('ALLOWED-F4', 'probe-allowed')
+    allowed = await find_window('ALLOWED-F4')
+    launch_fixture('BLOCKED-F4', 'probe-blocked')
+    blocked = await find_window('BLOCKED-F4')
+    for w, x in ((allowed, 0), (blocked, 640)):
+        dispatch('setfloating', 'address:'+w['address'])
+        dispatch('resizewindowpixel', 'exact 640 720,address:'+w['address'])
+        dispatch('movewindowpixel', f'exact {x} 0,address:'+w['address'])
+    dispatch('focuswindow', 'address:'+allowed['address'])
+    dispatch('movecursor', '100 100')
+    await asyncio.sleep(.2)
+    actual = query('clients')
+    allowed = next(w for w in actual if w['address']==allowed['address'])
+    blocked = next(w for w in actual if w['address']==blocked['address'])
+    assert allowed['at'][0]+allowed['size'][0] == blocked['at'][0] == 640, (allowed,blocked)
+    guarded_env = dict(os.environ, OMNIMCP_PROFILE='legacy', OMNIMCP_CONFINE='class:probe-allowed')
+    guarded = StdioServerParameters(command=sys.executable, args=['-m','omnimcp.server'], env=guarded_env)
+    async with stdio_client(guarded) as (read, write), ClientSession(read, write) as client:
+        await client.initialize()
+        cursor_before = query('cursorpos')
+        r = await client.call_tool('pointer', {'action':'click','x':639.6,'y':100,'background':False})
+        cursor_after = query('cursorpos')
+        assert r.isError, [getattr(c,'text','') for c in r.content]
+        assert cursor_before == cursor_after, (cursor_before,cursor_after)
+        report['checks']['F4_default_boundary_refused'] = {
+            'status':'passed', 'requested':[639.6,100], 'rounded':[640,100],
+            'cursor_before':cursor_before, 'cursor_after':cursor_after,
+            'error':[getattr(c,'text','') for c in r.content], 'allowed':allowed,'blocked':blocked}
+    subprocess.run(['grim', str(OUT/'four-fixes-desktop.png')], check=True, timeout=15)
+
+try:
+    package_root = Path(omnimcp.__file__).parent
+    hashes = json.loads(Path('/mnt/update/module-hashes.json').read_text())
+    for name, expected in hashes.items():
+        assert hashlib.sha256((package_root/name).read_bytes()).hexdigest() == expected, name
+    report['updated_source_files_verified'] = len(hashes)
+    assert base.main() == 0, 'base desktop acceptance failed'
+    asyncio.run(asyncio.wait_for(run(), 180))
+    report['status'] = 'passed'
+except BaseException as exc:
+    report['error'] = repr(exc)
+    import traceback
+    report['traceback'] = traceback.format_exc()
+finally:
+    for p in fixtures:
+        if p.poll() is None:
+            p.terminate()
+            try: p.wait(timeout=3)
+            except subprocess.TimeoutExpired: p.kill(); p.wait(timeout=3)
+    (OUT/'four-fixes-validation.json').write_text(json.dumps(report,indent=2)+'\n')
+    print(json.dumps(report,indent=2), flush=True)
+sys.exit(0 if report['status']=='passed' else 1)

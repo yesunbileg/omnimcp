@@ -1,0 +1,346 @@
+GUEST_BOOTED
+Linux (none) 7.0.0-43-generic #43-Ubuntu SMP PREEMPT_DYNAMIC Fri Oct 23 13:25:25 UTC 2026 x86_64 GNU/Linux
+total 0
+crw------- 1 root root 226,   0 Nov  7 13:48 card0
+crw------- 1 root root 226, 128 Nov  7 13:48 renderD128
+Starting systemd-udevd version 259.9-0ubuntu0.1
+HYPRLAND_READY=dd220efe7b1e292415bd0ea7161f63df9c95bfd3_1794059292_1613239575
+Processing request of type ListToolsRequest
+Processing request of type CallToolRequest
+Processing request of type CallToolRequest
+Processing request of type CallToolRequest
+Processing request of type CallToolRequest
+Processing request of type CallToolRequest
+Processing request of type CallToolRequest
+Processing request of type CallToolRequest
+Processing request of type CallToolRequest
+Processing request of type CallToolRequest
+Processing request of type CallToolRequest
+Processing request of type CallToolRequest
+{
+  "status": "passed",
+  "checks": {
+    "legacy_stdio": "passed",
+    "desktop": {
+      "status": "passed",
+      "monitors": 1,
+      "windows": 0
+    },
+    "launch": {
+      "status": "passed",
+      "address": "0x56db4cbf8100"
+    },
+    "pointer": {
+      "status": "passed",
+      "actual_cursor": {
+        "x": 320,
+        "y": 240
+      }
+    },
+    "screenshot": {
+      "status": "passed",
+      "path": "/mnt/results/desktop-acceptance.png",
+      "width": 1280,
+      "height": 720,
+      "bytes": 12527,
+      "after_keyboard": true
+    },
+    "keyboard": {
+      "status": "passed",
+      "marker": "/mnt/results/fixture-77bcb16c1186.txt",
+      "value": "omnimcp-keyboard-77bcb16c1186"
+    },
+    "close": {
+      "status": "passed",
+      "response": "closed 0x56db4cbf8100"
+    }
+  },
+  "fixture_class": "omnimcp-accept-77bcb16c1186",
+  "hyprland_version": "Hyprland 0.53.3 built from branch v0.53.3 at commit dd220efe7b1e292415bd0ea7161f63df9c95bfd3 clean (version: bump to 0.53.3).\nDate: Sat Jan 24 20:02:06 2026\nTag: v0.53.3, commits: 6793\n\nLibraries:\nHyprgraphics: built against 0.5.0, system has unknown\nHyprutils: built against 0.11.0, system has unknown\nHyprcursor: built against 0.1.13, system has unknown\nHyprlang: built against 0.6.8, system has unknown\nAquamarine: built against 0.10.0, system has unknown\n\nVersion ABI string: dd220efe7b1e292415bd0ea7161f63df9c95bfd3_aq_0.10_hu_0.11_hg_0.5_hc_0.1_hlg_0.6\nno flags were set"
+}
+Processing request of type CallToolRequest
+Processing request of type ListToolsRequest
+Processing request of type CallToolRequest
+Processing request of type CallToolRequest
+Processing request of type CallToolRequest
+{
+  "status": "passed",
+  "checks": {
+    "F3_launch_concurrent_same_class": {
+      "status": "passed",
+      "launch_started_marker": "1794059327.187946330",
+      "human_before": {
+        "address": "0x56db4cbf8100",
+        "mapped": true,
+        "hidden": false,
+        "at": [
+          0,
+          0
+        ],
+        "size": [
+          1280,
+          720
+        ],
+        "workspace": {
+          "id": 1,
+          "name": "1"
+        },
+        "floating": false,
+        "pseudo": false,
+        "monitor": 0,
+        "class": "foot",
+        "title": "HUMAN-F3",
+        "initialClass": "foot",
+        "initialTitle": "HUMAN-F3",
+        "pid": 370,
+        "xwayland": false,
+        "pinned": false,
+        "fullscreen": 0,
+        "fullscreenClient": 0,
+        "grouped": [],
+        "tags": [],
+        "swallowing": "0x0",
+        "focusHistoryID": 0,
+        "inhibitingIdle": false,
+        "xdgTag": "",
+        "xdgDescription": "",
+        "contentType": "none"
+      },
+      "human_after": {
+        "address": "0x56db4cbf8100",
+        "mapped": true,
+        "hidden": false,
+        "at": [
+          0,
+          0
+        ],
+        "size": [
+          1280,
+          720
+        ],
+        "workspace": {
+          "id": 1,
+          "name": "1"
+        },
+        "floating": false,
+        "pseudo": false,
+        "monitor": 0,
+        "class": "foot",
+        "title": "HUMAN-F3",
+        "initialClass": "foot",
+        "initialTitle": "HUMAN-F3",
+        "pid": 370,
+        "xwayland": false,
+        "pinned": false,
+        "fullscreen": 0,
+        "fullscreenClient": 0,
+        "grouped": [],
+        "tags": [],
+        "swallowing": "0x0",
+        "focusHistoryID": 0,
+        "inhibitingIdle": false,
+        "xdgTag": "",
+        "xdgDescription": "",
+        "contentType": "none"
+      },
+      "intended": {
+        "address": "0x56db4cc30eb0",
+        "mapped": true,
+        "hidden": false,
+        "at": [
+          0,
+          0
+        ],
+        "size": [
+          1280,
+          720
+        ],
+        "workspace": {
+          "id": 2,
+          "name": "2"
+        },
+        "floating": false,
+        "pseudo": false,
+        "monitor": 0,
+        "class": "foot",
+        "title": "INTENDED-F3",
+        "initialClass": "foot",
+        "initialTitle": "INTENDED-F3",
+        "pid": 368,
+        "xwayland": false,
+        "pinned": false,
+        "fullscreen": 0,
+        "fullscreenClient": 0,
+        "grouped": [],
+        "tags": [],
+        "swallowing": "0x0",
+        "focusHistoryID": 1,
+        "inhibitingIdle": false,
+        "xdgTag": "",
+        "xdgDescription": "",
+        "contentType": "none"
+      },
+      "result": {
+        "address": "0x56db4cc30eb0",
+        "class": "foot",
+        "title": "INTENDED-F3",
+        "workspace": 2
+      }
+    },
+    "F1_foreground_receipt": {
+      "status": "passed",
+      "before": {
+        "normal": {
+          "id": 2,
+          "name": "2"
+        },
+        "special": {
+          "id": -98,
+          "name": "special:notes"
+        },
+        "active": "0x56db4cbe5380",
+        "class": "probe-special-f1"
+      },
+      "after": {
+        "normal": {
+          "id": 1,
+          "name": "1"
+        },
+        "special": {
+          "id": 0,
+          "name": ""
+        },
+        "active": "0x56db4cbf8100",
+        "class": "foot"
+      },
+      "receipt": "sent Escape to 0x56db4cbf8100 (foot) with sendshortcut, to the control the app has focused; foreground focus requested from 0x56db4cbe5380 on workspace special:notes; after focus dispatch: 0x56db4cbf8100 on workspace 1; after keyboard delivery: 0x56db4cbf8100 on workspace 1"
+    },
+    "background_preserves_special": {
+      "status": "passed",
+      "before": {
+        "normal": {
+          "id": 1,
+          "name": "1"
+        },
+        "special": {
+          "id": -98,
+          "name": "special:notes"
+        },
+        "active": "0x56db4cbe5380",
+        "class": "probe-special-f1"
+      },
+      "after": {
+        "normal": {
+          "id": 1,
+          "name": "1"
+        },
+        "special": {
+          "id": -98,
+          "name": "special:notes"
+        },
+        "active": "0x56db4cbe5380",
+        "class": "probe-special-f1"
+      },
+      "receipt": "sent Escape to 0x56db4cbf8100 (foot) with sendshortcut, to the control the app has focused (the human's focus untouched)"
+    },
+    "F4_default_boundary_refused": {
+      "status": "passed",
+      "requested": [
+        639.6,
+        100
+      ],
+      "rounded": [
+        640,
+        100
+      ],
+      "cursor_before": {
+        "x": 100,
+        "y": 100
+      },
+      "cursor_after": {
+        "x": 100,
+        "y": 100
+      },
+      "error": [
+        "Error executing tool pointer: (640, 100) is over a window outside the confinement scope (probe-blocked; class in ['probe-allowed']); clicking there is refused"
+      ],
+      "allowed": {
+        "address": "0x56db4cbcfc70",
+        "mapped": true,
+        "hidden": false,
+        "at": [
+          0,
+          0
+        ],
+        "size": [
+          640,
+          720
+        ],
+        "workspace": {
+          "id": 1,
+          "name": "1"
+        },
+        "floating": true,
+        "pseudo": false,
+        "monitor": 0,
+        "class": "probe-allowed",
+        "title": "ALLOWED-F4",
+        "initialClass": "probe-allowed",
+        "initialTitle": "ALLOWED-F4",
+        "pid": 462,
+        "xwayland": false,
+        "pinned": false,
+        "fullscreen": 0,
+        "fullscreenClient": 0,
+        "grouped": [],
+        "tags": [],
+        "swallowing": "0x0",
+        "focusHistoryID": 0,
+        "inhibitingIdle": false,
+        "xdgTag": "",
+        "xdgDescription": "",
+        "contentType": "none"
+      },
+      "blocked": {
+        "address": "0x56db4cbf8100",
+        "mapped": true,
+        "hidden": false,
+        "at": [
+          640,
+          0
+        ],
+        "size": [
+          640,
+          720
+        ],
+        "workspace": {
+          "id": 1,
+          "name": "1"
+        },
+        "floating": true,
+        "pseudo": false,
+        "monitor": 0,
+        "class": "probe-blocked",
+        "title": "BLOCKED-F4",
+        "initialClass": "probe-blocked",
+        "initialTitle": "BLOCKED-F4",
+        "pid": 473,
+        "xwayland": false,
+        "pinned": false,
+        "fullscreen": 0,
+        "fullscreenClient": 0,
+        "grouped": [],
+        "tags": [],
+        "swallowing": "0x0",
+        "focusHistoryID": 1,
+        "inhibitingIdle": false,
+        "xdgTag": "",
+        "xdgDescription": "",
+        "contentType": "none"
+      }
+    }
+  },
+  "updated_source_files_verified": 53
+}
+/home/tester/run-desktop.sh: line 14:   238 Segmentation fault         /usr/bin/Hyprland --config /home/tester/hyprland.conf > /mnt/results/hyprland.log 2>&1
+GUEST_RESULT=0

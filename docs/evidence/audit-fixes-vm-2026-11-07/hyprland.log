@@ -1,0 +1,57 @@
+Refusing to try glamor on llvmpipe
+XWAYLAND: Disabling GLAMOR support
+EGL setup failed, disabling glamor
+Failed to initialize glamor, falling back to sw
+The XKEYBOARD keymap compiler (xkbcomp) reports:
+> Warning:          Unsupported maximum keycode 708, clipping.
+>                   X11 cannot support keycodes above 255.
+> Warning:          Virtual modifier Hyper multiply defined
+>                   Using 0, ignoring 0
+> Warning:          Virtual modifier ScrollLock multiply defined
+>                   Using 0, ignoring 0
+Errors from xkbcomp are not fatal to the X server
+The XKEYBOARD keymap compiler (xkbcomp) reports:
+> Warning:          Virtual modifier NumLock multiply defined
+>                   Using 0, ignoring 0
+> Warning:          Virtual modifier Alt multiply defined
+>                   Using 0, ignoring 0
+> Warning:          Virtual modifier LevelThree multiply defined
+>                   Using 0, ignoring 0
+> Warning:          Virtual modifier Super multiply defined
+>                   Using 0, ignoring 0
+> Warning:          Virtual modifier LevelFive multiply defined
+>                   Using 0, ignoring 0
+> Warning:          Virtual modifier Meta multiply defined
+>                   Using 0, ignoring 0
+> Warning:          Virtual modifier Hyper multiply defined
+>                   Using 0, ignoring 0
+> Warning:          Virtual modifier ScrollLock multiply defined
+>                   Using 0, ignoring 0
+Errors from xkbcomp are not fatal to the X server
+The XKEYBOARD keymap compiler (xkbcomp) reports:
+> Warning:          Virtual modifier NumLock multiply defined
+>                   Using 0, ignoring 0
+> Warning:          Virtual modifier Alt multiply defined
+>                   Using 0, ignoring 0
+> Warning:          Virtual modifier LevelThree multiply defined
+>                   Using 0, ignoring 0
+> Warning:          Virtual modifier Super multiply defined
+>                   Using 0, ignoring 0
+> Warning:          Virtual modifier LevelFive multiply defined
+>                   Using 0, ignoring 0
+> Warning:          Virtual modifier Meta multiply defined
+>                   Using 0, ignoring 0
+> Warning:          Virtual modifier Hyper multiply defined
+>                   Using 0, ignoring 0
+> Warning:          Virtual modifier ScrollLock multiply defined
+>                   Using 0, ignoring 0
+Errors from xkbcomp are not fatal to the X server
+The XKEYBOARD keymap compiler (xkbcomp) reports:
+> Warning:          Unsupported maximum keycode 708, clipping.
+>                   X11 cannot support keycodes above 255.
+> Warning:          Virtual modifier Hyper multiply defined
+>                   Using 0, ignoring 0
+> Warning:          Virtual modifier ScrollLock multiply defined
+>                   Using 0, ignoring 0
+Errors from xkbcomp are not fatal to the X server
+(EE) could not connect to wayland server

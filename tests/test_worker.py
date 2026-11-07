@@ -175,3 +175,23 @@ def test_malformed_socket_requests_do_not_break_worker(worker):
             sock.shutdown(socket.SHUT_WR)
             sock.recv(16384)
     assert "items" in rpc({"op": "discover", "limit": 2})
+
+
+def test_cli_accepted_cancel_exits_successfully(worker):
+    submitted = rpc({"op": "act", "action": "event.wait",
+                     "params": {"since": 10**9, "timeout_s": 30}})
+    ref = submitted["job_id"]
+    deadline = time.monotonic() + 5
+    while time.monotonic() < deadline:
+        if rpc({"op": "job", "job_id": ref})["status"] == "running":
+            break
+        time.sleep(.02)
+    else:
+        pytest.fail("fixture job did not start")
+    result = subprocess.run(
+        [sys.executable, "-m", "omnimcp", "job", ref, "--cancel"],
+        env=worker.env, capture_output=True, text=True, timeout=10,
+    )
+    assert json.loads(result.stdout)["status"] == "cancellation_requested"
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert wait_job(ref)["status"] == "cancelled"

@@ -1,0 +1,45 @@
+"""Reproduce launch() claiming a concurrent human window using fake Hyprland IPC."""
+import os
+from unittest.mock import patch
+from omnimcp import events, server, trust
+
+human = {
+    "address": "0xhuman", "class": "google-chrome", "title": "User tab",
+    "workspace": {"id": 1, "name": "1"},
+}
+query_counts = {"clients": 0}
+dispatched = []
+
+def query(cmd):
+    if cmd == "clients":
+        query_counts["clients"] += 1
+        return [] if query_counts["clients"] == 1 else [human]
+    if cmd == "activewindow":
+        return {"address": "0xhuman"}
+    if cmd == "monitors":
+        return [{
+            "id": 0, "name": "DP-1", "x": 0, "y": 0,
+            "width": 1920, "height": 1080,
+            "activeWorkspace": {"id": 1, "name": "1"},
+            "specialWorkspace": {"id": 0, "name": ""},
+        }]
+    raise AssertionError(cmd)
+
+def dispatch(*args):
+    dispatched.append(args)
+
+class NoSocket:
+    def __init__(self):
+        raise events.EventError("no socket in isolated reproduction")
+
+with patch.dict(os.environ, {"OMNIMCP_BACKGROUND": "0"}, clear=False), \
+     patch.object(server.safety, "touch", lambda *_: None), \
+     patch.object(server.hyprctl, "query", query), \
+     patch.object(server.hyprctl, "dispatch", dispatch), \
+     patch.object(server.events, "EventStream", NoSocket), \
+     patch.object(server.time, "sleep", lambda _: None), \
+     patch.object(server.time, "monotonic", side_effect=[0, 0, 0, 0, 0]):
+    trust._owned.clear()
+    print("result:", server.launch("google-chrome", workspace="2", wait_s=1))
+    print("dispatches:", dispatched)
+    print("owned:", trust.owned())

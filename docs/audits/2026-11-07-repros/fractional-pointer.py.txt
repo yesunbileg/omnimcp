@@ -1,0 +1,87 @@
+"""Isolated public pointer() reproduction for fractional-coordinate guard mismatch.
+
+Hyprland IPC and the final virtual-pointer click are faked. The production
+trust guards and input.move rounding path run unchanged; no compositor is used.
+"""
+import os
+from unittest.mock import patch
+
+from omnimcp import server
+
+# A normal 640-logical-pixel-wide window ends at x=640. The next window is
+# immediately adjacent, so native default-seat cursor positioning rounds the
+# requested x=639.6 to exactly x=640, beyond the confined kitty window.
+monitors = [{
+    "id": 0,
+    "name": "DP-1",
+    "x": 0,
+    "y": 0,
+    "width": 1920,
+    "height": 1080,
+    "activeWorkspace": {"id": 1, "name": "1"},
+    "specialWorkspace": {"id": 0, "name": ""},
+}]
+clients = [
+    {
+        "address": "0x1",
+        "class": "kitty",
+        "workspace": {"id": 1, "name": "1"},
+        "at": [0, 0],
+        "size": [640, 800],
+    },
+    {
+        "address": "0x2",
+        "class": "firefox",
+        "workspace": {"id": 1, "name": "1"},
+        "at": [640, 0],
+        "size": [800, 800],
+    },
+]
+evidence = []
+
+
+def batch_query(commands):
+    assert commands == ["monitors", "clients"]
+    return [monitors, clients]
+
+
+def query(command):
+    if command == "layers":
+        return {}
+    if command == "cursorpos":
+        return {"x": 640, "y": 5}
+    if command == "activewindow":
+        return {"address": "0x1"}
+    raise AssertionError(command)
+
+
+def dispatch(*args):
+    evidence.append(("hyprctl dispatch", args))
+
+
+class FakeDefaultSeatPointer:
+    # False selects input.move's default-seat path, which rounds then calls
+    # hyprctl movecursor. click() represents the final wire delivery boundary.
+    on_named_seat = False
+
+    def click(self, *args, **kwargs):
+        evidence.append(("virtual pointer click", args, kwargs))
+
+
+with (
+    patch.dict(os.environ, {
+        "OMNIMCP_BACKGROUND": "0",
+        "OMNIMCP_CONFINE": "class:kitty",
+        "OMNIMCP_AUTH_GUARD": "0",
+    }, clear=False),
+    patch.object(server.safety, "touch", lambda *_: None),
+    patch.object(server.hyprctl, "batch_query", batch_query),
+    patch.object(server.hyprctl, "query", query),
+    patch.object(server.hyprctl, "dispatch", dispatch),
+    patch.object(server.hinput, "_with_pointer", lambda fn: fn(FakeDefaultSeatPointer())),
+):
+    result = server.pointer("click", x=639.6, y=5.0)
+
+print("result:", result)
+for event in evidence:
+    print(event)

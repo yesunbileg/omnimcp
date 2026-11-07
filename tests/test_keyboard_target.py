@@ -48,6 +48,17 @@ def test_key_focuses_window_first(stub):
     assert "with sendshortcut" in out
 
 
+def test_foreground_key_receipt_includes_the_focus_takeover(stub, monkeypatch):
+    seats = iter([("0xhuman", 1), ("0xabc", 2)])
+    monkeypatch.setattr(srv, "_seat_now", lambda: next(seats))
+
+    out = srv.keyboard("key", keys="ctrl+t", window="0xabc", background=False)
+
+    assert "with sendshortcut" in out
+    assert "focus untouched" not in out
+    assert "foreground" in out or "focus changed" in out
+
+
 def test_no_window_does_not_focus(stub):
     out = srv.keyboard("type", text="hi")
     assert stub["dispatch"] == []

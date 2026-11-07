@@ -122,4 +122,5 @@ def main(argv):
         req.update(ref=args.target, offset=args.offset, length=args.length, binary=args.binary)
     result = rpc(req)
     print(encode(result))
-    return 0 if result.get("status", "ok") in {"ok", "queued", "running", "succeeded"} else 1
+    accepted = {"ok", "queued", "running", "succeeded", "cancellation_requested"}
+    return 0 if result.get("status", "ok") in accepted else 1

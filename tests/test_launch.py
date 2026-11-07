@@ -71,14 +71,17 @@ def _patch(monkeypatch, fake, stream="none"):
         monkeypatch.setattr(server.events, "EventStream", lambda: stream)
 
 
-def test_launch_moves_single_instance_window(monkeypatch, no_sleep):
+def test_launch_does_not_claim_off_workspace_single_instance_window(monkeypatch, no_sleep):
+    """A same-class window on the human's workspace does not prove launch provenance."""
     fake = FakeHyprctl([[EXISTING], [EXISTING], [EXISTING, CHROME]])
     _patch(monkeypatch, fake)
+    owned = set()
+    monkeypatch.setattr(server.trust, "note_launched", lambda address, cls: owned.add(address))
     out = server.launch("google-chrome", workspace="2")
-    assert out["address"] == "0xb"
-    assert out["workspace"] == "2"
-    assert "moved" in out["note"]
-    assert ("movetoworkspacesilent", "2,address:0xb") in fake.dispatched
+    assert isinstance(out, str)
+    assert "couldn't safely associate" in out
+    assert fake.dispatched == [("exec", "[workspace 2 silent] google-chrome")]
+    assert owned == set()
 
 
 def test_launch_no_move_when_rule_worked(monkeypatch, no_sleep):
@@ -114,9 +117,9 @@ def test_launch_uses_event_socket_when_available(monkeypatch, no_sleep):
     stream = FakeStream({"address": "0xb", "workspace": "5", "class": "google-chrome"})
     _patch(monkeypatch, fake, stream=stream)
     out = server.launch("google-chrome", workspace="2")
-    assert out["address"] == "0xb"
-    assert out["workspace"] == "2"  # moved: event said it landed on 5
-    assert ("movetoworkspacesilent", "2,address:0xb") in fake.dispatched
+    assert isinstance(out, str)
+    assert "couldn't safely associate" in out
+    assert fake.dispatched == [("exec", "[workspace 2 silent] google-chrome")]
 
 
 def test_launch_event_timeout_message(monkeypatch, no_sleep):

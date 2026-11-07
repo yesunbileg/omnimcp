@@ -439,7 +439,7 @@ def test_automatic_mode_still_switches_workspaces_on_request(wired_bg):
 @pytest.fixture
 def launch_fake(monkeypatch):
     s = {"rule": None, "clients": [], "seat": 0, "active": ["0xhuman"],
-         "lands": None, "dispatch": [], "monitors": MONS}
+         "lands": None, "dispatch": [], "monitors": MONS, "owned": []}
     monkeypatch.delenv("OMNIMCP_BACKGROUND", raising=False)
     monkeypatch.setattr(srv.safety, "touch", lambda *a: None)
 
@@ -456,7 +456,7 @@ def launch_fake(monkeypatch):
     monkeypatch.setattr(srv.hyprctl, "dispatch", lambda *a: s["dispatch"].append(a))
     monkeypatch.setattr(srv, "_active_address",
                         lambda: s["active"].pop(0) if len(s["active"]) > 1 else s["active"][0])
-    monkeypatch.setattr(srv.trust, "note_launched", lambda *a: None)
+    monkeypatch.setattr(srv.trust, "note_launched", lambda address, cls: s["owned"].append(address))
     monkeypatch.setattr(srv.trust, "owned", lambda: {"0xmine"})
 
     def seat():
@@ -514,15 +514,15 @@ def test_a_silent_launch_leaves_the_seat_baseline_alone(launch_fake):
     assert launch_fake["seat"] == 1
 
 
-def test_an_app_that_opened_elsewhere_says_whether_focus_moved(launch_fake):
-    # a single-instance app opens from its running process, on the human's
-    # workspace, and is moved after
+def test_an_app_that_opened_elsewhere_is_reported_as_ambiguous(launch_fake):
+    # A same-class window on another workspace is not proof of launch origin.
     launch_fake["lands"] = "1"
     launch_fake["active"][:] = ["0xhuman", "0xother"]
     out = srv.launch("foot")
-    assert ("movetoworkspacesilent", "99,address:0xnew") in launch_fake["dispatch"]
-    assert "focus" in out["note"] and "0xother" in out["note"] and "agent" in out["note"]
-    assert launch_fake["seat"] == 1  # our launch moved the seat
+    assert isinstance(out, str) and "couldn't safely associate" in out
+    assert launch_fake["dispatch"] == []
+    assert launch_fake["owned"] == []
+    assert launch_fake["seat"] == 0
 
 
 def test_a_dry_run_names_the_agent_workspace(launch_fake, monkeypatch):
@@ -728,18 +728,60 @@ def test_confinement_without_an_agent_workspace_opens_as_before(launch_fake, mon
     assert launch_fake["rule"] == "" and "OMNIMCP_CONFINE" in out["note"]
 
 
-def test_an_app_that_opened_on_screen_says_it_took_focus(launch_fake):
+def test_an_ambiguous_window_on_screen_is_left_unclaimed(launch_fake):
     launch_fake["lands"] = "1"  # the human's workspace, on screen
     out = srv.launch("foot")
-    assert "workspace 1" in out["note"] and "took their keyboard focus" in out["note"]
-    assert "warning" not in out
+    assert isinstance(out, str) and "workspace 1" in out
+    assert "not moved or marked as owned" in out
+    assert "may have taken the human's focus" in out
+    assert launch_fake["dispatch"] == []
+    assert launch_fake["owned"] == []
+
+
+@pytest.mark.parametrize("selector", ["+1", "-1", "e+1", "previous", "empty"])
+def test_unresolved_relative_launch_workspace_is_reported_as_ambiguous(launch_fake, selector):
+    # Hyprland resolves these selectors to concrete workspaces when dispatching.
+    launch_fake["lands"] = "2"
+    out = srv.launch("foot", workspace=selector)
+    assert isinstance(out, str) and "couldn't safely associate" in out
+    assert launch_fake["rule"] == f"[workspace {selector} silent]"
+    assert launch_fake["dispatch"] == []
+    assert launch_fake["owned"] == []
 
 
 def test_under_the_guarantee_an_app_that_opened_on_screen_is_a_warning(launch_fake, monkeypatch):
     monkeypatch.setenv("OMNIMCP_BACKGROUND", "1")
     launch_fake["lands"] = "1"
     out = srv.launch("foot")
-    assert "OMNIMCP_BACKGROUND" in out["warning"] and "separate" in out["warning"]
+    assert isinstance(out, str) and "couldn't safely associate" in out
+    assert "OMNIMCP_BACKGROUND" in out and "separate app instance" in out
+    assert launch_fake["dispatch"] == []
+    assert launch_fake["owned"] == []
+
+
+@pytest.mark.parametrize("workspace", ["name:research", "special:notes"])
+def test_visible_named_or_special_ambiguous_launch_warns_under_guarantee(
+    launch_fake, monkeypatch, workspace
+):
+    monkeypatch.setenv("OMNIMCP_BACKGROUND", "1")
+    launch_fake["lands"] = workspace.removeprefix("name:")
+    launch_fake["monitors"] = [dict(
+        MONS[0], activeWorkspace={"id": 1, "name": "1"},
+        specialWorkspace={"id": -1337, "name": "special:notes"},
+    )]
+    if workspace.startswith("name:"):
+        launch_fake["monitors"] = [dict(
+            MONS[0], activeWorkspace={"id": 1, "name": "1"},
+            specialWorkspace={"id": 0, "name": ""},
+        )]
+        # The candidate is visible on a named workspace without a numeric id.
+        launch_fake["lands"] = "research"
+        launch_fake["monitors"][0]["activeWorkspace"] = {"name": "research"}
+        launch_fake["monitors"][0]["activeWorkspace"]["id"] = -1337
+    out = srv.launch("foot", workspace="99")
+    assert isinstance(out, str) and "OMNIMCP_BACKGROUND" in out
+    assert "may have taken the human's focus" in out
+    assert launch_fake["owned"] == []
 
 
 # --- which new window is the launched one -------------------------------------
@@ -766,7 +808,17 @@ def test_launch_waits_for_its_own_window_not_one_the_human_opens(monkeypatch):
     ours = ("openwindow", {"address": "0xfoot", "workspace": "99", "class": "foot"})
     monkeypatch.setattr(srv.events, "EventStream", lambda: _Stream([human, ours]))
     monkeypatch.setattr(srv.hyprctl, "dispatch", lambda *a: None)
-    monkeypatch.setattr(srv, "_client_by_address", lambda a: {"address": a})
+    monkeypatch.setattr(srv.hyprctl, "query", lambda what: [])
+    def client_by_address(address):
+        if address == "0xkitty":
+            return {"address": address, "class": "kitty", "workspace": {"id": 1, "name": "1"}}
+        return {
+            "address": address,
+            "class": "foot",
+            "workspace": {"id": 99, "name": "99"},
+        }
+
+    monkeypatch.setattr(srv, "_client_by_address", client_by_address)
     accept = srv._launched_window("99", "foot")
     assert srv._launch_and_wait("[workspace 99 silent] foot", 5, accept)["address"] == "0xfoot"
 

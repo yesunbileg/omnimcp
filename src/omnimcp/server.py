@@ -1641,15 +1641,31 @@ def hypr(action: str, target: str = "", workspace: str = "", then: str = "none")
 
 
 def _await_new_window(
-    before: set[str], wait_s: float, accept: Callable[[dict[str, Any]], bool] | None = None
+    before: set[str],
+    wait_s: float,
+    accept: Callable[[dict[str, Any]], bool] | None = None,
+    *,
+    deadline: float | None = None,
 ) -> dict[str, Any] | None:
     """Polling fallback when the event socket is unavailable."""
-    deadline = time.monotonic() + wait_s
-    while time.monotonic() < deadline:
-        time.sleep(0.15)
+    deadline = time.monotonic() + wait_s if deadline is None else deadline
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return None
+        time.sleep(min(0.15, remaining))
+        if time.monotonic() >= deadline:
+            return None
         for c in hyprctl.query("clients"):
-            if c["address"] not in before and (accept is None or accept(c)):
+            if time.monotonic() >= deadline:
+                return None
+            if c["address"] in before:
+                continue
+            accepted = accept is None or accept(c)
+            if accepted and time.monotonic() < deadline:
                 return c
+            if time.monotonic() >= deadline:
+                return None
     return None
 
 
@@ -1675,12 +1691,11 @@ def _program(command: str) -> str:
 
 
 def _launched_window(workspace: str, command: str) -> Callable[[dict[str, Any]], bool]:
-    """Which new window a placed launch waits for: one on its workspace, or
-    one of the launched program's own class (a single-instance app's window
-    opens from the running process, which ignores the rule). Any other new
-    window is someone else's, often the human's, and must not be taken over
-    and moved. `workspace` is an event's workspace name or a client's
-    workspace record."""
+    """Coarsely match a new window by target workspace or app class.
+
+    An off-workspace class match is only a candidate: launch() treats it as
+    ambiguous and never claims or moves it on class alone.
+    """
     prog = _norm(_program(command))
 
     def on_it(ws: Any) -> bool:
@@ -1708,37 +1723,98 @@ def _launched_window(workspace: str, command: str) -> Callable[[dict[str, Any]],
     return accept
 
 
+def _launch_workspace_match(workspace: str) -> Callable[[dict[str, Any]], bool]:
+    """Match a new window only when its reported client record is on target."""
+    wanted = _launched_window(workspace, "")
+
+    def accept(win: dict[str, Any]) -> bool:
+        ws = win.get("workspace")
+        if wanted(win):
+            return True
+        # openwindow events carry a workspace name, which can differ from the
+        # workspace's id. Resolve the address before rejecting that event.
+        if not isinstance(ws, dict) and win.get("address"):
+            with contextlib.suppress(Exception):
+                client = _client_by_address(win["address"])
+                return bool(client and wanted(client))
+        return False
+
+    return accept
+
+
+def _launched_app_class(command: str) -> Callable[[dict[str, Any]], bool]:
+    """Identify a possible single-instance match, without attributing it."""
+    prog = _norm(_program(command))
+
+    def matches(win: dict[str, Any]) -> bool:
+        cls = str(win.get("class", ""))
+        c, last = _norm(cls), _norm(cls.rsplit(".", 1)[-1])
+        if len(prog) < 3 or len(c) < 3:
+            return False
+        return prog in c or c in prog or (len(last) >= 3 and (last in prog or prog in last))
+
+    return matches
+
+
 def _client_by_address(address: str) -> dict[str, Any] | None:
     return next((c for c in hyprctl.query("clients") if c["address"] == address), None)
 
 
 def _launch_and_wait(
-    rule_command: str, wait_s: float, accept: Callable[[dict[str, Any]], bool] | None = None
+    rule_command: str,
+    wait_s: float,
+    accept: Callable[[dict[str, Any]], bool] | None = None,
 ) -> dict[str, Any] | None:
     """Dispatch exec and return the new window's client record.
 
     Preferred path: subscribe to the event socket BEFORE dispatching, then
-    block on the openwindow event (no race, no polling). Falls back to
-    clients-diff polling if socket2 is unreachable.
+    block on a new openwindow event. Events for clients already present in
+    the post-subscription snapshot are stale for this launch. Event waiting
+    and clients-diff polling share one deadline.
     """
     try:
         stream = events.EventStream()
     except events.EventError:
         before = {c["address"] for c in hyprctl.query("clients")}
+        deadline = time.monotonic() + wait_s
         hyprctl.dispatch("exec", rule_command)
-        return _await_new_window(before, wait_s, accept)
+        return _await_new_window(
+            before, max(0.0, deadline - time.monotonic()), accept, deadline=deadline
+        )
     with stream:
+        before = {c["address"] for c in hyprctl.query("clients")}
+        deadline = time.monotonic() + wait_s
         hyprctl.dispatch("exec", rule_command)
-        matcher = None if accept is None else (lambda name, payload: accept(payload))
-        hit = stream.wait_for({"openwindow"}, matcher, wait_s)
-    if hit is None:
-        return None
-    address = hit[1]["address"]
-    win = _client_by_address(address)
-    if win is None:
-        time.sleep(0.1)  # event can beat hyprctl's client list by a beat
+        def matcher(name: str, payload: dict[str, Any]) -> bool:
+            address = payload.get("address")
+            # Workspace names in openwindow events are not always the numeric
+            # id clients reports. Keep a class-matching event as a candidate,
+            # then validate its resolved client before returning it.
+            if not address or address in before:
+                return False
+            accepted = accept is None or accept(payload)
+            tentative = getattr(accept, "_tentative", None)
+            return accepted or bool(tentative and tentative(payload))
+
+        remaining = max(0.0, deadline - time.monotonic())
+        hit = stream.wait_for({"openwindow"}, matcher, remaining) if remaining else None
+    if hit is not None:
+        address = hit[1].get("address")
+        if not address or address in before:
+            return _await_new_window(
+                before, max(0.0, deadline - time.monotonic()), accept, deadline=deadline
+            )
         win = _client_by_address(address)
-    return win
+        accepted = (
+            win is not None and address not in before and (accept is None or accept(win))
+        )
+        if accepted and time.monotonic() < deadline:
+            return win
+    # socket2 may report an openwindow before clients exposes it, or may lose
+    # an event that could not yet be resolved. Reconcile against client state.
+    return _await_new_window(
+        before, max(0.0, deadline - time.monotonic()), accept, deadline=deadline
+    )
 
 
 @journal.journaled("act")
@@ -1746,16 +1822,19 @@ def launch(
     command: str, workspace: str = "", wait_s: float = 8.0, background: bool | None = None
 ) -> dict[str, Any] | str:
     """Open an app: run `command` via Hyprland exec. Optional `workspace` placement
-    (silent, works even for single-instance apps like browsers, whose
-    window gets moved after it appears) and `wait_s` (1-30, default 8;
+    (silent) and `wait_s` (1-30, default 8;
     raise for slow apps). Without `workspace`, the app opens silently on
     the next of the agent's own workspaces (OMNIMCP_AGENT_WORKSPACES, 99
     down to 90 by default) that is not on screen, so the agent can work on
     it in the background; `background=false` opens it on the human's
-    workspace instead. It waits for its own window (one on that workspace,
-    or of the program's own class), never one the human opens meanwhile.
-    An app that is already running opens its window from the running
-    process, on the human's screen, before it is moved: the note says so.
+    workspace instead. It waits for a new window on the requested workspace.
+    A same-class window that appears elsewhere may be an existing
+    single-instance app or a window opened by the human, so it is left alone
+    and reported as ambiguous. A workspace match cannot prove universal launch
+    provenance; another window appearing there at the same time can still be
+    indistinguishable. Relative selectors whose destination cannot be known
+    before dispatch (e.g. `previous` and `empty`) may therefore be reported as
+    ambiguous even when the app opened successfully.
     Returns the new window's address/class/title/workspace, or a timeout
     note."""
     safety.touch("launch")
@@ -1807,9 +1886,75 @@ def launch(
     if journal.dry_run():
         return f"{_DRY} run {rule + command} and wait up to {wait_s:.0f}s for its window"
     active_before = _active_address() if rule else None
-    accept = _launched_window(workspace, command) if rule else None
+    ambiguous: list[dict[str, Any]] = []
+    if rule:
+        on_workspace = _launch_workspace_match(workspace)
+        class_match = _launched_app_class(command)
+
+        def accept(win: dict[str, Any]) -> bool:
+            if on_workspace(win) and class_match(win):
+                return True
+            if (class_match(win) or on_workspace(win)) and not any(
+                item.get("address") == win.get("address") for item in ambiguous
+            ):
+                ambiguous.append(win)
+            return False
+
+        # Keep the existing _launch_and_wait callback signature for callers
+        # and test doubles while allowing unresolved matching events through.
+        accept._tentative = class_match  # type: ignore[attr-defined]
+    else:
+        accept = None
     win = _launch_and_wait(rule + command, wait_s, accept)
+    if win is not None and rule and not accept(win):
+        # Recheck the resolved client record, not just the earlier event: its
+        # class or workspace can change between openwindow and client lookup.
+        win = None
     if win is None:
+        if ambiguous:
+            classes = ", ".join(sorted({str(w.get("class", "unknown")) for w in ambiguous}))
+            workspaces = ", ".join(sorted({
+                str(hyprctl.workspace_ref(ws) if isinstance(ws, dict) else ws) or "unknown"
+                for ws in (w.get("workspace") for w in ambiguous)
+            }))
+            visibility_note = ""
+            visible = None
+            with contextlib.suppress(Exception):
+                shown = _shown_workspaces(hyprctl.query("monitors"))
+                shown_refs = set()
+                for item in shown:
+                    ref = hyprctl.workspace_ref(item)
+                    if ref is not None:
+                        shown_refs.add(str(ref))
+                    if item.get("name"):
+                        shown_refs.add(str(item["name"]))
+                visible = any(
+                    str(
+                        hyprctl.workspace_ref(ws) if isinstance(ws, dict) else ws or ""
+                    ) in shown_refs
+                    for w in ambiguous
+                    for ws in (w.get("workspace"),)
+                )
+            if visible is True:
+                visibility_note = (
+                    "; it appeared on a visible workspace and may have taken the human's focus"
+                )
+                if mode == bg.GUARANTEE:
+                    visibility_note += (
+                        ", which may violate OMNIMCP_BACKGROUND=1; use a separate app instance "
+                        "or ask the human"
+                    )
+            elif visible is None and mode == bg.GUARANTEE:
+                visibility_note = (
+                    "; its visibility could not be checked and it may have taken the human's "
+                    "focus, which may violate OMNIMCP_BACKGROUND=1"
+                )
+            return (
+                f"launched, but couldn't safely associate a new {classes} window on workspace "
+                f"{workspaces} with this request; it may belong to an already-running app or "
+                "a concurrent user action, so it was not moved or marked as owned; call "
+                f"desktop() to inspect it{visibility_note}"
+            )
         return (
             f"launched, but no new window appeared within {wait_s:.0f}s, slow or "
             "single-instance apps may open late and on their own workspace; call "

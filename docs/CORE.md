@@ -102,6 +102,25 @@ higher-level effect; semantic mutations include their verification/readback.
 Legacy desktop text is retained with its verification limits. Focus/close
 adapters independently check compositor state; low-level input cannot prove an
 application's intended effect without a subsequent semantic observation.
+For `launch(..., workspace=...)`, a new window is associated with the request
+only when its resolved client record reports both the requested workspace and
+a class matching the launched command. A matching app-class window appearing
+elsewhere is ambiguous (for example, a single-instance app may have opened it
+from an existing process), so it is reported without moving it or adding it to
+launched-window ownership. Workspace and class matching cannot prove universal
+provenance: an unrelated window can appear on the requested workspace at the same time.
+This conservative association changes single-instance compatibility: a matching
+window on another workspace is no longer automatically moved or claimed. Some
+wrapper commands also start apps whose window class does not match the command,
+such as `xdg-open URL` or `python app.py`; those launches may be reported as
+ambiguous unless their association is independently confirmed. A workspace
+match alone does not override that class ambiguity.
+Hyprland's relative launch selectors (`+1`, `-1`, `e+1`, `previous`, and
+`empty`) are still dispatched as requested, but their concrete destination
+cannot always be resolved reliably before dispatch. In that case launch
+reports an ambiguous association and leaves the new window unclaimed and
+unmoved, even if the launch itself succeeded. Use a numeric or named workspace
+when the caller needs a confirmed association.
 
 ## Workflows and jobs
 

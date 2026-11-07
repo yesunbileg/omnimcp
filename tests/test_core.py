@@ -305,9 +305,10 @@ def test_auth_cancellation_is_persisted_and_never_auto_reprompts(store, tmp_path
     with pytest.raises(Fault, match="Previous authentication"):
         ctx.run(["/usr/bin/false"], admin=True)
     assert calls.read_text() == "x"
-    authorized = Context(store, auth_retry=True)
-    assert authorized.run(["/usr/bin/true"], admin=True)["status"] == "auth_cancelled"
-    assert calls.read_text() == "xx"
+    retry = Context(store, auth_retry=True)
+    with pytest.raises(Fault, match="Previous authentication"):
+        retry.run(["/usr/bin/true"], admin=True)
+    assert calls.read_text() == "x"
 
 
 def test_stale_process_ref_is_rejected(engine):
@@ -366,7 +367,7 @@ def test_window_refs_reject_reused_addresses_and_previous_sessions(monkeypatch):
         WindowRefs().args({"window": ref})
 
 
-def test_admin_success_timeout_and_retry_authorization_consumed(store, tmp_path, monkeypatch):
+def test_admin_success_timeout_requires_local_reset_before_retry(store, tmp_path, monkeypatch):
     fake = tmp_path / "pkexec"
     fake.write_text('#!/bin/sh\nexec "$@"\n')
     fake.chmod(0o700)
@@ -379,6 +380,9 @@ def test_admin_success_timeout_and_retry_authorization_consumed(store, tmp_path,
     )
     retry = Context(store, auth_retry=True)
     fake.write_text("#!/bin/sh\nexit 126\n")
+    with pytest.raises(Fault, match="Previous authentication"):
+        retry.run(["/usr/bin/true"], admin=True)
+    store.auth_block("gui-auth", clear=True)
     assert retry.run(["/usr/bin/true"], admin=True)["status"] == "auth_cancelled"
     with pytest.raises(Fault, match="Previous authentication"):
         retry.run(["/usr/bin/true"], admin=True)

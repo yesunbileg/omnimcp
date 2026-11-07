@@ -2,10 +2,8 @@
   "mcpServers": {
     "omnimcp": {
       "type": "stdio",
-      "command": "/home/home/.local/bin/omnimcp",
-      "env": {
-        "OMNIMCP_KANBAN_FILE": "/mnt/work/User/AI/Task/kanban.md"
-      },
+      "command": "./bin/omnimcp",
+      "env": {},
       "env_vars": [
         "WAYLAND_DISPLAY",
         "HYPRLAND_INSTANCE_SIGNATURE",

@@ -1,34 +1,38 @@
-# omnimcp for Codex
+# omniMCP Codex plugin
 
-A local plugin wrapping the installed omnimcp server (0.2.0) and the
-existing desktop workflow skill. The server runtime is not copied or reinstalled.
+This plugin package (manifest version `0.2.1`) starts an installed omniMCP
+runtime (`0.2.0`) through `bin/omnimcp`. It does not include or install the
+runtime, credentials, or a user-specific Kanban board.
 
-## Requirements
+Install omniMCP first as described in the repository [setup guide](../../../docs/start.md).
+The shim uses `OMNIMCP_BIN` when set; otherwise it finds `omnimcp` on `PATH` and
+refuses to run itself recursively. The server needs the active Hyprland session
+variables: `WAYLAND_DISPLAY`, `HYPRLAND_INSTANCE_SIGNATURE`, `XDG_RUNTIME_DIR`,
+and `DBUS_SESSION_BUS_ADDRESS`. Configure a Kanban board separately with
+`OMNIMCP_KANBAN_FILE` if needed.
 
-This personal package uses `/home/home/.local/bin/omnimcp` through the
-plugin-contained `bin/omnimcp` shim, plus the existing Hyprland/Wayland
-session. The current Kanban file setting is preserved. No credentials are
-packaged. It is intended for this Linux desktop.
+Set optional values in this plugin's own `mcp.json` `env` map, for example:
 
-The portable Agent Plugins format only permits a bare executable name or a
-plugin-relative `./` command, which is why the shim exists. Session variables
-(`WAYLAND_DISPLAY`, `HYPRLAND_INSTANCE_SIGNATURE`, `XDG_RUNTIME_DIR`) are
-recovered by the server from the runtime directory; the Codex compatibility
-manifest `.mcp.json` still forwards them explicitly for older clients.
+```json
+"env": {
+  "OMNIMCP_BIN": "/absolute/path/to/omnimcp",
+  "OMNIMCP_KANBAN_FILE": "/absolute/path/to/kanban.md"
+}
+```
 
-## Install or refresh
+Use the same `env` values in `.mcp.json` for Codex compatibility. That manifest
+also forwards the four desktop session variables with `env_vars`. Keep the
+plugin as the only registration; do not add a duplicate standalone
+`mcp_servers.omnimcp` entry. See the [setup guide](../../../docs/start.md) for
+manifest setup and session details.
+
+Add this checkout as a local marketplace and install the plugin:
 
 ```sh
-codex plugin marketplace add /mnt/work/PROJECTS/LINUX/omnimcp/packaging/codex
+codex plugin marketplace add /path/to/omnimcp/packaging/codex
 codex plugin add omnimcp@omnimcp-local
 ```
 
-The standalone `mcp_servers.omnimcp` entry in Codex config has been
-removed, so the plugin is the only source of these tools. Start a new chat to
-load the plugin. Use `desktop` for a harmless live check; do not take a
-screenshot for installation.
-
-The package has portable `plugin.json` and `mcp.json`, plus a Codex compatibility
-manifest and `.mcp.json` with explicit session environment forwarding. It keeps
-the existing server profile; no compact-profile migration or worker changes are
-part of this plugin installation.
+The package contains both portable Agent Plugins manifests and the Codex
+compatibility `.mcp.json`; each starts the relative shim and forwards the
+desktop session variables. Open a new chat after installation or update.

@@ -61,3 +61,19 @@ The 16 live pytest cases from the native suite were not executed in this guest.
 This manual acceptance does not establish accessibility, polkit, multi-monitor,
 or physical GPU behavior. See the committed
 [runtime evidence](../../docs/evidence/hyprland-vm-2026-11-07/README.md).
+
+## CI and custom artifact directories
+
+Set `OMNIMCP_VM_DIR` to a fresh absolute directory to use these helpers outside
+the managed checkout. `ci-run.sh` exports locked requirements, rebuilds the wheel
+and image, boots the actual compositor, and preserves raw results. Existing
+images/results must not be overwritten; use a fresh directory for a fresh build.
+
+CI gates the desktop effects and required evidence, including the real text
+marker, cursor readback and PNG. The raw runner still returns 2 for the tested
+Hyprland 0.53.3/Aquamarine 0.10 teardown exit 139. `ci_result.py` recognizes only
+that exact version and diagnostic signature after desktop acceptance succeeds,
+records `teardown=known_failure` and `release_ready=false`, and emits a warning.
+Timeouts, missing evidence, unknown crash signatures and failed desktop checks
+fail CI. A green desktop acceptance check does not close the compositor
+lifecycle release gate. Full raw logs and the original exit code are uploaded.

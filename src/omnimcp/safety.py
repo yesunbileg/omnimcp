@@ -23,12 +23,15 @@ import json
 import os
 import re
 import signal
+import tempfile
 import threading
 import time
 from collections.abc import Callable
 from pathlib import Path
 
 import psutil
+
+from omnimcp import private_paths
 
 _state_path: Path | None = None
 _started: float = 0.0
@@ -43,19 +46,23 @@ _ACTION_JUNK = re.compile(r"[^A-Za-z0-9:_.-]+")
 
 
 def state_path() -> Path:
-    base = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
-    d = Path(base) / "omnimcp"
-    d.mkdir(parents=True, exist_ok=True)
-    return d / "state.json"
+    return private_paths.runtime_dir() / "state.json"
 
 
 def _write(payload: dict) -> None:
     if _state_path is None:
         return
     with _write_lock:
-        tmp = _state_path.with_suffix(".tmp")
-        tmp.write_text(json.dumps(payload))
-        tmp.replace(_state_path)
+        fd, name = tempfile.mkstemp(prefix=".state-", dir=_state_path.parent)
+        tmp = Path(name)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as stream:
+                stream.write(json.dumps(payload))
+                stream.flush()
+                os.fsync(stream.fileno())
+            tmp.replace(_state_path)
+        finally:
+            tmp.unlink(missing_ok=True)
 
 
 _armed = False
@@ -134,7 +141,10 @@ def shutdown() -> None:
         # waiting on its window) has overwritten the file with its pid, and
         # removing that would leave the live server invisible and un-stoppable
         with contextlib.suppress(OSError, ValueError, TypeError, KeyError):
-            if int(json.loads(_state_path.read_text())["pid"]) == os.getpid():
+            fd = private_paths.open_private_file(_state_path, os.O_RDONLY)
+            with os.fdopen(fd, "r", encoding="utf-8") as stream:
+                state = json.load(stream)
+            if int(state["pid"]) == os.getpid():
                 _state_path.unlink(missing_ok=True)
         _state_path = None
 

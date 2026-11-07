@@ -26,11 +26,12 @@ import contextlib
 import fcntl
 import json
 import os
+import tempfile
 import time
 from pathlib import Path
 from typing import Any
 
-from omnimcp import hyprctl, trust
+from omnimcp import hyprctl, private_paths, trust
 
 STATE_VERSION = 1
 
@@ -39,10 +40,7 @@ _restored: dict[str, Any] = {}  # what restore() loaded, to tell our changes fro
 
 
 def _dir() -> Path:
-    base = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
-    d = Path(base) / "omnimcp"
-    d.mkdir(parents=True, exist_ok=True)
-    return d
+    return private_paths.runtime_dir()
 
 
 def path() -> Path:
@@ -57,7 +55,9 @@ def load() -> dict[str, Any]:
     """The stored state, or {} when there is none, it is unreadable, it was
     written by another version, or it belongs to another compositor."""
     try:
-        raw = json.loads(path().read_text())
+        fd = private_paths.open_private_file(path(), os.O_RDONLY)
+        with os.fdopen(fd, "r", encoding="utf-8") as stream:
+            raw = json.load(stream)
     except (OSError, ValueError):
         return {}
     if not isinstance(raw, dict) or raw.get("v") != STATE_VERSION:
@@ -151,10 +151,13 @@ def save() -> None:
         "flags": _plain(_flags),
     }
     target = path()
-    with (
-        contextlib.suppress(OSError, TypeError, ValueError),
-        open(target.with_suffix(".lock"), "w") as guard,
-    ):
+    try:
+        fd = private_paths.open_private_file(
+            target.with_suffix(".lock"), os.O_CREAT | os.O_RDWR, 0o600
+        )
+    except OSError:
+        return
+    with contextlib.suppress(OSError, TypeError, ValueError), os.fdopen(fd, "r+") as guard:
         fcntl.flock(guard, fcntl.LOCK_EX)
         merged = _merge(load(), mine)
         payload = {
@@ -163,6 +166,13 @@ def save() -> None:
             "updated": time.time(),
             **merged,
         }
-        tmp = target.with_suffix(".tmp")
-        tmp.write_text(json.dumps(payload))
-        tmp.replace(target)
+        fd, name = tempfile.mkstemp(prefix=".cli-state-", dir=target.parent)
+        tmp = Path(name)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as stream:
+                stream.write(json.dumps(payload))
+                stream.flush()
+                os.fsync(stream.fileno())
+            tmp.replace(target)
+        finally:
+            tmp.unlink(missing_ok=True)

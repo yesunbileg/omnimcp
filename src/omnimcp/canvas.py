@@ -15,7 +15,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from omnimcp import journal, trust
+from omnimcp import journal, private_paths, trust
 
 COLORS = {str(i): name for i, name in enumerate(
     ("red", "orange", "yellow", "green", "cyan", "purple"), 1
@@ -276,10 +276,14 @@ def _write(target: Path, raw: bytes, doc: dict, revision: str) -> tuple[str, str
     data = (json.dumps(doc, ensure_ascii=False, indent=2, allow_nan=False) + "\n").encode()
     if len(data) > MAX_BYTES:
         raise ValueError("edited Canvas exceeds 32 MiB")
-    lock_dir = Path(tempfile.gettempdir()) / f"omnimcp-canvas-{os.getuid()}"
-    lock_dir.mkdir(mode=0o700, exist_ok=True)
+    lock_dir = private_paths.private_dir(
+        Path(tempfile.gettempdir()) / f"omnimcp-canvas-{os.getuid()}"
+    )
     lock_name = hashlib.sha256(os.fsencode(target)).hexdigest()
-    with (lock_dir / lock_name).open("a") as lock:
+    lock_fd = private_paths.open_private_file(
+        lock_dir / lock_name, os.O_CREAT | os.O_RDWR, 0o600
+    )
+    with os.fdopen(lock_fd, "r+") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         if target.read_bytes() != raw:
             raise ValueError("Canvas changed; read again before editing")

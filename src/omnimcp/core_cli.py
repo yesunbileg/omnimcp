@@ -19,9 +19,19 @@ OPS = {"discover", "observe", "act", "workflow", "job", "events", "artifact"}
 def worker(argv):
     parser = argparse.ArgumentParser(prog="omnimcp worker")
     parser.add_argument(
-        "operation", choices=["run", "install", "status", "start", "stop", "stop-all"]
+        "operation", choices=["run", "install", "status", "start", "stop", "stop-all", "auth-reset"]
     )
     args = parser.parse_args(argv)
+    if args.operation == "auth-reset":
+        from omnimcp.core.state import Store
+
+        store = Store()
+        try:
+            store.auth_block("gui-auth", clear=True)
+        finally:
+            store.close()
+        print("GUI authentication block cleared locally; the next admin action may prompt.")
+        return 0
     if args.operation == "stop-all":
         result = rpc({"op": "worker_stop_all"}, timeout=10)
         print(encode(result))

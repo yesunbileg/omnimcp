@@ -1,6 +1,6 @@
 #!/bin/bash
 set -euo pipefail
-vm_dir=/workspace/.omnimcp-runtime/hypr-vm
+vm_dir=${OMNIMCP_VM_DIR:-/workspace/.omnimcp-runtime/hypr-vm}
 exec 9>"$vm_dir/run.lock"
 flock -n 9 || { echo 'A VM test run already owns this directory.' >&2; exit 1; }
 if [ -d "$vm_dir/results" ]; then

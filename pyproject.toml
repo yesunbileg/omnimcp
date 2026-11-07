@@ -42,7 +42,7 @@ include = [
 ]
 
 [dependency-groups]
-dev = ["pytest>=8", "ruff>=0.6"]
+dev = ["pytest>=8", "pytest-cov>=7,<8", "ruff>=0.6"]
 
 [tool.ruff]
 line-length = 100
@@ -58,3 +58,14 @@ markers = [
     "background: drives apps on the agent's workspaces in a live session",
 ]
 addopts = "-m 'not e2e and not background'"
+
+[tool.coverage.run]
+source = ["omnimcp"]
+patch = ["subprocess"]
+parallel = true
+
+[tool.coverage.report]
+# Audited commit measured 82.65% with subprocess coverage; keep the integer floor.
+fail_under = 82
+show_missing = true
+skip_covered = true

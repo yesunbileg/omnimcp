@@ -11,6 +11,7 @@ from typing import Any, get_type_hints
 
 from omnimcp.core.registry import Fault
 from omnimcp.core.state import new_id
+from omnimcp.legacy_result import LegacyContent, LegacyFailure, LegacyUnverified
 
 
 def selected_session():
@@ -43,29 +44,32 @@ def normalize(value, ctx):
                         "mime_type": block.mimeType,
                     }
                 )
+        if isinstance(value, LegacyContent):
+            return {
+                "status": "failed" if value.outcome == "failed" else "ok",
+                "content": blocks,
+                "verified": False,
+                "outcome": value.outcome,
+            }
         return {"status": "ok", "content": blocks}
-    if isinstance(value, str):
+    if isinstance(value, LegacyFailure):
+        return {
+            "status": "failed",
+            "text": str(value),
+            "verified": False,
+            "outcome": "failed",
+            "verification": "Legacy function reported a failed check.",
+        }
+    if isinstance(value, (LegacyUnverified, str)):
         try:
             parsed = json.loads(value)
             return parsed
         except ValueError:
-            # Legacy functions use error strings instead of exceptions in some paths.
-            lowered = value.lower()
-            failure = any(
-                s in lowered
-                for s in (
-                    "read failed:",
-                    "event socket unavailable:",
-                    "but no new window appeared",
-                    "no accessibility tree",
-                    "sequence stopped",
-                    "no change seen",
-                    "event socket dropped before confirming",
-                )
-            ) or lowered.startswith(("error", "refused", "failed", "warning", "timeout", "no such"))
             return {
-                "status": "failed" if failure else "ok",
-                "text": value,
+                "status": "ok",
+                "text": str(value),
+                "verified": False,
+                "outcome": "unverified",
                 "verification": "Legacy text response; inspect readback for acting operations.",
             }
     return value

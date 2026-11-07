@@ -6,7 +6,7 @@ workflows and native wrappers are local Python implementations.
 | Source/backend | Version/commit | License | Use and reason |
 | --- | --- | --- | --- |
 | https://github.com/IlyasKhallouki/hypruse | original checkout HEAD `efce06d2cb91ccea48d34b6321de78b1603312d8` | MIT, retained LICENSE | Existing customized desktop code; local rename/Canvas/Kanban work preserved. No upstream merge performed. |
-| https://github.com/modelcontextprotocol/python-sdk | `mcp==1.28.1`, uv.lock | MIT | Existing MCP protocol dependency pinned for compatibility. |
+| https://github.com/modelcontextprotocol/python-sdk | `mcp==1.30.0`, uv.lock | MIT | MCP protocol dependency pinned for compatibility. |
 | https://github.com/giampaolo/psutil | `7.2.2`, uv.lock | BSD-3-Clause | Direct process identity and native measurements dependency; no source copied. |
 | https://github.com/microsoft/playwright-mcp | optional `@playwright/mcp@0.0.83`; user-local package-lock records transitive integrity | Apache-2.0 | Unmodified lazy browser backend through standard MCP. No donor code. |
 | https://github.com/restic/restic | host-installed optional CLI, version reported by its executable | BSD-2-Clause | Unmodified backup backend, activated only with configured repository/credentials. |

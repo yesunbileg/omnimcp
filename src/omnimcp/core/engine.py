@@ -203,27 +203,142 @@ class Engine:
         self.registry, self.store = registry, store
         self.pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="os-job")
         self.lock = threading.RLock()
+        self.lifecycle_lock = threading.Lock()
+        self.active_operations = 0
+        self.close_event = threading.Event()
+        self.close_thread = None
+        self.close_result = None
         self.resources: dict[str, threading.Lock] = {}
         self.contexts: dict[str, Context] = {}
         self.futures = {}
         self.foreground: dict[int, Context] = {}
         self.stopping = False
+        self.closed = False
         self.readonly = flag("OMNIMCP_READONLY")
         self.dryrun = flag("OMNIMCP_DRYRUN")
 
-    def close(self):
-        with self.lock:
-            self.stopping = True
-            for ctx in [*self.contexts.values(), *self.foreground.values()]:
-                ctx.cancelled.set()
-        self.pool.shutdown(wait=True, cancel_futures=False)
-        while True:
-            with self.lock:
-                if not self.foreground:
+    def _enter_operation(self):
+        with self.lifecycle_lock:
+            if self.stopping:
+                return False
+            self.active_operations += 1
+            return True
+
+    def _leave_operation(self):
+        with self.lifecycle_lock:
+            self.active_operations -= 1
+
+    def close(self, timeout: float = 5.0):
+        """Begin asynchronous cleanup and wait only for the caller's bounded budget."""
+        deadline = time.monotonic() + max(0.0, timeout)
+        with self.lifecycle_lock:
+            if self.close_thread is None:
+                self.stopping = True
+                self.close_thread = threading.Thread(
+                    target=self._close_coordinator,
+                    args=(deadline,),
+                    name="omnimcp-close",
+                    daemon=True,
+                )
+                self.close_thread.start()
+            thread = self.close_thread
+        self.close_event.wait(max(0.0, deadline - time.monotonic()))
+        if self.close_event.is_set():
+            return self.close_result
+        return {
+            "status": "shutdown_pending",
+            "threads_still_busy": None,
+            "terminators_still_busy": None,
+            "store_safe_to_close": False,
+        }
+
+    def _close_coordinator(self, deadline):
+        try:
+            while True:
+                with self.lifecycle_lock:
+                    active = self.active_operations
+                if not active or time.monotonic() >= deadline:
                     break
-            time.sleep(0.02)
-        for hook in getattr(self.registry, "close_hooks", []):
-            hook()
+                time.sleep(min(0.02, max(0, deadline - time.monotonic())))
+            with self.lock:
+                contexts = dict(self.contexts)
+                foreground = list(self.foreground.values())
+                for ctx in [*contexts.values(), *foreground]:
+                    ctx.cancelled.set()
+                cancelled = []
+                for ref, future in list(self.futures.items()):
+                    if future.cancel():
+                        cancelled.append(ref)
+                        self.futures.pop(ref, None)
+                        self.contexts.pop(ref, None)
+            for ref in [*contexts, *cancelled]:
+                self.store.update_job(
+                    ref,
+                    "interrupted",
+                    {"status": "interrupted", "message": "Worker shutdown; not replayed."},
+                )
+
+            with self.store.lock:
+                rows = self.store.db.execute(
+                    "SELECT id,pid,pgid,create_time FROM processes"
+                ).fetchall()
+            terminators = []
+            for record_id, pid, pgid, birth in rows:
+                thread = threading.Thread(
+                    target=self.store.stop_process_group,
+                    args=(pid, pgid, birth),
+                    name=f"stop-{record_id}",
+                    daemon=True,
+                )
+                thread.start()
+                terminators.append(thread)
+
+            self.pool.shutdown(wait=False, cancel_futures=True)
+            for hook in getattr(self.registry, "close_hooks", []):
+                hook_done = threading.Event()
+
+                def call_hook(fn=hook):
+                    try:
+                        fn()
+                    finally:
+                        hook_done.set()
+
+                threading.Thread(target=call_hook, name="omnimcp-close-hook", daemon=True).start()
+                if not hook_done.wait(max(0.0, deadline - time.monotonic())):
+                    self.close_result = {
+                        "status": "shutdown_pending",
+                        "threads_still_busy": len(contexts) + len(foreground),
+                        "terminators_still_busy": sum(t.is_alive() for t in terminators),
+                        "store_safe_to_close": False,
+                    }
+                    return
+            while time.monotonic() < deadline:
+                with self.lock:
+                    busy = len(self.contexts) + len(self.foreground)
+                if not busy and not any(t.is_alive() for t in terminators):
+                    break
+                time.sleep(min(0.02, max(0, deadline - time.monotonic())))
+            with self.lifecycle_lock:
+                active = self.active_operations
+            with self.lock:
+                busy = len(self.contexts) + len(self.foreground)
+            safe = not busy and not active and not any(t.is_alive() for t in terminators)
+            self.closed = safe
+            self.close_result = {
+                "status": "closed" if safe else "shutdown_pending",
+                "threads_still_busy": busy if not active else None,
+                "terminators_still_busy": sum(t.is_alive() for t in terminators),
+                "store_safe_to_close": safe,
+            }
+        except BaseException:
+            self.close_result = {
+                "status": "shutdown_pending",
+                "threads_still_busy": None,
+                "terminators_still_busy": None,
+                "store_safe_to_close": False,
+            }
+        finally:
+            self.close_event.set()
 
     def stop_all(self):
         """Request cancellation without waiting indefinitely for uncooperative handlers."""
@@ -275,9 +390,7 @@ class Engine:
             time.sleep(0.05)
         with self.lock:
             busy = sum(
-                future.running()
-                for ref, future in self.futures.items()
-                if ref in self.contexts
+                future.running() for ref, future in self.futures.items() if ref in self.contexts
             ) + len(self.foreground)
         terminations = [ctx.termination for _, ctx in jobs if ctx.termination]
         terminations += [ctx.termination for ctx in foreground if ctx.termination]

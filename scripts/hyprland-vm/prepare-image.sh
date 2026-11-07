@@ -1,6 +1,6 @@
 #!/bin/bash
 set -euo pipefail
-vm_dir=/workspace/.omnimcp-runtime/hypr-vm
+vm_dir=${OMNIMCP_VM_DIR:-/workspace/.omnimcp-runtime/hypr-vm}
 for artifact in root.img rootfs.tar; do
     if [ -e "$vm_dir/$artifact" ] || [ -L "$vm_dir/$artifact" ]; then
         echo "Refusing to overwrite $vm_dir/$artifact; archive the previous disposable VM first." >&2

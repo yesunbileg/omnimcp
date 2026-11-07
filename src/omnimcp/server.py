@@ -30,6 +30,7 @@ from omnimcp import (
     hyprctl,
     journal,
     keymap,
+    private_paths,
     safety,
     session,
     trust,
@@ -39,6 +40,7 @@ from omnimcp import clipboard as clip
 from omnimcp import input as hinput
 from omnimcp import kanban as kb
 from omnimcp import screenshot as shot
+from omnimcp.legacy_result import LegacyContent, LegacyFailure, LegacyUnverified
 
 INSTRUCTIONS = """\
 Hyprland desktop tools. Call desktop first for window addresses; prefer ui/
@@ -164,10 +166,7 @@ def _image(*, data: str, mimeType: str) -> Any:
 
 
 def _runtime_dir() -> Path:
-    base = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
-    d = Path(base) / "omnimcp"
-    d.mkdir(parents=True, exist_ok=True)
-    return d
+    return private_paths.runtime_dir()
 
 
 def _prune_shots(d: Path, keep: int = 20) -> None:
@@ -409,7 +408,9 @@ def _ui_read(
         bus = a11y.connect()
         app = a11y.app_for_pid(bus, client.get("pid"), title, tuple(client["size"]))
         if app is None:
-            return f"{cls} exposes no accessibility tree; use screenshot + zoom instead"
+            return LegacyFailure(
+                f"{cls} exposes no accessibility tree; use screenshot + zoom instead"
+            )
         frame = a11y.window_frame(bus, app[0], app[1], title, tuple(client["size"]))
         # a background press acts on the control itself, and a reading after
         # one must be of this window, not a same-titled one: prove the frame
@@ -419,7 +420,9 @@ def _ui_read(
             bus, frame[0], frame[1], name=name, actionable=actionable
         )
     except a11y.A11yError as exc:
-        return f"accessibility read failed: {exc}; use screenshot + zoom instead"
+        return LegacyFailure(
+            f"accessibility read failed: {exc}; use screenshot + zoom instead"
+        )
     ax, ay = client["at"]
     aw, ah = client["size"]
     out = []
@@ -626,12 +629,21 @@ def _acted(msg: str, then: str, window: str = "", fallback: bool = True) -> list
         return msg
     head = _text(msg)
     if then == "desktop":
-        return [head, _text(json.dumps(hyprctl.snapshot()))]
+        blocks = [head, _text(json.dumps(hyprctl.snapshot()))]
+        return LegacyContent(blocks, "failed") if isinstance(msg, LegacyFailure) else (
+            LegacyContent(blocks, "unverified") if isinstance(msg, LegacyUnverified) else blocks
+        )
     if then == "screenshot":
         try:
-            return [head, *_deliver_capture(stable=True)]
+            blocks = [head, *_deliver_capture(stable=True)]
+            return LegacyContent(blocks, "failed") if isinstance(msg, LegacyFailure) else (
+                LegacyContent(blocks, "unverified") if isinstance(msg, LegacyUnverified) else blocks
+            )
         except Exception as exc:  # the observation must never mask the action's success
-            return [head, _text(f"screenshot failed: {exc}")]
+            blocks = [head, _text(f"screenshot failed: {exc}")]
+            if isinstance(msg, LegacyFailure):
+                return LegacyContent(blocks, "failed")
+            return LegacyContent(blocks, "unverified")
     if then == "ui":
         try:
             view = _with_hidden_note(window, _ui_read(window))
@@ -654,7 +666,14 @@ def _acted(msg: str, then: str, window: str = "", fallback: bool = True) -> list
                 with contextlib.suppress(Exception):
                     view = _ui_read()
         payload = view if isinstance(view, str) else json.dumps(view)
-        return [head, _text(payload)]
+        blocks = [head, _text(payload)]
+        outcome = (
+            "failed" if isinstance(msg, LegacyFailure)
+            else "unverified" if isinstance(msg, LegacyUnverified)
+            else "unverified" if isinstance(view, LegacyFailure)
+            else None
+        )
+        return LegacyContent(blocks, outcome) if outcome else blocks
     raise ValueError(f"unknown then {then!r}: {'|'.join(_OBSERVE_MODES)}")
 
 
@@ -1136,10 +1155,13 @@ def _keyboard_in_background(
                 untouched, warning = _seat_report(seat)
                 paren = " (the human's focus untouched)" if untouched else ""
                 kind = "password field" if secret else "text field"
-                return _acted(
+                result = (
                     f"typed {len(text)} characters into the {kind} in {cls} through the "
-                    f"accessibility interface{paren}; {seen}{warning}",
-                    then, window=addr, fallback=False)
+                    f"accessibility interface{paren}; {seen}{warning}"
+                )
+                if isinstance(seen, LegacyFailure):
+                    result = LegacyFailure(result)
+                return _acted(result, then, window=addr, fallback=False)
         if keys_only:
             why = "newlines, tabs and backspaces are keys, so the whole text goes key by key"
         elif field is not None:
@@ -1215,7 +1237,7 @@ def _read_back(before: str, after: str, text: str) -> str:
     journal keeps every result line, and typed text is only ever recorded
     as a length plus a digest. `ui` shows the value itself."""
     if after == before:
-        return "no change seen"
+        return LegacyFailure("no change seen")
     if len(after) == len(before) + len(text) and text in after:
         return f"the field now holds the typed text ({len(after)} characters)"
     return f"the field changed, but not by exactly the typed text ({len(after)} characters now)"
@@ -1298,8 +1320,12 @@ def _click_in_background(
                 for k, v in after.items()
             )
         elif before:
-            msg += "; no change seen"
-    return _acted(msg + warning, then, window=client["address"], fallback=False)
+            msg = LegacyFailure(msg + "; no change seen" + warning)
+    if isinstance(msg, LegacyFailure):
+        msg = LegacyFailure(msg + warning)
+    else:
+        msg += warning
+    return _acted(msg, then, window=client["address"], fallback=False)
 
 
 def _seat_now() -> tuple[Any, Any] | None:
@@ -1517,7 +1543,7 @@ def _close_and_confirm(target: str) -> str:
         stream = events.EventStream()
     except events.EventError:
         hyprctl.dispatch("closewindow", addr)
-        return f"asked {target} to close"
+        return LegacyUnverified(f"asked {target} to close")
     with stream:
         hyprctl.dispatch("closewindow", addr)
         try:
@@ -1529,9 +1555,11 @@ def _close_and_confirm(target: str) -> str:
         except events.EventError:
             # the dispatch already fired; a socket dying mid-wait must not
             # turn a (probably successful) close into a tool error
-            return f"asked {target} to close (event socket dropped before confirming)"
+            return LegacyUnverified(
+                f"asked {target} to close (event socket dropped before confirming)"
+            )
     if hit is None:
-        return (
+        return LegacyUnverified(
             f"asked {target} to close, but it is still open after "
             f"{_CLOSE_WAIT_S:.0f}s (it may be prompting to save)"
         )
@@ -1953,13 +1981,13 @@ def launch(
                     "; its visibility could not be checked and it may have taken the human's "
                     "focus, which may violate OMNIMCP_BACKGROUND=1"
                 )
-            return (
+            return LegacyUnverified(
                 f"launched, but couldn't safely associate a new {classes} window on workspace "
                 f"{workspaces} with this request; it may belong to an already-running app or "
                 "a concurrent user action, so it was not moved or marked as owned; call "
                 f"desktop() to inspect it{visibility_note}"
             )
-        return (
+        return LegacyUnverified(
             f"launched, but no new window appeared within {wait_s:.0f}s, slow or "
             "single-instance apps may open late and on their own workspace; call "
             "desktop() to find the window, then hypr move_window if needed"
@@ -2236,9 +2264,9 @@ def wait_for(event: str, match: str = "", timeout_s: float = 10) -> dict[str, An
         with events.EventStream() as stream:
             hit = stream.wait_for(names, matcher, timeout_s)
     except events.EventError as exc:
-        return f"event socket unavailable: {exc}"
+        return LegacyFailure(f"event socket unavailable: {exc}")
     if hit is None:
-        return f"timeout: no matching {event} event within {timeout_s:.0f}s"
+        return LegacyFailure(f"timeout: no matching {event} event within {timeout_s:.0f}s")
     return {"event": hit[0], **hit[1]}
 
 
@@ -2385,9 +2413,9 @@ def _seq_wait_for(
     try:
         hit = stream.wait_for(names, matcher, timeout_s)
     except events.EventError as exc:
-        return f"event socket unavailable: {exc}"
+        return LegacyFailure(f"event socket unavailable: {exc}")
     if hit is None:
-        return f"timeout: no matching {event} event within {timeout_s:.0f}s"
+        return LegacyFailure(f"timeout: no matching {event} event within {timeout_s:.0f}s")
     return {"event": hit[0], **hit[1]}
 
 
@@ -2522,6 +2550,8 @@ def sequence(
             f"sequence{tag}: stopped after {ran}/{len(steps)} steps, {stopped}\n"
             + "\n".join(results)
         )
+    if stopped is not None:
+        head = LegacyFailure(head)
     return _acted(head, then, window=named[-1] if named else "", fallback=not named)
 
 

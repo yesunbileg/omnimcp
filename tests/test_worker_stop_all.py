@@ -120,3 +120,123 @@ def test_cancelled_tracked_job_is_retried_on_recovery(tmp_path, monkeypatch):
         assert store.job(job)["pid"] == 1234
     finally:
         store.close()
+
+
+def test_interrupted_tracked_job_is_retried_on_recovery(tmp_path, monkeypatch):
+    store = Store(tmp_path)
+    job = store.create_job("test")
+    store.track_process(job, 1234, 1234, 1.0)
+    store.update_job(job, "interrupted")
+    called = []
+    monkeypatch.setattr(
+        store,
+        "stop_process_group",
+        lambda *identity: called.append(identity) or {"status": "termination_pending", "killed": 0},
+    )
+    try:
+        store.recover_processes()
+        assert called == [(1234, 1234, 1.0)]
+        assert store.job(job)["pid"] == 1234
+    finally:
+        store.close()
+
+
+def test_close_deadline_includes_store_lock_wait(tmp_path):
+    store = Store(tmp_path)
+    engine = Engine(Registry(), store)
+    store.lock.acquire()
+    try:
+        started = time.monotonic()
+        result = engine.close(timeout=0.15)
+        assert time.monotonic() - started < 0.5
+        assert result["status"] == "shutdown_pending"
+        assert result["store_safe_to_close"] is False
+    finally:
+        store.lock.release()
+        engine.close(timeout=2)
+        store.close()
+
+
+def test_process_records_are_unique_and_old_untrack_preserves_new_identity(tmp_path):
+    store = Store(tmp_path)
+    job = store.create_job("test")
+    first = store.track_process(job, 1111, 1111, 1.0)
+    second = store.track_process(job, 2222, 2222, 2.0)
+    foreground = store.track_process("", 3333, 3333, 3.0)
+    try:
+        assert first.startswith("p") and second.startswith("p") and foreground.startswith("p")
+        assert len({first, second, foreground}) == 3
+        store.untrack_process(first)
+        with store.lock:
+            rows = store.db.execute(
+                "SELECT id,pid,pgid,create_time FROM processes ORDER BY id"
+            ).fetchall()
+            job_identity = store.db.execute(
+                "SELECT pid,pgid,create_time FROM jobs WHERE id=?", (job,)
+            ).fetchone()
+        assert {(row[0], row[1], row[2], row[3]) for row in rows} == {
+            (second, 2222, 2222, 2.0),
+            (foreground, 3333, 3333, 3.0),
+        }
+        assert tuple(job_identity) == (2222, 2222, 2.0)
+    finally:
+        store.close()
+
+
+def test_pending_process_result_is_retried_on_later_stop(tmp_path, monkeypatch):
+    store = Store(tmp_path)
+    outcomes = iter(
+        [
+            {"status": "termination_pending", "killed": 0},
+            {"status": "stopped", "killed": 1},
+        ]
+    )
+    calls = []
+    monkeypatch.setattr(
+        store,
+        "_stop_process_group",
+        lambda *identity: calls.append(identity) or next(outcomes),
+    )
+    try:
+        assert store.stop_process_group(1111, 1111, 1.0)["status"] == "termination_pending"
+        assert store.stop_process_group(1111, 1111, 1.0)["status"] == "stopped"
+        assert calls == [(1111, 1111, 1.0), (1111, 1111, 1.0)]
+    finally:
+        store.close()
+
+
+def test_close_deadline_includes_blocking_close_hook(tmp_path):
+    store = Store(tmp_path)
+    engine = Engine(Registry(), store)
+    release = threading.Event()
+    engine.registry.close_hooks = [lambda: release.wait()]
+    try:
+        started = time.monotonic()
+        result = engine.close(timeout=0.15)
+        assert time.monotonic() - started < 0.5
+        assert result["status"] == "shutdown_pending"
+        assert result["store_safe_to_close"] is False
+    finally:
+        release.set()
+        time.sleep(0.05)
+        store.close()
+
+
+def test_request_registration_keeps_store_open_and_submit_rejects_after_close(tmp_path):
+    store = Store(tmp_path)
+    engine = Engine(Registry(), store)
+    entered = threading.Event()
+    release = threading.Event()
+    engine._request = lambda request: entered.set() or release.wait() or {"status": "ok"}
+    request_thread = threading.Thread(target=lambda: engine.request({"op": "discover"}))
+    request_thread.start()
+    try:
+        assert entered.wait(2)
+        result = engine.close(timeout=0.1)
+        assert result["store_safe_to_close"] is False
+        assert engine.submit("late", lambda ctx: {"status": "ok"})["status"] == "worker_unavailable"
+    finally:
+        release.set()
+        request_thread.join(2)
+        engine.close(timeout=2)
+        store.close()

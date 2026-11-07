@@ -31,7 +31,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from omnimcp import __version__
+from omnimcp import __version__, private_paths
 
 OBSERVE = ("desktop", "screenshot", "zoom", "ui", "marks", "binds", "wait_for", "canvas")
 ACT = ("pointer", "keyboard", "click_ui", "hypr", "launch", "sequence")
@@ -330,9 +330,7 @@ def _fail(kind: str, message: str, code: int) -> int:
 
 
 def lock_path() -> Path:
-    base = Path(os.environ.get("XDG_RUNTIME_DIR", "/tmp")) / "omnimcp"
-    base.mkdir(parents=True, exist_ok=True)
-    return base / "cli.lock"
+    return private_paths.runtime_dir() / "cli.lock"
 
 
 def _lock() -> Any:
@@ -342,7 +340,8 @@ def _lock() -> Any:
     pid goes into the file once the lock is held (never before: opening
     for truncation would wipe the pid of the verb we are waiting on), which
     is how `omnimcp stop` reaches a verb when a server owns the beacon."""
-    fh = open(lock_path(), "a+")  # noqa: SIM115 (held until the process exits)
+    fd = private_paths.open_private_file(lock_path(), os.O_CREAT | os.O_RDWR, 0o600)
+    fh = os.fdopen(fd, "r+")  # noqa: SIM115 (held until the process exits)
     fcntl.flock(fh, fcntl.LOCK_EX)
     fh.seek(0)
     fh.truncate()

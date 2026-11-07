@@ -2,20 +2,70 @@ name: ci
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'wip/**']
   pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python: ["3.11", "3.12", "3.13", "3.14"]
+        python: ['3.11', '3.12', '3.13', '3.14']
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: ${{ matrix.python }}
-      - run: uv sync --group dev
+      - run: uv sync --frozen --group dev
       - run: uv run ruff check .
-      - run: uv run pytest -q
+      - run: uv run ruff format --check .
+      - name: Tests with worker and CLI subprocess coverage
+        run: uv run pytest -q --cov=omnimcp --cov-report=term --cov-report=xml
+      - name: Build wheel and source distribution
+        run: uv build
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-${{ matrix.python }}
+          path: coverage.xml
+          if-no-files-found: error
+
+  desktop:
+    name: Real Hyprland desktop acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      OMNIMCP_VM_DIR: ${{ runner.temp }}/omnimcp-hypr-vm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: '3.14'
+      - name: Real desktop effects and separately recorded teardown
+        run: bash scripts/hyprland-vm/ci-run.sh
+      - name: Publish both component outcomes
+        if: always()
+        run: |
+          if [ -f "$OMNIMCP_VM_DIR/results/ci-result.json" ]; then
+            cat "$OMNIMCP_VM_DIR/results/ci-result.json" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'Desktop evidence is incomplete; see failing step and raw artifacts.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: real-hyprland-evidence
+          path: |
+            ${{ runner.temp }}/omnimcp-hypr-vm/results/
+            ${{ runner.temp }}/omnimcp-hypr-vm/serial.log
+            ${{ runner.temp }}/omnimcp-hypr-vm/raw-runner-exit.txt
+            ${{ runner.temp }}/omnimcp-hypr-vm/source-commit.txt
+          if-no-files-found: error

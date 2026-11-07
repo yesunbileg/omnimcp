@@ -16,6 +16,8 @@ import psutil
 from .registry import Fault
 from .state import Store
 
+_admin_attempt_lock = threading.Lock()
+
 
 def flag(name: str) -> bool:
     return os.environ.get(name, "").lower() in {"1", "true", "yes", "on"}
@@ -59,6 +61,25 @@ class Context:
         admin: bool = False,
         accepted: tuple[int, ...] = (0,),
     ) -> dict:
+        if admin and not _admin_attempt_lock.acquire(blocking=False):
+            raise Fault(
+                "busy", "Another admin attempt is in progress; no additional prompt was issued."
+            )
+        try:
+            return self._run(argv, cwd=cwd, timeout=timeout, admin=admin, accepted=accepted)
+        finally:
+            if admin:
+                _admin_attempt_lock.release()
+
+    def _run(
+        self,
+        argv: list[str],
+        *,
+        cwd: str = "",
+        timeout: float = 60,
+        admin: bool = False,
+        accepted: tuple[int, ...] = (0,),
+    ) -> dict:
         self.check()
         if not argv or not all(isinstance(a, str) and "\0" not in a for a in argv):
             raise Fault("invalid_params", "argv must contain nonempty executable and strings.")
@@ -74,16 +95,11 @@ class Context:
                 session.ensure_session_env()
             except RuntimeError as exc:
                 raise Fault("permission_required", str(exc)) from exc
-            if self.store.auth_block(key) and not self.auth_retry:
+            if self.store.auth_block(key):
                 raise Fault(
                     "auth_cancelled",
-                    "Previous authentication stopped. Ask the human before "
-                    "retrying; only then set auth_retry=true.",
-                )
-            if self.auth_retry:
-                self.store.auth_block(key, clear=True)
-                self.auth_retry = (
-                    False  # one explicit human-authorized retry, never a session bypass
+                    "Previous authentication stopped. An operator reset is required with "
+                    "omnimcp worker auth-reset before retrying.",
                 )
             if not shutil.which("pkexec"):
                 raise Fault(
@@ -94,6 +110,7 @@ class Context:
                     "permission_required", "No graphical session selected for authentication."
                 )
             argv = [shutil.which("pkexec"), *argv]
+        process_record = None
         ref, path = self.store.artifact_path("command-output")
         if self.job_id:
             self.progress({"output": ref})
@@ -125,7 +142,10 @@ class Context:
                         threading.Thread(target=terminate_late, daemon=True).start()
             if birth is not None:
                 try:
-                    self.store.track_process(self.job_id, proc.pid, proc.pid, birth)
+                    process_record = (
+                        self.store.track_process(self.job_id, proc.pid, proc.pid, birth)
+                        or self.job_id
+                    )
                 except BaseException:
                     self.store.stop_process_group(proc.pid, proc.pid, birth)
                     raise
@@ -146,23 +166,28 @@ class Context:
                 ) and birth is not None:
                     termination = self.store.stop_process_group(proc.pid, proc.pid, birth)
                     self.termination = termination
-                    signal_denied = termination["status"] == "termination_denied"
+                    signal_denied = termination["status"] in {
+                        "termination_denied",
+                        "termination_pending",
+                    }
                     if not signal_denied:
                         with contextlib.suppress(subprocess.TimeoutExpired):
                             proc.wait(timeout=1)
                 elif proc.poll() is None:
                     signal_denied = True
-                if proc.poll() is not None and not signal_denied:
-                    self.store.untrack_process(self.job_id)
+                if proc.poll() is not None and not signal_denied and process_record:
+                    self.store.untrack_process(process_record)
         if signal_denied:
-            # Elevated processes may reject this user's signals; never claim termination.
-            self.store.auth_block(key, "cancelled")
+            # Keep the process record until every verified group member has exited.
+            if admin:
+                self.store.auth_block(key, "cancelled")
             return {
                 "status": "cancellation_pending" if stopped == "cancelled" else "timeout_pending",
                 "pid": proc.pid,
-                "still_running": proc.poll() is None,
+                "process_ref": process_record,
+                "still_running": True,
                 "output": ref,
-                "message": "OS denied termination after elevation; inspect actual state. "
+                "message": "Process termination could not be confirmed; inspect actual state. "
                 "No retry or additional authentication prompt was issued.",
             }
         result = {

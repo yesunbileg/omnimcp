@@ -155,7 +155,9 @@ state, devices and GUI authentication. Arbitrary command jobs can opt into a
 shared `resource` name; the server cannot infer every resource touched by arbitrary
 programs. Desktop commands issued outside this worker do not share its mutexes.
 A worker restart marks queued/running jobs `interrupted` and never replays them.
-The systemd unit uses `KillMode=control-group` to terminate daemon-owned children.
+The worker closes within a bound; if a handler is still busy, its job can be
+reported as `interrupted` with shutdown diagnostics. The systemd unit uses
+`KillMode=control-group` to terminate daemon-owned children.
 After any interruption/cancellation inspect real state before retrying a change.
 If elevation makes a child unsignalable by this user, the result explicitly reports
 `cancellation_pending`/`timeout_pending`, its PID and retained output, rather than
@@ -209,18 +211,28 @@ install dependencies or prompt for passwords through AI input.
 ## Admin and preservation
 
 Only `pkexec` is used for core admin commands. No password parameter, terminal
-password channel or sudo retry is implemented. A cancellation/timeout blocks further
-GUI admin prompts in SQLite. Only after asking the human may a caller set
-`auth_retry=true`; this grants one new attempt, not a workflow/session bypass.
-Installing/enabling the user worker itself needs no elevated privileges.
+password channel or sudo retry is implemented. Concurrent admin actions do not
+fan out into concurrent GUI prompts. A cancelled or timed-out authentication
+blocks later admin prompts in persistent worker state. The compatibility
+`auth_retry` parameter does not clear that block. After the local owner has checked
+the situation, `omnimcp worker auth-reset` clears it. This command shares the local
+user account's authority: a same-UID agent with shell access can invoke it and
+`pkexec`, so it is not a separate consent boundary or OS sandbox. Installing/enabling
+the user worker itself needs no elevated privileges.
 
-`admin.install_helper` explicitly installs the standalone `root_helper.py` to
-`/usr/local/libexec/omnimcp-file-helper` with root ownership using a GUI prompt.
-It is optional and is not installed silently. `config.admin_update` refuses a missing,
-user-writable or incorrectly owned helper/ancestor. The helper uses `/usr/bin/python3 -I`
-and only standard-library imports, so elevated execution never imports the editable
-Python package. Root backups stay under `/var/lib/omnimcp/backups/<uid>/`.
-Each use goes through pkexec again, preserving native authentication policy.
+`admin.install_helper` does not install the editable package or copy a helper with
+root privileges. It returns `permission_required` and manual guidance for an
+administrator to install a trusted, root-controlled standalone helper. The helper
+must be root-owned, have no symlink in its path, and use the fixed
+`/etc/omnimcp/allowed-configs.json` policy: a root-controlled JSON array of exact,
+canonical absolute target paths. Helper, policy and backup control paths are
+forbidden as targets; environment variables cannot redirect those paths.
+`config.admin_update` refuses a missing, user-writable or incorrectly owned helper
+or ancestor. The standalone helper uses `/usr/bin/python3 -I` and standard-library
+imports so elevated execution never imports the editable Python package. Root
+backups stay under `/var/lib/omnimcp/backups/<uid>/`. Each operation goes through
+pkexec again, preserving native authentication policy. Installing the helper on a
+live system is an explicit administrator task and is not performed by these docs.
 
 User file edits check SHA-256 revisions, produce diffs, retain and verify backups,
 preserve mode/ownership/xattrs, replace atomically and verify readback. `preview=true`

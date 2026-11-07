@@ -29,6 +29,22 @@ jobs with `job`; cancellation is cooperative and does not undo completed changes
 User services normally stop at logout; configuring systemd linger is a separate
 user choice. Jobs survive MCP/CLI disconnects while the worker remains running.
 
+To cancel current jobs while keeping the worker available, run
+`omnimcp worker stop-all`. This owner control uses the local authenticated Unix
+socket; it is not an MCP tool or an action/workflow capability. It reports
+`cancelled`, `groups_terminated`, `killed`, and `threads_still_busy`. Pending jobs
+are cancelled immediately. Recorded process groups are stopped after verifying
+their leader's PID and birth time; surviving recorded members are individually
+checked before SIGKILL. A handler thread that ignores cancellation may remain
+busy after the bounded response. Cancellation does not undo completed changes.
+An agent with local shell access can invoke the CLI too; this interface is not
+an authorization boundary against that agent.
+
+The legacy `omnimcp stop` also checks beacon ownership and the recorded process
+birth time before signaling. A live older beacon without a birth time is
+refused; restart that server through its owning client or service so it writes
+a new beacon. The stop command does not guess an identity from an old PID.
+
 Set `OMNIMCP_PROFILE=compact` or use `args = ["--profile", "compact"]` in
 an MCP client to opt in. The existing client configuration is retained until
 all benchmark gates have been measured. Reconnect clients after package updates.
@@ -86,6 +102,25 @@ higher-level effect; semantic mutations include their verification/readback.
 Legacy desktop text is retained with its verification limits. Focus/close
 adapters independently check compositor state; low-level input cannot prove an
 application's intended effect without a subsequent semantic observation.
+For `launch(..., workspace=...)`, a new window is associated with the request
+only when its resolved client record reports both the requested workspace and
+a class matching the launched command. A matching app-class window appearing
+elsewhere is ambiguous (for example, a single-instance app may have opened it
+from an existing process), so it is reported without moving it or adding it to
+launched-window ownership. Workspace and class matching cannot prove universal
+provenance: an unrelated window can appear on the requested workspace at the same time.
+This conservative association changes single-instance compatibility: a matching
+window on another workspace is no longer automatically moved or claimed. Some
+wrapper commands also start apps whose window class does not match the command,
+such as `xdg-open URL` or `python app.py`; those launches may be reported as
+ambiguous unless their association is independently confirmed. A workspace
+match alone does not override that class ambiguity.
+Hyprland's relative launch selectors (`+1`, `-1`, `e+1`, `previous`, and
+`empty`) are still dispatched as requested, but their concrete destination
+cannot always be resolved reliably before dispatch. In that case launch
+reports an ambiguous association and leaves the new window unclaimed and
+unmoved, even if the launch itself succeeded. Use a numeric or named workspace
+when the caller needs a confirmed association.
 
 ## Workflows and jobs
 
@@ -120,7 +155,9 @@ state, devices and GUI authentication. Arbitrary command jobs can opt into a
 shared `resource` name; the server cannot infer every resource touched by arbitrary
 programs. Desktop commands issued outside this worker do not share its mutexes.
 A worker restart marks queued/running jobs `interrupted` and never replays them.
-The systemd unit uses `KillMode=control-group` to terminate daemon-owned children.
+The worker closes within a bound; if a handler is still busy, its job can be
+reported as `interrupted` with shutdown diagnostics. The systemd unit uses
+`KillMode=control-group` to terminate daemon-owned children.
 After any interruption/cancellation inspect real state before retrying a change.
 If elevation makes a child unsignalable by this user, the result explicitly reports
 `cancellation_pending`/`timeout_pending`, its PID and retained output, rather than
@@ -131,6 +168,9 @@ Compact desktop references use compositor stable IDs, with process-birth fallbac
 on older Hyprland; that fallback cannot prove same-process window-address reuse.
 
 ## Native capabilities and extension contract
+
+Codex native account quotas: [`codex.usage` / `codex_usage`](CODEX-USAGE.md),
+with direct `omnimcp codex-usage` access, requires no model invocation.
 
 Use `discover` for the current catalog and each parameter schema. Included domains:
 
@@ -171,18 +211,28 @@ install dependencies or prompt for passwords through AI input.
 ## Admin and preservation
 
 Only `pkexec` is used for core admin commands. No password parameter, terminal
-password channel or sudo retry is implemented. A cancellation/timeout blocks further
-GUI admin prompts in SQLite. Only after asking the human may a caller set
-`auth_retry=true`; this grants one new attempt, not a workflow/session bypass.
-Installing/enabling the user worker itself needs no elevated privileges.
+password channel or sudo retry is implemented. Concurrent admin actions do not
+fan out into concurrent GUI prompts. A cancelled or timed-out authentication
+blocks later admin prompts in persistent worker state. The compatibility
+`auth_retry` parameter does not clear that block. After the local owner has checked
+the situation, `omnimcp worker auth-reset` clears it. This command shares the local
+user account's authority: a same-UID agent with shell access can invoke it and
+`pkexec`, so it is not a separate consent boundary or OS sandbox. Installing/enabling
+the user worker itself needs no elevated privileges.
 
-`admin.install_helper` explicitly installs the standalone `root_helper.py` to
-`/usr/local/libexec/omnimcp-file-helper` with root ownership using a GUI prompt.
-It is optional and is not installed silently. `config.admin_update` refuses a missing,
-user-writable or incorrectly owned helper/ancestor. The helper uses `/usr/bin/python3 -I`
-and only standard-library imports, so elevated execution never imports the editable
-Python package. Root backups stay under `/var/lib/omnimcp/backups/<uid>/`.
-Each use goes through pkexec again, preserving native authentication policy.
+`admin.install_helper` does not install the editable package or copy a helper with
+root privileges. It returns `permission_required` and manual guidance for an
+administrator to install a trusted, root-controlled standalone helper. The helper
+must be root-owned, have no symlink in its path, and use the fixed
+`/etc/omnimcp/allowed-configs.json` policy: a root-controlled JSON array of exact,
+canonical absolute target paths. Helper, policy and backup control paths are
+forbidden as targets; environment variables cannot redirect those paths.
+`config.admin_update` refuses a missing, user-writable or incorrectly owned helper
+or ancestor. The standalone helper uses `/usr/bin/python3 -I` and standard-library
+imports so elevated execution never imports the editable Python package. Root
+backups stay under `/var/lib/omnimcp/backups/<uid>/`. Each operation goes through
+pkexec again, preserving native authentication policy. Installing the helper on a
+live system is an explicit administrator task and is not performed by these docs.
 
 User file edits check SHA-256 revisions, produce diffs, retain and verify backups,
 preserve mode/ownership/xattrs, replace atomically and verify readback. `preview=true`

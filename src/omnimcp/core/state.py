@@ -17,6 +17,8 @@ import psutil
 from .registry import Fault
 
 BUDGET = 16 * 1024
+TERM_GRACE = 0.5
+KILL_VERIFY_GRACE = 1.0
 
 
 def state_dir() -> Path:
@@ -58,6 +60,9 @@ class Store:
             CREATE TABLE IF NOT EXISTS artifacts (
                 id TEXT PRIMARY KEY, path TEXT, kind TEXT, created REAL);
             CREATE TABLE IF NOT EXISTS auth_blocks (key TEXT PRIMARY KEY, status TEXT);
+            CREATE TABLE IF NOT EXISTS processes (
+                id TEXT PRIMARY KEY, job_id TEXT, pid INTEGER, pgid INTEGER,
+                create_time REAL, updated REAL);
         """)
         for name, kind in (("pid", "INTEGER"), ("pgid", "INTEGER"), ("create_time", "REAL")):
             try:
@@ -65,6 +70,20 @@ class Store:
             except sqlite3.OperationalError as exc:
                 if "duplicate column name" not in str(exc).lower():
                     raise
+        self.db.commit()
+        rows = self.db.execute(
+            "SELECT id,pid,pgid,create_time FROM jobs WHERE pid IS NOT NULL"
+        ).fetchall()
+        for job_id, pid, pgid, birth in rows:
+            exists = self.db.execute(
+                "SELECT 1 FROM processes WHERE job_id=? AND pid=? AND pgid=? AND create_time=?",
+                (job_id, pid, pgid, birth),
+            ).fetchone()
+            if not exists:
+                self.db.execute(
+                    "INSERT INTO processes VALUES(?,?,?,?,?,?)",
+                    (new_id("p"), job_id, pid, pgid, birth, time.time()),
+                )
         self.db.commit()
 
     def close(self):
@@ -109,7 +128,8 @@ class Store:
         with self.lock:
             cursor = self.db.execute(
                 "UPDATE jobs SET status=?, updated=?, result=COALESCE(?,result), "
-                "progress=COALESCE(?,progress) WHERE id=? AND status != 'cancelled'",
+                "progress=COALESCE(?,progress) WHERE id=? "
+                "AND status NOT IN ('cancelled','interrupted')",
                 (
                     status,
                     time.time(),
@@ -158,23 +178,44 @@ class Store:
                 )
 
     def track_process(self, job_id: str, pid: int, pgid: int, create_time: float):
-        """Persist the identity of a process group on its durable job record."""
-        if not job_id:
-            return
+        """Persist a process identity independently of the lifetime of its job."""
+        record_id = new_id("p")
         with self.lock:
+            if job_id:
+                self.db.execute(
+                    "UPDATE jobs SET pid=?,pgid=?,create_time=? WHERE id=?",
+                    (pid, pgid, create_time, job_id),
+                )
             self.db.execute(
-                "UPDATE jobs SET pid=?,pgid=?,create_time=? WHERE id=?",
-                (pid, pgid, create_time, job_id),
+                "INSERT INTO processes VALUES(?,?,?,?,?,?)",
+                (record_id, job_id or None, pid, pgid, create_time, time.time()),
             )
             self.db.commit()
+        return record_id
 
-    def untrack_process(self, job_id: str):
-        if not job_id:
+    def untrack_process(self, record_id: str):
+        if not record_id:
             return
         with self.lock:
-            self.db.execute(
-                "UPDATE jobs SET pid=NULL,pgid=NULL,create_time=NULL WHERE id=?", (job_id,)
-            )
+            row = self.db.execute(
+                "SELECT id,job_id,pid,pgid,create_time FROM processes WHERE id=?", (record_id,)
+            ).fetchone()
+            if row is None:
+                # Keep compatibility with older callers that supplied a job ID.
+                row = self.db.execute(
+                    "SELECT id,job_id,pid,pgid,create_time FROM processes "
+                    "WHERE job_id=? ORDER BY updated DESC LIMIT 1",
+                    (record_id,),
+                ).fetchone()
+                if row is None:
+                    return
+            self.db.execute("DELETE FROM processes WHERE id=?", (row["id"],))
+            if row["job_id"]:
+                self.db.execute(
+                    "UPDATE jobs SET pid=NULL,pgid=NULL,create_time=NULL WHERE id=? "
+                    "AND pid=? AND pgid=? AND create_time=?",
+                    (row["job_id"], row["pid"], row["pgid"], row["create_time"]),
+                )
             self.db.commit()
 
     def stop_process_group(self, pid: int, pgid: int, birth: float) -> dict:
@@ -185,7 +226,7 @@ class Store:
         with lock:
             if identity not in self.process_results:
                 result = self._stop_process_group(pid, pgid, birth)
-                if result["status"] != "termination_denied":
+                if result["status"] not in {"termination_denied", "termination_pending"}:
                     self.process_results[identity] = result
                 return result
             return self.process_results[identity]
@@ -196,11 +237,18 @@ class Store:
             return result
         try:
             leader = psutil.Process(pid)
+            if leader.status() == psutil.STATUS_ZOMBIE:
+                result["status"] = "termination_pending"
+                result["message"] = "Group leader is a zombie; members are unverified."
+                return result
+        except psutil.NoSuchProcess:
+            result["status"] = "termination_pending"
+            result["message"] = "Group leader identity is gone; members are unverified."
+            return result
+        try:
             if leader.create_time() != birth or os.getpgid(pid) != pgid:
                 result["status"] = "pid_reused"
                 return result
-            if leader.status() == psutil.STATUS_ZOMBIE:
-                raise psutil.NoSuchProcess(pid)
             members = []
             for process in psutil.process_iter():
                 try:
@@ -224,7 +272,7 @@ class Store:
                 return result
             os.killpg(pgid, signal.SIGTERM)
             result["status"] = "stopped"
-            deadline = time.monotonic() + 5
+            deadline = time.monotonic() + TERM_GRACE
             while time.monotonic() < deadline:
                 remaining = []
                 for member_pid, member_birth in members:
@@ -242,6 +290,7 @@ class Store:
                 if not remaining:
                     break
                 time.sleep(0.05)
+            kill_targets = []
             for member_pid, member_birth in remaining:
                 try:
                     member = psutil.Process(member_pid)
@@ -250,11 +299,34 @@ class Store:
                         and member.status() != psutil.STATUS_ZOMBIE
                     ):
                         os.kill(member_pid, signal.SIGKILL)
-                        result["killed"] += 1
+                        kill_targets.append((member_pid, member_birth))
                 except (psutil.NoSuchProcess, ProcessLookupError):
                     pass
                 except (psutil.AccessDenied, PermissionError, OSError):
                     result["status"] = "termination_denied"
+            verify_deadline = time.monotonic() + KILL_VERIFY_GRACE
+            while time.monotonic() < verify_deadline:
+                alive = []
+                for member_pid, member_birth in members:
+                    try:
+                        member = psutil.Process(member_pid)
+                        if (
+                            member.create_time() == member_birth
+                            and member.status() != psutil.STATUS_ZOMBIE
+                        ):
+                            alive.append((member_pid, member_birth))
+                    except psutil.NoSuchProcess:
+                        pass
+                    except (psutil.AccessDenied, PermissionError, OSError):
+                        result["status"] = "termination_denied"
+                if result["status"] == "termination_denied" or not alive:
+                    break
+                time.sleep(0.05)
+            if result["status"] != "termination_denied" and alive:
+                result["status"] = "termination_pending"
+                result["message"] = "Verified process group members remain after SIGKILL."
+            alive_ids = set(alive)
+            result["killed"] = sum(target not in alive_ids for target in kill_targets)
         except (psutil.NoSuchProcess, ProcessLookupError):
             result["status"] = "already_exited"
             result["message"] = "group leader gone; members not verified"
@@ -268,14 +340,19 @@ class Store:
             return
         with self.lock:
             rows = self.db.execute(
-                "SELECT id,pid,pgid,create_time FROM jobs "
-                "WHERE status IN ('queued','running','cancelled') AND pid IS NOT NULL"
+                "SELECT p.id,p.job_id,p.pid,p.pgid,p.create_time FROM processes p "
+                "LEFT JOIN jobs j ON j.id=p.job_id "
+                "WHERE p.job_id IS NULL OR j.status IN "
+                "('queued','running','cancelled','interrupted')"
             ).fetchall()
-        for job_id, pid, pgid, birth in rows:
+        for record_id, job_id, pid, pgid, birth in rows:
             result = self.stop_process_group(pid, pgid, birth)
-            self.event("process", {**result, "pid": pid, "pgid": pgid, "job_id": job_id})
-            if result["status"] != "termination_denied":
-                self.untrack_process(job_id)
+            self.event(
+                "process",
+                {**result, "pid": pid, "pgid": pgid, "job_id": job_id, "process_id": record_id},
+            )
+            if result["status"] not in {"termination_denied", "termination_pending"}:
+                self.untrack_process(record_id)
 
     def artifact_path(self, kind: str = "text") -> tuple[str, Path]:
         ref = new_id("a")

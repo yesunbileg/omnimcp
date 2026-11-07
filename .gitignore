@@ -8,3 +8,7 @@ build/
 .ruff_cache/
 .coverage
 .agent-scratch/
+
+.coverage.*
+coverage.xml
+htmlcov/

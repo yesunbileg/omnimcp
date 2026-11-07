@@ -108,7 +108,16 @@ async def serve():
         server.close()
         await server.wait_closed()
         # Mark stopped jobs interrupted on graceful shutdown too; changes are never replayed.
-        await asyncio.to_thread(engine.close)
+        shutdown = await asyncio.to_thread(engine.close)
+        if not shutdown["store_safe_to_close"]:
+            # ThreadPoolExecutor registers an interpreter-exit join for its workers,
+            # so returning from asyncio.run would otherwise wait forever. Keep the
+            # SQLite handle open while a handler can still write, record the bounded
+            # shutdown outcome, then end this isolated worker process explicitly.
+            store.event("worker", {"status": "shutdown_pending", **shutdown})
+            with store.lock:
+                store.db.commit()
+            os._exit(0)
         path.unlink(missing_ok=True)
         store.event("worker", {"status": "stopped"})
         store.close()

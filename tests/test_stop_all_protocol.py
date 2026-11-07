@@ -104,5 +104,6 @@ def test_stop_all_is_absent_from_real_mcp_and_capability_dispatch(daemon):
                 ("workflow", {"steps": [{"id": "stop", "action": "worker_stop_all"}]}),
             ):
                 result = await client.call_tool(name, args)
+                assert result.isError is True
                 assert json.loads(result.content[0].text)["status"] == "unsupported"
     asyncio.run(asyncio.wait_for(run(), timeout=15))

@@ -27,15 +27,18 @@ def build_app(desktop) -> Any:
     app.tool(
         structured_output=False,
         annotations=ToolAnnotations(
-            title="Codex account usage", readOnlyHint=True, destructiveHint=False,
+            title="Codex account usage",
+            readOnlyHint=True,
+            destructiveHint=False,
             openWorldHint=True,
         ),
     )(codex_usage)
     for tool in desktop._OBSERVE_TOOLS:
         app.tool(
+            structured_output=tool.__name__ not in {"screenshot", "zoom"},
             annotations=ToolAnnotations(
                 title=desktop._TITLES[tool.__name__], readOnlyHint=True, openWorldHint=False
-            )
+            ),
         )(tool)
     app.tool(
         name="canvas",

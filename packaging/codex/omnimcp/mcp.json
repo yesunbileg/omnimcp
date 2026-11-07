@@ -4,9 +4,7 @@
     "omnimcp": {
       "type": "stdio",
       "command": "./bin/omnimcp",
-      "env": {
-        "OMNIMCP_KANBAN_FILE": "/mnt/work/User/AI/Task/kanban.md"
-      }
+      "env": {}
     }
   }
 }

@@ -1,0 +1,32 @@
+{
+  "status": "passed",
+  "checks": {
+    "legacy_stdio": "passed",
+    "desktop": {
+      "status": "passed",
+      "monitors": 1,
+      "windows": 0
+    },
+    "launch": {
+      "status": "passed",
+      "address": "0x6461032d9000"
+    },
+    "screenshot": {
+      "status": "passed",
+      "path": "/mnt/results/desktop-acceptance.png",
+      "width": 1280,
+      "height": 720,
+      "bytes": 9501
+    },
+    "keyboard": {
+      "status": "passed",
+      "marker": "/mnt/results/fixture-312124a1b6f1.txt",
+      "value": "omnimcp-keyboard-312124a1b6f1"
+    },
+    "close": {
+      "status": "passed",
+      "response": "closed 0x6461032d9000"
+    }
+  },
+  "fixture_class": "omnimcp-accept-312124a1b6f1"
+}

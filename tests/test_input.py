@@ -33,6 +33,40 @@ def test_click_validates_before_touching_compositor():
         hinput.click(button="laser")
 
 
+@pytest.mark.parametrize(
+    ("named", "expected"),
+    [(False, (640, 5)), (True, (639.6, 5))],
+)
+def test_pointer_rounding_mode_preserves_named_seat_subpixels(monkeypatch, named, expected):
+    class Pointer:
+        on_named_seat = named
+
+    monkeypatch.delenv("OMNIMCP_SEAT", raising=False)
+    monkeypatch.setattr(hinput, "_vp", Pointer() if named else None)
+    assert hinput.normalize_pointer_point(639.6, 5) == expected
+
+
+def test_pointer_normalization_preserves_coordinate_less_click(monkeypatch):
+    assert hinput.normalize_pointer_point(None, None) == (None, None)
+
+
+def test_pointer_normalization_fails_closed_when_requested_seat_is_missing(monkeypatch):
+    class DefaultPointer:
+        on_named_seat = False
+
+    monkeypatch.setenv("OMNIMCP_SEAT", "agent-seat")
+    monkeypatch.setattr(hinput, "_vp", DefaultPointer())
+    with pytest.raises(hinput.InputError, match="Requested seat"):
+        hinput.click(10.25, 20.5)
+
+
+def test_pointer_normalization_does_not_create_device_for_dry_run(monkeypatch):
+    monkeypatch.setattr(hinput, "_vp", None)
+    monkeypatch.setattr(hinput, "_on_named_seat", lambda: pytest.fail("device lookup"))
+    assert hinput.normalize_pointer_point(None, None) == (None, None)
+    assert hinput._vp is None
+
+
 class FakeVP:
     # not on a named seat, so positioning falls back to the compositor the
     # way it does in a default single-seat session (see input.move)

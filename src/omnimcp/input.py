@@ -209,6 +209,29 @@ def _with_pointer(fn: Callable[[VirtualPointer], Any]) -> Any:
                 raise
 
 
+def normalize_pointer_point(x: float | None, y: float | None) -> tuple[float | None, float | None]:
+    """Round coordinates for the default seat before confinement checks.
+
+    Do not construct a virtual pointer just to choose the rounding mode: a
+    dry run and a request refused by policy must not create compositor input
+    devices. A requested or already selected named seat keeps its coordinates;
+    its wire movement has existing relative-origin and quantization behavior.
+    """
+    if x is None and y is None:
+        return None, None
+    _check_xy(x, y)
+    requested = os.environ.get("OMNIMCP_SEAT", "").strip()
+    if requested or (_vp is not None and _vp.on_named_seat):
+        return x, y
+    assert x is not None and y is not None
+    return round(x), round(y)
+
+
+def _check_requested_pointer_seat(pointer: VirtualPointer) -> None:
+    if os.environ.get("OMNIMCP_SEAT", "").strip() and not pointer.on_named_seat:
+        raise InputError("Requested seat is not selected; default-seat input refused.")
+
+
 # Public because the server calls them BEFORE deciding whether to act: a
 # dry run has to raise everything the real call would, and these checks
 # used to live only past the point a dry run stops at.
@@ -234,6 +257,7 @@ def move(x: float, y: float) -> None:
         # single global cursor, which belongs to the human, so using it here would
         # defeat the whole point of having a second seat.
         def run(p: VirtualPointer) -> bool:
+            _check_requested_pointer_seat(p)
             if not p.on_named_seat:
                 return False
             p.move_to(x, y)
@@ -257,7 +281,11 @@ def click(
         if has_xy:
             move(x, y)  # type: ignore[arg-type]
             time.sleep(0.02)
-        _with_pointer(lambda p: p.click(button, double=double))
+        def run(p: VirtualPointer) -> None:
+            _check_requested_pointer_seat(p)
+            p.click(button, double=double)
+
+        _with_pointer(run)
 
 
 def drag(x1: float, y1: float, x2: float, y2: float, button: str = "left") -> None:
@@ -266,6 +294,7 @@ def drag(x1: float, y1: float, x2: float, y2: float, button: str = "left") -> No
 
     def run(p: VirtualPointer) -> None:
         global _held_button
+        _check_requested_pointer_seat(p)
         # flag BEFORE the press: the press blocks in a sync roundtrip with
         # the button already down compositor-side, and a SIGTERM landing
         # there must see the hold. Releasing an un-pressed button is

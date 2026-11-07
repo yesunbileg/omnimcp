@@ -765,6 +765,9 @@ def pointer(
     safety.touch(f"pointer:{action}")
     trust.guard_seat()
     if action in ("move", "click", "drag"):  # else the ValueError below
+        x, y = hinput.normalize_pointer_point(x, y)
+        if action == "drag":
+            to_x, to_y = hinput.normalize_pointer_point(to_x, to_y)
         _pointer_policy(action, x, y, to_x, to_y, background)
     # OMNIMCP_DRYRUN runs every check below and then delivers nothing, so
     # `plan` describes what each branch was about to do. The guards stay
@@ -1027,6 +1030,7 @@ def click_ui(
             kind = "double click" if double else f"{button} click"
             bg.refuse(f"a {kind} has no accessibility action, only a left click does")
         return _click_in_background(client, control, desc, then, allow_auth)
+    x, y = hinput.normalize_pointer_point(x, y)
     trust.guard_client(client)  # confinement
     trust.guard_auth_client(client, allow_auth)
     # a locked session, or a layer over the point, would swallow the click

@@ -388,6 +388,42 @@ def test_a_drag_checks_both_ends(wired_bg):
     assert wired_bg["at_points"] == [(1, 2), (3, 4)]
 
 
+def test_default_seat_drag_guards_and_delivers_rounded_endpoints(wired_bg, monkeypatch):
+    guarded, delivered = [], []
+    monkeypatch.setattr(srv.hinput, "normalize_pointer_point",
+                        lambda x, y: (float(round(x)), float(round(y))))
+    monkeypatch.setattr(srv.trust, "guard_pointer", lambda x, y, *a: guarded.append((x, y)))
+    monkeypatch.setattr(srv.hinput, "drag", lambda *a, **k: delivered.append(a))
+    monkeypatch.setattr(srv.trust, "remember_seat", lambda: None)
+    monkeypatch.setattr(srv.hyprctl, "cursor_pos", lambda: (640, 20))
+    srv.pointer("drag", x=639.6, y=5.2, to_x=800.4, to_y=20.4)
+    assert guarded == [(640.0, 5.0), (800.0, 20.0)]
+    assert delivered == [(640.0, 5.0, 800.0, 20.0)]
+
+
+def test_click_ui_checks_and_delivers_rounded_default_seat_point(wired_bg, monkeypatch):
+    guarded, delivered = [], []
+    monkeypatch.setattr(srv, "_ui_read", lambda *a, **k: [
+        {"role": "push button", "name": "Save", "x": 639.6, "y": 80.4,
+         "clickable": True, "_svc": "svc", "_path": "/save"}
+    ])
+    monkeypatch.setattr(srv.hinput, "normalize_pointer_point",
+                        lambda x, y: (float(round(x)), float(round(y))))
+    monkeypatch.setattr(srv.trust, "guard_client", lambda *a: None)
+    monkeypatch.setattr(srv.trust, "guard_auth_client", lambda *a: None)
+    monkeypatch.setattr(srv.trust, "guard_session_lock", lambda *a: "")
+    monkeypatch.setattr(srv.trust, "guard_covering_layer",
+                        lambda x, y, *a: guarded.append((x, y)))
+    monkeypatch.setattr(srv.trust, "check_click_point",
+                        lambda client, x, y, *a, **k: guarded.append((x, y)))
+    monkeypatch.setattr(srv.trust, "remember_seat", lambda: None)
+    monkeypatch.setattr(srv.hinput, "click",
+                        lambda x, y, **k: delivered.append((x, y)))
+    srv.click_ui(name="Save", window="0xa", background=False)
+    assert guarded == [(640.0, 80.0)] * 4
+    assert delivered == [(640.0, 80.0)]
+
+
 def test_pointer_background_false_skips_the_check(wired_bg):
     wired_bg["window_at_point"] = "0xa"
     srv.pointer("click", x=100, y=100, background=False)

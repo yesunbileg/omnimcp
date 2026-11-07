@@ -229,21 +229,24 @@ class Engine:
             self.active_operations -= 1
 
     def close(self, timeout: float = 5.0):
-        """Begin asynchronous cleanup and wait only for the caller's bounded budget."""
+        """Bound the caller's wait, including cleanup locks and adapter close hooks.
+
+        A timed-out daemon coordinator still owns storage. Callers must keep it
+        open until a later close reports store_safe_to_close, or exit the worker.
+        """
         deadline = time.monotonic() + max(0.0, timeout)
+        start = None
         with self.lifecycle_lock:
             if self.close_thread is None:
                 self.stopping = True
-                self.close_thread = threading.Thread(
+                start = self.close_thread = threading.Thread(
                     target=self._close_coordinator,
-                    args=(deadline,),
                     name="omnimcp-close",
                     daemon=True,
                 )
-                self.close_thread.start()
-            thread = self.close_thread
-        self.close_event.wait(max(0.0, deadline - time.monotonic()))
-        if self.close_event.is_set():
+        if start is not None:
+            start.start()
+        if self.close_event.wait(max(0.0, deadline - time.monotonic())):
             return self.close_result
         return {
             "status": "shutdown_pending",
@@ -252,32 +255,30 @@ class Engine:
             "store_safe_to_close": False,
         }
 
-    def _close_coordinator(self, deadline):
+    def _close_coordinator(self):
         try:
-            while True:
-                with self.lifecycle_lock:
-                    active = self.active_operations
-                if not active or time.monotonic() >= deadline:
-                    break
-                time.sleep(min(0.02, max(0, deadline - time.monotonic())))
-            with self.lock:
+            # Cancel first: foreground request completion may itself require this
+            # signal, so waiting for active RPCs before cancellation deadlocks.
+            with self.lifecycle_lock:
                 contexts = dict(self.contexts)
                 foreground = list(self.foreground.values())
+                futures = dict(self.futures)
                 for ctx in [*contexts.values(), *foreground]:
                     ctx.cancelled.set()
-                cancelled = []
-                for ref, future in list(self.futures.items()):
-                    if future.cancel():
-                        cancelled.append(ref)
+            for ref, future in futures.items():
+                if future.cancel():
+                    with self.lifecycle_lock:
                         self.futures.pop(ref, None)
                         self.contexts.pop(ref, None)
-            for ref in [*contexts, *cancelled]:
+            for ref in contexts:
                 self.store.update_job(
                     ref,
                     "interrupted",
                     {"status": "interrupted", "message": "Worker shutdown; not replayed."},
                 )
-
+            # Best-effort durable diagnostic: the caller never waits beyond its
+            # deadline if another operation holds SQLite or the Store lock.
+            self.store.event("worker", {"status": "shutdown_pending"})
             with self.store.lock:
                 rows = self.store.db.execute(
                     "SELECT id,pid,pgid,create_time FROM processes"
@@ -292,57 +293,53 @@ class Engine:
                 )
                 thread.start()
                 terminators.append(thread)
-
-            self.pool.shutdown(wait=False, cancel_futures=True)
-            for hook in getattr(self.registry, "close_hooks", []):
-                hook_done = threading.Event()
-
-                def call_hook(fn=hook):
-                    try:
-                        fn()
-                    finally:
-                        hook_done.set()
-
-                threading.Thread(target=call_hook, name="omnimcp-close-hook", daemon=True).start()
-                if not hook_done.wait(max(0.0, deadline - time.monotonic())):
-                    self.close_result = {
-                        "status": "shutdown_pending",
-                        "threads_still_busy": len(contexts) + len(foreground),
-                        "terminators_still_busy": sum(t.is_alive() for t in terminators),
-                        "store_safe_to_close": False,
-                    }
-                    return
-            while time.monotonic() < deadline:
-                with self.lock:
+            # Queued futures were cancelled above; already running handlers must
+            # finish before storage or hooks can be closed.
+            self.pool.shutdown(wait=False)
+            while True:
+                with self.lifecycle_lock:
                     busy = len(self.contexts) + len(self.foreground)
-                if not busy and not any(t.is_alive() for t in terminators):
+                    active = self.active_operations
+                if not busy and not active and not any(t.is_alive() for t in terminators):
                     break
-                time.sleep(min(0.02, max(0, deadline - time.monotonic())))
-            with self.lifecycle_lock:
-                active = self.active_operations
-            with self.lock:
-                busy = len(self.contexts) + len(self.foreground)
-            safe = not busy and not active and not any(t.is_alive() for t in terminators)
-            self.closed = safe
+                time.sleep(0.01)
+            for hook in getattr(self.registry, "close_hooks", []):
+                hook()
+            self.closed = True
             self.close_result = {
-                "status": "closed" if safe else "shutdown_pending",
-                "threads_still_busy": busy if not active else None,
-                "terminators_still_busy": sum(t.is_alive() for t in terminators),
-                "store_safe_to_close": safe,
+                "status": "closed",
+                "threads_still_busy": 0,
+                "terminators_still_busy": 0,
+                "store_safe_to_close": True,
             }
-        except BaseException:
+        except BaseException as exc:
             self.close_result = {
                 "status": "shutdown_pending",
                 "threads_still_busy": None,
                 "terminators_still_busy": None,
                 "store_safe_to_close": False,
+                "cleanup_error": type(exc).__name__,
             }
         finally:
             self.close_event.set()
 
     def stop_all(self):
         """Request cancellation without waiting indefinitely for uncooperative handlers."""
-        with self.lock:
+        if not self._enter_operation():
+            return {
+                "status": "worker_unavailable",
+                "cancelled": 0,
+                "groups_terminated": 0,
+                "killed": 0,
+                "threads_still_busy": 0,
+            }
+        try:
+            return self._stop_all()
+        finally:
+            self._leave_operation()
+
+    def _stop_all(self):
+        with self.lifecycle_lock:
             jobs = [(ref, ctx) for ref, ctx in self.contexts.items() if not ctx.stop_requested]
             foreground = [ctx for ctx in self.foreground.values() if not ctx.stop_requested]
             for _, ctx in jobs:
@@ -356,7 +353,8 @@ class Engine:
                 if future and future.cancel():
                     self.contexts.pop(ref, None)
                     self.futures.pop(ref, None)
-                self.store.update_job(ref, "cancelled", {"status": "cancelled"})
+        for ref, _ in jobs:
+            self.store.update_job(ref, "cancelled", {"status": "cancelled"})
         all_contexts = [ctx for _, ctx in jobs] + foreground
         for ref, ctx in jobs:
             row = self.store.job(ref)
@@ -380,7 +378,7 @@ class Engine:
             thread.start()
         deadline = time.monotonic() + 6.5
         while time.monotonic() < deadline:
-            with self.lock:
+            with self.lifecycle_lock:
                 if (
                     not any(ref in self.contexts for ref, _ in jobs)
                     and not any(id(ctx) in self.foreground for ctx in foreground)
@@ -388,7 +386,7 @@ class Engine:
                 ):
                     break
             time.sleep(0.05)
-        with self.lock:
+        with self.lifecycle_lock:
             busy = sum(
                 future.running() for ref, future in self.futures.items() if ref in self.contexts
             ) + len(self.foreground)
@@ -446,38 +444,58 @@ class Engine:
                 raise Fault("backend_error", str(exc)) from exc
 
     def submit(self, name, runner, *, auth_retry=False):
-        ref = self.store.create_job(name)
-        ctx = Context(self.store, job_id=ref, auth_retry=auth_retry, engine=self)
-        with self.lock:
-            self.contexts[ref] = ctx
+        if not self._enter_operation():
+            raise Fault("worker_unavailable", "Worker is stopping.")
+        try:
+            ref = self.store.create_job(name)
+            ctx = Context(self.store, job_id=ref, auth_retry=auth_retry, engine=self)
 
-        def run():
-            try:
-                with self.lock:
+            def run():
+                try:
+                    with self.lifecycle_lock:
+                        if self.stopping:
+                            ctx.cancelled.set()
                     ctx.check()
                     self.store.update_job(ref, "running")
-                result = runner(ctx)
-                status = result.get("status", "ok") if isinstance(result, dict) else "ok"
-                state = (
-                    "cancelled"
-                    if status == "cancelled"
-                    else ("succeeded" if status in {"ok", "dry_run"} else "failed")
-                )
-            except Fault as exc:
-                result, state = exc.result(), "cancelled" if exc.code == "cancelled" else "failed"
-            except Exception as exc:
-                result, state = {"status": "backend_error", "message": str(exc)}, "failed"
-            with self.lock:
-                if not ctx.cancelled.is_set():
-                    self.store.update_job(ref, state, self.store.bound(result))
-                elif self.store.job(ref)["status"] != "cancelled":
-                    self.store.update_job(ref, "cancelled", self.store.bound(result))
-                self.contexts.pop(ref, None)
-                self.futures.pop(ref, None)
+                    result = runner(ctx)
+                    status = result.get("status", "ok") if isinstance(result, dict) else "ok"
+                    state = (
+                        "cancelled"
+                        if status == "cancelled"
+                        else "succeeded"
+                        if status in {"ok", "dry_run"}
+                        else "failed"
+                    )
+                except Fault as exc:
+                    result = exc.result()
+                    state = "cancelled" if exc.code == "cancelled" else "failed"
+                except Exception as exc:
+                    result, state = {"status": "backend_error", "message": str(exc)}, "failed"
+                try:
+                    with self.lifecycle_lock:
+                        stopping = self.stopping
+                    if stopping:
+                        self.store.update_job(ref, "interrupted", {"status": "interrupted"})
+                    elif not ctx.cancelled.is_set():
+                        self.store.update_job(ref, state, self.store.bound(result))
+                    elif self.store.job(ref)["status"] != "cancelled":
+                        self.store.update_job(ref, "cancelled", self.store.bound(result))
+                finally:
+                    with self.lifecycle_lock:
+                        self.contexts.pop(ref, None)
+                        self.futures.pop(ref, None)
 
-        with self.lock:
-            self.futures[ref] = self.pool.submit(run)
-        return {"status": "queued", "job_id": ref}
+            with self.lifecycle_lock:
+                rejected = self.stopping
+                if not rejected:
+                    self.contexts[ref] = ctx
+                    self.futures[ref] = self.pool.submit(run)
+            if rejected:
+                self.store.update_job(ref, "interrupted", {"status": "interrupted"})
+                raise Fault("worker_unavailable", "Worker is stopping.")
+            return {"status": "queued", "job_id": ref}
+        finally:
+            self._leave_operation()
 
     def validate_workflow(self, steps):
         if not isinstance(steps, list) or not 1 <= len(steps) <= 256:
@@ -609,15 +627,20 @@ class Engine:
 
     def request(self, request: dict):
         """Worker RPC envelope. All failures are typed, bounded results."""
+        if not self._enter_operation():
+            return {"status": "worker_unavailable", "message": "Worker is stopping."}
         try:
-            result = self._request(validate(request))
-        except Fault as exc:
-            result = exc.result()
-        except (TypeError, ValueError, KeyError) as exc:
-            result = {"status": "invalid_params", "message": str(exc)}
-        except Exception as exc:
-            result = {"status": "backend_error", "message": str(exc)}
-        return self.store.bound(result)
+            try:
+                result = self._request(validate(request))
+            except Fault as exc:
+                result = exc.result()
+            except (TypeError, ValueError, KeyError) as exc:
+                result = {"status": "invalid_params", "message": str(exc)}
+            except Exception as exc:
+                result = {"status": "backend_error", "message": str(exc)}
+            return self.store.bound(result)
+        finally:
+            self._leave_operation()
 
     def _request(self, req):
         if self.stopping:
@@ -652,12 +675,14 @@ class Engine:
                     auth_retry=req.get("auth_retry", False),
                 )
             ctx = Context(self.store, engine=self, auth_retry=req.get("auth_retry", False))
-            with self.lock:
+            with self.lifecycle_lock:
+                if self.stopping:
+                    raise Fault("worker_unavailable", "Worker is stopping.")
                 self.foreground[id(ctx)] = ctx
             try:
                 result = self.execute(name, params, ctx, readonly)
             finally:
-                with self.lock:
+                with self.lifecycle_lock:
                     self.foreground.pop(id(ctx), None)
             if op == "observe":
                 result = project(result, req)
@@ -678,7 +703,7 @@ class Engine:
                     raise Fault("invalid_params", "Cancellation needs a job_id.")
                 if readonly:
                     raise Fault("permission_required", "Read-only access cannot cancel jobs.")
-                with self.lock:
+                with self.lifecycle_lock:
                     ctx = self.contexts.get(ref)
                     if ctx:
                         ctx.cancelled.set()

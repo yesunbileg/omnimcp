@@ -1,8 +1,10 @@
 import threading
 import time
 
+import pytest
+
 from omnimcp.core.engine import Engine
-from omnimcp.core.registry import Registry
+from omnimcp.core.registry import Fault, Registry
 from omnimcp.core.state import Store
 
 
@@ -218,7 +220,7 @@ def test_close_deadline_includes_blocking_close_hook(tmp_path):
         assert result["store_safe_to_close"] is False
     finally:
         release.set()
-        time.sleep(0.05)
+        assert engine.close(timeout=2)["store_safe_to_close"]
         store.close()
 
 
@@ -234,7 +236,8 @@ def test_request_registration_keeps_store_open_and_submit_rejects_after_close(tm
         assert entered.wait(2)
         result = engine.close(timeout=0.1)
         assert result["store_safe_to_close"] is False
-        assert engine.submit("late", lambda ctx: {"status": "ok"})["status"] == "worker_unavailable"
+        with pytest.raises(Fault, match="stopping"):
+            engine.submit("late", lambda ctx: {"status": "ok"})
     finally:
         release.set()
         request_thread.join(2)

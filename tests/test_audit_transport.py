@@ -70,7 +70,9 @@ def test_compact_maps_application_fault_to_mcp_error_without_changing_json(monke
         result = await app.call_tool("observe", {"action": "desktop"})
         assert result.isError is True
         assert json.loads(result.content[0].text) == {
-            "status": "invalid_params", "message": "bad input", "field": "x"
+            "status": "invalid_params",
+            "message": "bad input",
+            "field": "x",
         }
 
     asyncio.run(run())
@@ -112,6 +114,71 @@ def test_compact_job_state_is_not_mcp_error(monkeypatch):
     async def run():
         result = await app.call_tool("job", {"job_id": "j1"})
         assert json.loads(result[0].text)["status"] == "failed"
+
+    asyncio.run(run())
+
+
+def test_click_readback_failure_stays_typed_through_both_result_shapes(monkeypatch):
+    from omnimcp import hyprctl, server
+    from omnimcp.adapters.desktop import normalize
+    from omnimcp.legacy_result import LegacyContent
+
+    for name in ("guard_client", "guard_auth_client", "guard_session_lock"):
+        monkeypatch.setattr(server.trust, name, lambda *args, **kwargs: None)
+    monkeypatch.setattr(server.a11y, "connect", lambda: object())
+    monkeypatch.setattr(server.a11y, "has_action", lambda *args: True)
+    monkeypatch.setattr(server.a11y, "action_name", lambda *args: "click")
+    monkeypatch.setattr(server.a11y, "current_value", lambda *args: {"pressed": False})
+    monkeypatch.setattr(server.a11y, "do_action", lambda *args: True)
+    monkeypatch.setattr(server, "_seat_now", lambda: None)
+    monkeypatch.setattr(server, "_seat_report", lambda seat: (False, ""))
+    monkeypatch.setattr(server.time, "sleep", lambda _: None)
+    monkeypatch.setattr(hyprctl, "query", lambda _: [{"address": "0x1"}])
+    monkeypatch.setattr(hyprctl, "snapshot", lambda: {})
+    client = {"address": "0x1", "class": "Fixture"}
+    control = {"_svc": "svc", "_path": "/button", "_field": False, "role": "button"}
+
+    plain = server._click_in_background(client, control, "button", "none", False)
+    assert normalize(plain, None)["status"] == "failed"
+    fused = server._click_in_background(client, control, "button", "desktop", False)
+    assert isinstance(fused, LegacyContent)
+    assert normalize(fused, None)["status"] == "failed"
+
+
+def test_compact_fault_status_taxonomy_and_unknown_status(monkeypatch):
+    from omnimcp import compact
+
+    monkeypatch.delenv("OMNIMCP_READONLY", raising=False)
+    response = {"status": "ok"}
+    monkeypatch.setattr(compact, "rpc", lambda request: dict(response))
+
+    async def inline(fn, *args):
+        return fn(*args)
+
+    monkeypatch.setattr(compact.asyncio, "to_thread", inline)
+    app = compact.build_app()
+
+    async def run():
+        for status in (
+            "busy",
+            "auth_cancelled",
+            "auth_timeout",
+            "cancellation_pending",
+            "timeout_pending",
+            "future_worker_fault",
+        ):
+            response.clear()
+            response.update({"status": status, "detail": "kept"})
+            result = await app.call_tool("act", {"action": "system.snapshot"})
+            assert result.isError is True
+            assert result.content[0].text == json.dumps(
+                {"status": status, "detail": "kept"}, separators=(",", ":")
+            )
+        for status in ("failed", "cancelled", "interrupted", "queued", "running"):
+            response.clear()
+            response.update({"status": status})
+            result = await app.call_tool("job", {"job_id": "j1"})
+            assert json.loads(result[0].text)["status"] == status
 
     asyncio.run(run())
 

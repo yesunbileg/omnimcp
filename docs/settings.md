@@ -50,7 +50,7 @@ prompt нээхийг worker төлөвөөр хориглоно; хуучин `
 хоригийг тайлахгүй. Нэвтэрсэн хэрэглэгч өөрөө шалгасны дараа local owner CLI-аас
 `omnimcp worker auth-reset` ажиллуулж хадгалсан блокийг цэвэрлэнэ. Энэ CLI болон
 `pkexec` нь ижил UID-тэй agent shell-ээс дуудагдаж болох тул тусдаа human-consent
-эсвэл OS security boundary болохгүй. Зэрэгцсэн admin хүсэлтүүд олон prompt
+эсвэл OS security boundary болохгүй. Нэг worker дотор зэрэгцсэн admin хүсэлтүүд олон prompt
 үүсгэхгүй.
 
 `admin.install_helper` нь editable package-ийг root-р ажиллуулахгүй. Тэр зөвхөн

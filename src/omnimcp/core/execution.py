@@ -142,9 +142,8 @@ class Context:
                         threading.Thread(target=terminate_late, daemon=True).start()
             if birth is not None:
                 try:
-                    process_record = (
-                        self.store.track_process(self.job_id, proc.pid, proc.pid, birth)
-                        or self.job_id
+                    process_record = self.store.track_process(
+                        self.job_id, proc.pid, proc.pid, birth
                     )
                 except BaseException:
                     self.store.stop_process_group(proc.pid, proc.pid, birth)
@@ -166,9 +165,9 @@ class Context:
                 ) and birth is not None:
                     termination = self.store.stop_process_group(proc.pid, proc.pid, birth)
                     self.termination = termination
-                    signal_denied = termination["status"] in {
-                        "termination_denied",
-                        "termination_pending",
+                    signal_denied = termination["status"] not in {
+                        "stopped",
+                        "already_exited",
                     }
                     if not signal_denied:
                         with contextlib.suppress(subprocess.TimeoutExpired):

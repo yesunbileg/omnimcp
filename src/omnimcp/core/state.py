@@ -213,8 +213,19 @@ class Store:
             if row["job_id"]:
                 self.db.execute(
                     "UPDATE jobs SET pid=NULL,pgid=NULL,create_time=NULL WHERE id=? "
-                    "AND pid=? AND pgid=? AND create_time=?",
-                    (row["job_id"], row["pid"], row["pgid"], row["create_time"]),
+                    "AND pid=? AND pgid=? AND create_time=? "
+                    "AND NOT EXISTS (SELECT 1 FROM processes WHERE job_id=? "
+                    "AND pid=? AND pgid=? AND create_time=?)",
+                    (
+                        row["job_id"],
+                        row["pid"],
+                        row["pgid"],
+                        row["create_time"],
+                        row["job_id"],
+                        row["pid"],
+                        row["pgid"],
+                        row["create_time"],
+                    ),
                 )
             self.db.commit()
 
@@ -243,7 +254,10 @@ class Store:
                 return result
         except psutil.NoSuchProcess:
             result["status"] = "termination_pending"
-            result["message"] = "Group leader identity is gone; members are unverified."
+            result["message"] = "group leader gone; members not verified"
+            return result
+        except (psutil.AccessDenied, PermissionError, OSError):
+            result["status"] = "termination_denied"
             return result
         try:
             if leader.create_time() != birth or os.getpgid(pid) != pgid:
@@ -273,6 +287,7 @@ class Store:
             os.killpg(pgid, signal.SIGTERM)
             result["status"] = "stopped"
             deadline = time.monotonic() + TERM_GRACE
+            remaining = list(members)
             while time.monotonic() < deadline:
                 remaining = []
                 for member_pid, member_birth in members:
@@ -305,6 +320,7 @@ class Store:
                 except (psutil.AccessDenied, PermissionError, OSError):
                     result["status"] = "termination_denied"
             verify_deadline = time.monotonic() + KILL_VERIFY_GRACE
+            alive = list(members)
             while time.monotonic() < verify_deadline:
                 alive = []
                 for member_pid, member_birth in members:
@@ -328,8 +344,8 @@ class Store:
             alive_ids = set(alive)
             result["killed"] = sum(target not in alive_ids for target in kill_targets)
         except (psutil.NoSuchProcess, ProcessLookupError):
-            result["status"] = "already_exited"
-            result["message"] = "group leader gone; members not verified"
+            result["status"] = "termination_pending"
+            result["message"] = "Group leader identity changed or vanished; members unverified."
         except (psutil.AccessDenied, PermissionError, OSError):
             result["status"] = "termination_denied"
         return result
@@ -340,10 +356,7 @@ class Store:
             return
         with self.lock:
             rows = self.db.execute(
-                "SELECT p.id,p.job_id,p.pid,p.pgid,p.create_time FROM processes p "
-                "LEFT JOIN jobs j ON j.id=p.job_id "
-                "WHERE p.job_id IS NULL OR j.status IN "
-                "('queued','running','cancelled','interrupted')"
+                "SELECT id,job_id,pid,pgid,create_time FROM processes"
             ).fetchall()
         for record_id, job_id, pid, pgid, birth in rows:
             result = self.stop_process_group(pid, pgid, birth)
@@ -351,7 +364,7 @@ class Store:
                 "process",
                 {**result, "pid": pid, "pgid": pgid, "job_id": job_id, "process_id": record_id},
             )
-            if result["status"] not in {"termination_denied", "termination_pending"}:
+            if result["status"] in {"stopped", "already_exited"}:
                 self.untrack_process(record_id)
 
     def artifact_path(self, kind: str = "text") -> tuple[str, Path]:

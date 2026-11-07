@@ -75,8 +75,11 @@ def worker(tmp_path, monkeypatch):
     for pid, pgid, birth, child_pid in value.processes:
         try:
             process = psutil.Process(pid)
-            if (process.create_time() == birth and os.getpgid(pid) == pgid
-                    and process.status() != psutil.STATUS_ZOMBIE):
+            if (
+                process.create_time() == birth
+                and os.getpgid(pid) == pgid
+                and process.status() != psutil.STATUS_ZOMBIE
+            ):
                 os.killpg(pgid, signal.SIGTERM)
                 deadline = time.monotonic() + 2
                 while time.monotonic() < deadline and (_active(pid) or _active(child_pid)):
@@ -96,11 +99,13 @@ def _running_command(worker, tmp_path):
         "p=subprocess.Popen(['/bin/sleep','60']); "
         "open(sys.argv[1],'w').write(str(p.pid)); time.sleep(60)"
     )
-    response = rpc({
-        "op": "act",
-        "action": "command.exec",
-        "params": {"argv": [sys.executable, "-c", code, str(pid_file)]},
-    })
+    response = rpc(
+        {
+            "op": "act",
+            "action": "command.exec",
+            "params": {"argv": [sys.executable, "-c", code, str(pid_file)]},
+        }
+    )
     assert response["status"] == "queued", response
     job_id = response["job_id"]
     deadline = time.monotonic() + 5
@@ -163,6 +168,11 @@ def test_sigkill_restart_skips_pid_when_saved_creation_time_differs(worker, tmp_
     db = Path(worker.env["OMNIMCP_STATE_DIR"]) / "state.sqlite3"
     with sqlite3.connect(db) as connection:
         connection.execute("UPDATE jobs SET create_time=? WHERE id=?", (birth - 10, job_id))
+        # Process identities are now authoritative in the independent ledger;
+        # corrupt that saved identity as well to simulate PID reuse.
+        connection.execute(
+            "UPDATE processes SET create_time=? WHERE job_id=?", (birth - 10, job_id)
+        )
     worker.kill()
     worker.start()
     assert _active(pid) and _active(child_pid)
@@ -185,8 +195,15 @@ def test_base_database_job_and_artifact_survive_additive_migration(tmp_path):
         """)
         db.execute(
             "INSERT INTO jobs VALUES(?,?,?,?,?,?,?)",
-            (ids["job"], "command.exec", "succeeded", 0, 0,
-             json.dumps({"output": ids["artifact"]}), None),
+            (
+                ids["job"],
+                "command.exec",
+                "succeeded",
+                0,
+                0,
+                json.dumps({"output": ids["artifact"]}),
+                None,
+            ),
         )
         db.execute(
             "INSERT INTO artifacts VALUES(?,?,?,?)", (ids["artifact"], str(artifact), "text", 0)

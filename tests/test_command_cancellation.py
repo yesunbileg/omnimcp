@@ -1,3 +1,4 @@
+import contextlib
 import os
 import signal
 import subprocess
@@ -134,7 +135,8 @@ def test_exited_group_leader_with_live_member_remains_pending(tmp_path, monkeypa
         "open(sys.argv[1], 'w').write(str(os.getpid())); time.sleep(60)"
     )
     leader_code = (
-        "import subprocess,sys,time; subprocess.Popen([sys.executable,'-c',sys.argv[2],sys.argv[1]]); "
+        "import subprocess,sys,time; "
+        "subprocess.Popen([sys.executable,'-c',sys.argv[2],sys.argv[1]]); "
         "time.sleep(.1)"
     )
     leader = subprocess.Popen(
@@ -156,8 +158,6 @@ def test_exited_group_leader_with_live_member_remains_pending(tmp_path, monkeypa
         assert psutil.Process(child_pid).status() != psutil.STATUS_ZOMBIE
     finally:
         if marker.exists():
-            try:
+            with contextlib.suppress(ProcessLookupError):
                 os.kill(int(marker.read_text()), signal.SIGKILL)
-            except ProcessLookupError:
-                pass
         store.close()

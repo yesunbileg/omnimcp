@@ -90,6 +90,7 @@ def _background_instructions() -> str:
     text = BACKGROUND_GUARANTEE if mode == bg.GUARANTEE else BACKGROUND_AUTO
     return text.format(workspaces=workspaces)
 
+
 READONLY_INSTRUCTIONS = """\
 READ-ONLY MODE: Hyprland observation. Call desktop first for windows, workspaces
 and layers. A listed layer is one the compositor tracks, not one you can see;
@@ -223,7 +224,8 @@ def _package(data: bytes, meta: dict[str, Any]) -> list[Any]:
     """Package an image for MCP transport: inline + metadata in image mode,
     a saved file path + metadata otherwise."""
     if _image_mode():
-        image_block = _image(data=base64.b64encode(data).decode(),
+        image_block = _image(
+            data=base64.b64encode(data).decode(),
             mimeType=f"image/{meta['format']}",
         )
         return [image_block, _text(json.dumps(meta))]
@@ -243,8 +245,7 @@ def _package(data: bytes, meta: dict[str, Any]) -> list[Any]:
     _prune_shots(d)
     meta["path"] = str(path)  # the CLI reads it from here, not from the sentence
     return [
-        _text(f"screenshot saved, read this file to view the screen: {path}"
-        ),
+        _text(f"screenshot saved, read this file to view the screen: {path}"),
         _text(json.dumps(meta)),
     ]
 
@@ -388,11 +389,14 @@ def _proven_frame(
     if peers is None:
         return None
     return a11y.window_frame_for(
-        bus, app[0], app[1], client.get("title", ""), tuple(client["size"]), peers)
+        bus, app[0], app[1], client.get("title", ""), tuple(client["size"]), peers
+    )
 
 
-_UNSURE = ("its accessibility tree cannot tell which window is {addr} (another window of "
-           "{cls} could match it, or its accessibility connection is another process's)")
+_UNSURE = (
+    "its accessibility tree cannot tell which window is {addr} (another window of "
+    "{cls} could match it, or its accessibility connection is another process's)"
+)
 
 
 def _ui_read(
@@ -420,9 +424,7 @@ def _ui_read(
             bus, frame[0], frame[1], name=name, actionable=actionable
         )
     except a11y.A11yError as exc:
-        return LegacyFailure(
-            f"accessibility read failed: {exc}; use screenshot + zoom instead"
-        )
+        return LegacyFailure(f"accessibility read failed: {exc}; use screenshot + zoom instead")
     ax, ay = client["at"]
     aw, ah = client["size"]
     out = []
@@ -451,15 +453,21 @@ def _ui_read(
             item["_unsure"] = True
         out.append(item)
     # a name filter reads the same elements, so it is no way past the cut
-    cut = (f"it stopped after reading {a11y.WALK_BUDGET} elements of a large tree, so "
-           f"{'a match' if name else 'more controls'} may lie beyond them")
+    cut = (
+        f"it stopped after reading {a11y.WALK_BUDGET} elements of a large tree, so "
+        f"{'a match' if name else 'more controls'} may lie beyond them"
+    )
     if not out:
         what = f"matching {name!r}" if name else "actionable"
         tail = f" ({cut})" if truncated else ""
         return f"no {what} elements in {cls}{tail}"
     if exact is None and not handles:
-        out.append({"note": "these controls may be another window's: "
-                            + _UNSURE.format(addr=client["address"], cls=cls)})
+        out.append(
+            {
+                "note": "these controls may be another window's: "
+                + _UNSURE.format(addr=client["address"], cls=cls)
+            }
+        )
     if truncated and not handles:
         out.append({"note": cut})
     return out
@@ -505,13 +513,21 @@ def _with_hidden_note(window: str, view: list[Any] | str) -> list[Any] | str:
             monitors, clients = hyprctl.batch_query(["monitors", "clients"])
             reason = shot._hidden_reason(client, monitors, clients)
             if reason is not None:
-                tail = "." if READONLY else (
-                    ", so press its controls with click_ui; a pointer click at these "
-                    "points would land on whatever is on screen there"
+                tail = (
+                    "."
+                    if READONLY
+                    else (
+                        ", so press its controls with click_ui; a pointer click at these "
+                        "points would land on whatever is on screen there"
+                    )
                 )
-                view.append({"note": f"{client['address']} is not on screen ({reason}): "
-                                     f"these points are inside it, not on what the human "
-                                     f"sees{tail}"})
+                view.append(
+                    {
+                        "note": f"{client['address']} is not on screen ({reason}): "
+                        f"these points are inside it, not on what the human "
+                        f"sees{tail}"
+                    }
+                )
     return view
 
 
@@ -578,8 +594,12 @@ def marks(window: str = "", name: str = "") -> list[Any] | str:
     stored: dict[int, dict[str, Any]] = {}
     for i, e in enumerate(elements, start=1):
         legend.append({"mark": i, **{k: v for k, v in e.items() if not k.startswith("_")}})
-        stored[i] = {"dx": e["x"] - ax, "dy": e["y"] - ay,
-                     "label": f"{e['role']} {e['name']!r}", "role": e["role"]}
+        stored[i] = {
+            "dx": e["x"] - ax,
+            "dy": e["y"] - ay,
+            "label": f"{e['role']} {e['name']!r}",
+            "role": e["role"],
+        }
         if "_svc" in e:  # a background press needs the control itself, not its point
             stored[i]["svc"], stored[i]["path"] = e["_svc"], e["_path"]
             stored[i]["field"] = e.get("_field", False)
@@ -590,7 +610,10 @@ def marks(window: str = "", name: str = "") -> list[Any] | str:
     # checks both, since the CLI carries this record across processes and an
     # address can be handed to a different window later
     _last_marks = {
-        "window": addr, "class": client.get("class", ""), "ts": time.time(), "items": stored,
+        "window": addr,
+        "class": client.get("class", ""),
+        "ts": time.time(),
+        "items": stored,
         "size": list(client.get("size") or []),  # a resized window invalidates the offsets
     }
     hint = (
@@ -598,7 +621,8 @@ def marks(window: str = "", name: str = "") -> list[Any] | str:
         if READONLY  # click_ui does not exist in read-only mode
         else "click_ui(mark=N) clicks a numbered mark"
     )
-    legend_text = _text(json.dumps({"legend": legend, "hint": hint}),
+    legend_text = _text(
+        json.dumps({"legend": legend, "hint": hint}),
     )
     return [legend_text]
 
@@ -630,14 +654,24 @@ def _acted(msg: str, then: str, window: str = "", fallback: bool = True) -> list
     head = _text(msg)
     if then == "desktop":
         blocks = [head, _text(json.dumps(hyprctl.snapshot()))]
-        return LegacyContent(blocks, "failed") if isinstance(msg, LegacyFailure) else (
-            LegacyContent(blocks, "unverified") if isinstance(msg, LegacyUnverified) else blocks
+        return (
+            LegacyContent(blocks, "failed")
+            if isinstance(msg, LegacyFailure)
+            else (
+                LegacyContent(blocks, "unverified") if isinstance(msg, LegacyUnverified) else blocks
+            )
         )
     if then == "screenshot":
         try:
             blocks = [head, *_deliver_capture(stable=True)]
-            return LegacyContent(blocks, "failed") if isinstance(msg, LegacyFailure) else (
-                LegacyContent(blocks, "unverified") if isinstance(msg, LegacyUnverified) else blocks
+            return (
+                LegacyContent(blocks, "failed")
+                if isinstance(msg, LegacyFailure)
+                else (
+                    LegacyContent(blocks, "unverified")
+                    if isinstance(msg, LegacyUnverified)
+                    else blocks
+                )
             )
         except Exception as exc:  # the observation must never mask the action's success
             blocks = [head, _text(f"screenshot failed: {exc}")]
@@ -649,13 +683,14 @@ def _acted(msg: str, then: str, window: str = "", fallback: bool = True) -> list
             view = _with_hidden_note(window, _ui_read(window))
         except Exception as exc:  # the observation must never mask the action's success
             view = f"ui read failed: {exc}"
-            gone = window and not any(
-                c.get("address") == window for c in _quiet_clients())
+            gone = window and not any(c.get("address") == window for c in _quiet_clients())
             if window and not fallback and gone:
                 # a background action: the focused window is the human's,
                 # not the closed window's parent, so it is not shown
-                view = (f"{window} is gone (the action closed it); the human's own window "
-                        "is not shown, since this ran in the background")
+                view = (
+                    f"{window} is gone (the action closed it); the human's own window "
+                    "is not shown, since this ran in the background"
+                )
             elif window and not fallback:
                 pass  # the read failed on a window that is still there: say so
             elif window:
@@ -668,9 +703,12 @@ def _acted(msg: str, then: str, window: str = "", fallback: bool = True) -> list
         payload = view if isinstance(view, str) else json.dumps(view)
         blocks = [head, _text(payload)]
         outcome = (
-            "failed" if isinstance(msg, LegacyFailure)
-            else "unverified" if isinstance(msg, LegacyUnverified)
-            else "unverified" if isinstance(view, LegacyFailure)
+            "failed"
+            if isinstance(msg, LegacyFailure)
+            else "unverified"
+            if isinstance(msg, LegacyUnverified)
+            else "unverified"
+            if isinstance(view, LegacyFailure)
             else None
         )
         return LegacyContent(blocks, outcome) if outcome else blocks
@@ -942,8 +980,14 @@ def keyboard(
     if client is None:
         raise ValueError("no focused window for keyboard input")
     return _keyboard_in_background(
-        client, action, text, keys, then, allow_auth,
-        whole_call_seat=seat_before, seat_after_focus=seat_after_focus,
+        client,
+        action,
+        text,
+        keys,
+        then,
+        allow_auth,
+        whole_call_seat=seat_before,
+        seat_after_focus=seat_after_focus,
         foreground=bool(window),
     )
 
@@ -1016,8 +1060,12 @@ def click_ui(
         item = _last_marks["items"][mark]
         x, y = client["at"][0] + item["dx"], client["at"][1] + item["dy"]
         desc = f"mark {mark} ({item['label']})"
-        control = {"_svc": item.get("svc"), "_path": item.get("path"),
-                   "role": item.get("role", ""), "_unsure": item.get("unsure", False)}
+        control = {
+            "_svc": item.get("svc"),
+            "_path": item.get("path"),
+            "role": item.get("role", ""),
+            "_unsure": item.get("unsure", False),
+        }
         if "field" in item:
             control["_field"] = item["field"]
     else:
@@ -1034,7 +1082,8 @@ def click_ui(
         if len(pool) > 1:
             public = [{k: v for k, v in c.items() if not k.startswith("_")} for c in pool]
             return [
-                _text(f"{name!r} is ambiguous ({len(pool)} candidates); call again "
+                _text(
+                    f"{name!r} is ambiguous ({len(pool)} candidates); call again "
                     "with index=N (0-based) or a more specific name:",
                 ),
                 _text(json.dumps(public)),
@@ -1098,9 +1147,15 @@ _HYPR_MODS = {"ctrl": "CTRL", "shift": "SHIFT", "alt": "ALT", "logo": "SUPER", "
 
 
 def _keyboard_in_background(
-    client: dict[str, Any], action: str, text: str, keys: str, then: str, allow_auth: bool,
+    client: dict[str, Any],
+    action: str,
+    text: str,
+    keys: str,
+    then: str,
+    allow_auth: bool,
     whole_call_seat: tuple[Any, Any] | None = None,
-    seat_after_focus: tuple[Any, Any] | None = None, foreground: bool = False,
+    seat_after_focus: tuple[Any, Any] | None = None,
+    foreground: bool = False,
 ) -> list[Any] | str:
     """Deliver to a window: text through its accessibility text field when
     possible, else key by key with sendshortcut through the active layout.
@@ -1131,12 +1186,17 @@ def _keyboard_in_background(
         except a11y.A11yError:
             field, fields = None, []  # no accessibility: keys are the way in
         password = (field is not None and field[2] == a11y.PASSWORD_ROLE) or (
-            field is None and any(f[2] == a11y.PASSWORD_ROLE for f in fields))
+            field is None and any(f[2] == a11y.PASSWORD_ROLE for f in fields)
+        )
         if password and not allow_auth:
-            where = ("the focused field" if field is not None
-                     else "a text field it cannot place" if unsure
-                     else f"one of its {len(fields)} text fields, and it does not say which "
-                     "has its focus,")
+            where = (
+                "the focused field"
+                if field is not None
+                else "a text field it cannot place"
+                if unsure
+                else f"one of its {len(fields)} text fields, and it does not say which "
+                "has its focus,"
+            )
             raise trust.TrustError(
                 f"{where} in {cls} is a password field; refusing to type into it. "
                 "Pass allow_auth=true only if a human intends this credential entry."
@@ -1144,14 +1204,21 @@ def _keyboard_in_background(
         keys_only = any(ch in keymap.CONTROL_CHARS for ch in text)
         if field is not None and bus is not None and not keys_only:
             if journal.dry_run():
-                return _acted(f"{_DRY} type {len(text)} characters into the text field in "
-                              f"{cls} through the accessibility interface", then, window=addr)
+                return _acted(
+                    f"{_DRY} type {len(text)} characters into the text field in "
+                    f"{cls} through the accessibility interface",
+                    then,
+                    window=addr,
+                )
             seat = _seat_now()
             secret = field[2] == a11y.PASSWORD_ROLE  # never read, only typed with consent
             before = "" if secret else a11y.text_of(bus, field[0], field[1])
             if a11y.insert_text(bus, field[0], field[1], text):
-                seen = ("not read back" if secret
-                        else _read_back(before, a11y.text_of(bus, field[0], field[1]), text))
+                seen = (
+                    "not read back"
+                    if secret
+                    else _read_back(before, a11y.text_of(bus, field[0], field[1]), text)
+                )
                 untouched, warning = _seat_report(seat)
                 paren = " (the human's focus untouched)" if untouched else ""
                 kind = "password field" if secret else "text field"
@@ -1181,8 +1248,10 @@ def _keyboard_in_background(
         for i, ch in enumerate(text, start=1):
             chord = kmap.chord(ch)
             if chord is None:  # by position: typed text never goes into a result
-                bg.refuse(f"character {i} of the text has no key on the {layout[0]} "
-                          f"keyboard layout, and {why}")
+                bg.refuse(
+                    f"character {i} of the text has no key on the {layout[0]} "
+                    f"keyboard layout, and {why}"
+                )
             chords.append(chord)
     else:
         mods, key = hinput.parse_combo(keys)
@@ -1207,8 +1276,10 @@ def _keyboard_in_background(
             "other characters would arrive; switch to the first layout"
         )
     if client.get("xwayland"):
-        bg.refuse(f"{cls} is an XWayland window, and Hyprland sends background keys between "
-                  "two XWayland windows to the focused one instead")
+        bg.refuse(
+            f"{cls} is an XWayland window, and Hyprland sends background keys between "
+            "two XWayland windows to the focused one instead"
+        )
     what = f"{len(chords)} keys" if action == "type" else f"{keys}"
     if journal.dry_run():
         return _acted(f"{_DRY} send {what} to {addr} with sendshortcut", then, window=addr)
@@ -1220,7 +1291,8 @@ def _keyboard_in_background(
             # (not Hyprland's own message: it names the key, a typed character)
             raise hyprctl.HyprctlError(
                 f"sent {sent} of {len(chords)} keys to {addr}, then Hyprland refused a key "
-                "(the window may have closed)") from None
+                "(the window may have closed)"
+            ) from None
     if foreground:
         seat_note = _foreground_seat_report(seat, seat_after_focus)
     else:
@@ -1228,8 +1300,13 @@ def _keyboard_in_background(
         seat_note = (" (the human's focus untouched)" if untouched else "") + warning
     # keys land on whatever control the app has focused, which in a hidden
     # window is not the field text went into through accessibility
-    return _acted(f"sent {what} to {addr} ({cls}) with sendshortcut, to the control the app "
-                  f"has focused{seat_note}", then, window=addr, fallback=False)
+    return _acted(
+        f"sent {what} to {addr} ({cls}) with sendshortcut, to the control the app "
+        f"has focused{seat_note}",
+        then,
+        window=addr,
+        fallback=False,
+    )
 
 
 def _read_back(before: str, after: str, text: str) -> str:
@@ -1246,7 +1323,8 @@ def _read_back(before: str, after: str, text: str) -> str:
 # roles whose "click" is taking keyboard focus, which GrabFocus does inside
 # the app without touching the human's focus
 _TEXT_ROLE_NAMES = frozenset(
-    {"text", "entry", "password text", "terminal", "text box", "search box"})
+    {"text", "entry", "password text", "terminal", "text box", "search box"}
+)
 
 
 def _click_in_background(
@@ -1259,8 +1337,10 @@ def _click_in_background(
     trust.guard_session_lock(True, allow_auth)
     cls = client.get("class", "")
     if control.get("_unsure"):
-        bg.refuse(_UNSURE.format(addr=client["address"], cls=cls)
-                  + ", and a press could land in the other window")
+        bg.refuse(
+            _UNSURE.format(addr=client["address"], cls=cls)
+            + ", and a press could land in the other window"
+        )
     svc, path = control.get("_svc"), control.get("_path")
     if not isinstance(svc, str) or not isinstance(path, str):
         bg.refuse("this control was not resolved through the accessibility tree")
@@ -1280,8 +1360,9 @@ def _click_in_background(
         kit = kit.lower()
         instead = "to type into a window with one text field, use keyboard with window= directly"
         if kit == "gtk" and version.startswith("4."):
-            bg.refuse("GTK 4 does not let a field take focus over the accessibility interface",
-                      instead)
+            bg.refuse(
+                "GTK 4 does not let a field take focus over the accessibility interface", instead
+            )
         presents = kit == "gail" or (kit == "gtk" and version[:2] in ("2.", "3.")) or not kit
         if presents and _focus_on_activate(client["address"]) != 0:
             # GTK 2 and 3 present their window when a widget takes focus over
@@ -1294,8 +1375,9 @@ def _click_in_background(
             )
     if journal.dry_run():
         verb_ = "focus" if is_text or focus_only else "press"
-        return _acted(f"{_DRY} {verb_} {desc} in {cls} through {how}",
-                      then, window=client["address"])
+        return _acted(
+            f"{_DRY} {verb_} {desc} in {cls} through {how}", then, window=client["address"]
+        )
     seat = _seat_now()
     before = a11y.current_value(bus, svc, path)
     ok = a11y.grab_focus(bus, svc, path) if is_text else a11y.do_action(bus, svc, path)
@@ -1309,9 +1391,11 @@ def _click_in_background(
     if not any(c.get("address") == client["address"] for c in hyprctl.query("clients")):
         msg += "; the window closed"
     elif focus_only:  # what the app reports, not proof a key reaches it or acts
-        msg += ("; the app now reports it focused (it is not pressed; check what a key "
-                "does with ui)" if a11y.is_focused(bus, svc, path) else
-                "; the app does not report it focused")
+        msg += (
+            "; the app now reports it focused (it is not pressed; check what a key does with ui)"
+            if a11y.is_focused(bus, svc, path)
+            else "; the app does not report it focused"
+        )
     elif not is_text:  # focus is not a value: a field reads the same after it
         after = a11y.current_value(bus, svc, path)
         if after != before:
@@ -1320,7 +1404,7 @@ def _click_in_background(
                 for k, v in after.items()
             )
         elif before:
-            msg = LegacyFailure(msg + "; no change seen" + warning)
+            msg = LegacyFailure(msg + "; no change seen")
     if isinstance(msg, LegacyFailure):
         msg = LegacyFailure(msg + warning)
     else:
@@ -1354,9 +1438,11 @@ def _seat_report(before: tuple[Any, Any] | None) -> tuple[bool, str]:
         return False, ""
     if after == before:
         return True, ""
-    return False, (f"; WARNING: the human's focused window changed during this action (now "
-                   f"{after[0]} on workspace {after[1]}), so it may have opened or activated "
-                   "a window")
+    return False, (
+        f"; WARNING: the human's focused window changed during this action (now "
+        f"{after[0]} on workspace {after[1]}), so it may have opened or activated "
+        "a window"
+    )
 
 
 def _foreground_seat_now() -> tuple[Any, Any] | None:
@@ -1383,9 +1469,11 @@ def _foreground_seat_report(
     after_delivery = _foreground_seat_now()
     if before is None or after_focus is None or after_delivery is None:
         return "; foreground focus requested; full focus change could not be checked"
-    return (f"; foreground focus requested from {before[0]} on workspace {before[1]}; "
-            f"after focus dispatch: {after_focus[0]} on workspace {after_focus[1]}; "
-            f"after keyboard delivery: {after_delivery[0]} on workspace {after_delivery[1]}")
+    return (
+        f"; foreground focus requested from {before[0]} on workspace {before[1]}; "
+        f"after focus dispatch: {after_focus[0]} on workspace {after_focus[1]}; "
+        f"after keyboard delivery: {after_delivery[0]} on workspace {after_delivery[1]}"
+    )
 
 
 def _focus_on_activate(address: str = "") -> int | None:
@@ -1443,7 +1531,8 @@ def _workspace(name: str) -> str:
 def _validate_launch_workspace(workspace: str) -> None:
     if workspace and not re.fullmatch(
         r"(?:[+-]?[0-9]+|e\+[0-9]+|name:[A-Za-z0-9_.-]+|previous|empty|"
-        r"special:[A-Za-z0-9_.-]+)", workspace
+        r"special:[A-Za-z0-9_.-]+)",
+        workspace,
     ):
         raise ValueError(f"{workspace!r} is not a workspace allowed for launch")
 
@@ -1463,8 +1552,7 @@ def _check_launch_allowed(command: str) -> None:
     def refuse(reason: str) -> None:
         raise LaunchNotAllowedError(f"launch_not_allowed: {reason}")
 
-    if any((ord(char) < 32 and char != "\t") or 127 <= ord(char) <= 159
-           for char in command):
+    if any((ord(char) < 32 and char != "\t") or 127 <= ord(char) <= 159 for char in command):
         refuse("control characters are not allowed")
     # Shells that support ANSI-C quoting interpret backslash escapes inside it,
     # unlike shlex, so refuse it before scanning.
@@ -1507,24 +1595,34 @@ def _check_launch_allowed(command: str) -> None:
     if not allow_path or not os.path.isabs(allow_path):
         refuse("OMNIMCP_LAUNCH_ALLOW must name an absolute allowlist file")
     try:
-        fd = os.open(allow_path, os.O_RDONLY | os.O_NONBLOCK | getattr(os, "O_CLOEXEC", 0) |
-                     getattr(os, "O_NOFOLLOW", 0))
+        fd = os.open(
+            allow_path,
+            os.O_RDONLY
+            | os.O_NONBLOCK
+            | getattr(os, "O_CLOEXEC", 0)
+            | getattr(os, "O_NOFOLLOW", 0),
+        )
         with os.fdopen(fd, "r", encoding="utf-8") as allow_file:
             info = os.fstat(allow_file.fileno())
-            if (not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid()
-                    or info.st_mode & 0o022):
-                refuse("allowlist file must be regular, owned by the current user, "
-                       "and not group/world writable")
-            entries = [line.strip() for line in allow_file if line.strip() and
-                       not line.lstrip().startswith("#")]
+            if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o022:
+                refuse(
+                    "allowlist file must be regular, owned by the current user, "
+                    "and not group/world writable"
+                )
+            entries = [
+                line.strip()
+                for line in allow_file
+                if line.strip() and not line.lstrip().startswith("#")
+            ]
     except LaunchNotAllowedError:
         raise
     except (OSError, UnicodeError) as exc:
         refuse(f"cannot read allowlist file ({exc})")
 
     executable = words[0]
-    if not any(entry == executable and (os.path.isabs(entry) or "/" not in entry)
-               for entry in entries):
+    if not any(
+        entry == executable and (os.path.isabs(entry) or "/" not in entry) for entry in entries
+    ):
         refuse(f"{executable!r} is not listed in the allowlist")
 
 
@@ -1623,10 +1721,13 @@ def hypr(action: str, target: str = "", workspace: str = "", then: str = "none")
             bg.refuse("toggle_floating with no target acts on the human's focused window")
         if action == "move_window":
             bg.require_agent_workspace(workspace)
-            if any(bg.matches(workspace, ws)
-                   for ws in _shown_workspaces(hyprctl.query("monitors"))):
-                bg.refuse(f"workspace {workspace} is on screen, so the window would show in the "
-                          "human's sight")
+            if any(
+                bg.matches(workspace, ws) for ws in _shown_workspaces(hyprctl.query("monitors"))
+            ):
+                bg.refuse(
+                    f"workspace {workspace} is on screen, so the window would show in the "
+                    "human's sight"
+                )
     # confinement: any action naming a specific window must stay in scope;
     # fullscreen/toggle_floating with no target hit the ACTIVE window, so
     # resolve and guard that too, and check the seat has not moved under us
@@ -1705,10 +1806,27 @@ def _norm(text: str) -> str:
     return re.sub(r"[^a-z0-9]", "", text.lower())
 
 
-_WRAPPERS = frozenset({
-    "env", "setsid", "nohup", "exec", "uwsm", "uwsm-app", "app", "systemd-run", "flatpak",
-    "run", "gtk-launch", "sh", "bash", "dash", "zsh", "fish", "dbus-run-session",
-})
+_WRAPPERS = frozenset(
+    {
+        "env",
+        "setsid",
+        "nohup",
+        "exec",
+        "uwsm",
+        "uwsm-app",
+        "app",
+        "systemd-run",
+        "flatpak",
+        "run",
+        "gtk-launch",
+        "sh",
+        "bash",
+        "dash",
+        "zsh",
+        "fish",
+        "dbus-run-session",
+    }
+)
 
 
 def _program(command: str) -> str:
@@ -1817,6 +1935,7 @@ def _launch_and_wait(
         before = {c["address"] for c in hyprctl.query("clients")}
         deadline = time.monotonic() + wait_s
         hyprctl.dispatch("exec", rule_command)
+
         def matcher(name: str, payload: dict[str, Any]) -> bool:
             address = payload.get("address")
             # Workspace names in openwindow events are not always the numeric
@@ -1837,9 +1956,7 @@ def _launch_and_wait(
                 before, max(0.0, deadline - time.monotonic()), accept, deadline=deadline
             )
         win = _client_by_address(address)
-        accepted = (
-            win is not None and address not in before and (accept is None or accept(win))
-        )
+        accepted = win is not None and address not in before and (accept is None or accept(win))
         if accepted and time.monotonic() < deadline:
             return win
     # socket2 may report an openwindow before clients exposes it, or may lose
@@ -1896,22 +2013,29 @@ def launch(
         allowed = _confine_allows()
         if allowed is not None and not any(allowed(sel) for sel in bg.agent_workspaces()):
             if mode == bg.GUARANTEE:
-                bg.refuse("OMNIMCP_CONFINE=workspace:... holds none of the agent's workspaces, "
-                          "so no app can open where the agent may work")
+                bg.refuse(
+                    "OMNIMCP_CONFINE=workspace:... holds none of the agent's workspaces, "
+                    "so no app can open where the agent may work"
+                )
             note = (
                 "OMNIMCP_CONFINE holds none of the agent's workspaces, so it opened on the "
                 "human's workspace as before background mode"
             )
         else:
             workspace = bg.next_workspace(
-                hyprctl.query("clients"), trust.owned(),
-                shown=_shown_workspaces(hyprctl.query("monitors")), allowed=allowed,
+                hyprctl.query("clients"),
+                trust.owned(),
+                shown=_shown_workspaces(hyprctl.query("monitors")),
+                allowed=allowed,
             )
             note = (
                 f"opened on workspace {workspace}, one of the agent's "
                 "(OMNIMCP_AGENT_WORKSPACES), out of the human's sight"
-                + ("" if mode == bg.GUARANTEE
-                   else "; pass background=false to open it on the human's workspace")
+                + (
+                    ""
+                    if mode == bg.GUARANTEE
+                    else "; pass background=false to open it on the human's workspace"
+                )
             )
     _validate_launch_workspace(workspace)
     rule = f"[workspace {_workspace(workspace)} silent] " if workspace else ""
@@ -1945,10 +2069,14 @@ def launch(
     if win is None:
         if ambiguous:
             classes = ", ".join(sorted({str(w.get("class", "unknown")) for w in ambiguous}))
-            workspaces = ", ".join(sorted({
-                str(hyprctl.workspace_ref(ws) if isinstance(ws, dict) else ws) or "unknown"
-                for ws in (w.get("workspace") for w in ambiguous)
-            }))
+            workspaces = ", ".join(
+                sorted(
+                    {
+                        str(hyprctl.workspace_ref(ws) if isinstance(ws, dict) else ws) or "unknown"
+                        for ws in (w.get("workspace") for w in ambiguous)
+                    }
+                )
+            )
             visibility_note = ""
             visible = None
             with contextlib.suppress(Exception):
@@ -1961,9 +2089,8 @@ def launch(
                     if item.get("name"):
                         shown_refs.add(str(item["name"]))
                 visible = any(
-                    str(
-                        hyprctl.workspace_ref(ws) if isinstance(ws, dict) else ws or ""
-                    ) in shown_refs
+                    str(hyprctl.workspace_ref(ws) if isinstance(ws, dict) else ws or "")
+                    in shown_refs
                     for w in ambiguous
                     for ws in (w.get("workspace"),)
                 )
@@ -2033,7 +2160,8 @@ def launch(
     took = bool(rule) and not moved and active_after == win["address"]
     if took:  # Hyprland dropped the silent rule (the workspace was on screen)
         result["note"] = (result["note"] + "; " if result.get("note") else "") + (
-            "it opened on screen and took the human's keyboard focus")
+            "it opened on screen and took the human's keyboard focus"
+        )
         if mode == bg.GUARANTEE:
             result["warning"] = (
                 "this broke OMNIMCP_BACKGROUND=1: the new window took the human's keyboard "
@@ -2153,8 +2281,10 @@ def _event_matcher(needle: str) -> Callable[[str, dict[str, Any]], bool]:
             return True
         if needle in " ".join(str(v) for v in payload.values()).lower():
             return True
-        ref = payload.get("workspace") if "workspace" in payload else (
-            payload.get("name") if _name == "workspace" else None
+        ref = (
+            payload.get("workspace")
+            if "workspace" in payload
+            else (payload.get("name") if _name == "workspace" else None)
         )
         return ref is not None and needle in _workspace_aliases(str(ref)).lower()
 
@@ -2290,13 +2420,20 @@ _SEQ_HANDLERS = {
 # click was aimed at. Notification popups and bars are noise, not a
 # takeover.
 _WATCHED_EVENTS = {
-    "openwindow", "closewindow", "movewindow", "workspace", "openlayer", "closelayer",
+    "openwindow",
+    "closewindow",
+    "movewindow",
+    "workspace",
+    "openlayer",
+    "closelayer",
 }
+
 
 def _structural(name: str, payload: dict[str, Any]) -> bool:
     if name in ("openlayer", "closelayer"):
         return hyprctl.layer_kind(payload.get("namespace", "")) in hyprctl.FOCUS_STEALING_KINDS
     return name in _WATCHED_EVENTS
+
 
 _SEQ_MAX_STEPS = 20
 _SEQ_PLACED = ("pointer", "keyboard", "click_ui")  # the steps that take background=
@@ -2375,9 +2512,7 @@ def _unexpected(drained, expected_sigs, wait_names):
     return [
         (n, p)
         for n, p in drained
-        if _structural(n, p)
-        and _event_signature(n, p) not in expected_sigs
-        and n not in wait_names
+        if _structural(n, p) and _event_signature(n, p) not in expected_sigs and n not in wait_names
     ]
 
 
@@ -2496,8 +2631,9 @@ def sequence(
                     if step.get("action") in _HYPR_TAKES_VIEW:
                         bg.refuse(_HYPR_TAKES_VIEW[step["action"]])
                     if step.get("action") == "toggle_floating" and not step.get("target"):
-                        bg.refuse("toggle_floating with no target acts on the human's "
-                                  "focused window")
+                        bg.refuse(
+                            "toggle_floating with no target acts on the human's focused window"
+                        )
                 if step.get("op") == "wait_for" and stream is not None:
                     res = _seq_wait_for(stream, backlog, run, budget_left)
                 else:
@@ -2541,14 +2677,13 @@ def sequence(
     # satisfied by an effect that was never delivered.
     # then='ui' reads the last window a step named: in the background the
     # focused window is the human's, not the one the steps worked in
-    named = [s.get("window") for s in steps[:len(results)] if s.get("window")]
+    named = [s.get("window") for s in steps[: len(results)] if s.get("window")]
     tag = " (DRY RUN, nothing was delivered)" if journal.dry_run() else ""
     if stopped is None:
         head = f"sequence{tag}: all {ran}/{len(steps)} steps ran\n" + "\n".join(results)
     else:
-        head = (
-            f"sequence{tag}: stopped after {ran}/{len(steps)} steps, {stopped}\n"
-            + "\n".join(results)
+        head = f"sequence{tag}: stopped after {ran}/{len(steps)} steps, {stopped}\n" + "\n".join(
+            results
         )
     if stopped is not None:
         head = LegacyFailure(head)
@@ -2558,14 +2693,22 @@ def sequence(
 def _kanban_json(result: dict[str, Any], *, receipt: bool = False) -> str:
     """One compact MCP payload; writes acknowledge state without echoing card text."""
     if receipt:
-        result = {**result, "task": {k: v for k, v in result["task"].items()
-                                   if k not in {"text", "text_truncated"}}}
+        result = {
+            **result,
+            "task": {
+                k: v for k, v in result["task"].items() if k not in {"text", "text_truncated"}
+            },
+        }
     return json.dumps(result, ensure_ascii=False, separators=(",", ":"))
 
 
 @journal.journaled("observe")
 def kanban_read(
-    column: str = "", query: str = "", task_id: str = "", limit: int = 50, offset: int = 0,
+    column: str = "",
+    query: str = "",
+    task_id: str = "",
+    limit: int = 50,
+    offset: int = 0,
 ) -> str:
     """Read the configured Markdown Kanban board directly from disk. Returns
     exact column names, task IDs and a revision required for writes. Filter
@@ -2586,8 +2729,11 @@ def kanban_add(column: str, text: str, expected_revision: str) -> str:
 
 @journal.journaled("act")
 def kanban_update(
-    task_id: str, expected_revision: str, text: str | None = None,
-    column: str | None = None, checked: bool | None = None,
+    task_id: str,
+    expected_revision: str,
+    text: str | None = None,
+    column: str | None = None,
+    checked: bool | None = None,
     append_text: str | None = None,
 ) -> str:
     """Edit or move one Kanban task using its ID and the latest board revision.
@@ -2599,8 +2745,9 @@ def kanban_update(
     receipt without card text; use kanban_read(task_id=...) if needed.
     No task is executed."""
     safety.touch("kanban:update")
-    return _kanban_json(kb.update(task_id, expected_revision, text, column, checked,
-                                 append_text), receipt=True)
+    return _kanban_json(
+        kb.update(task_id, expected_revision, text, column, checked, append_text), receipt=True
+    )
 
 
 @journal.journaled("observe")
@@ -2696,10 +2843,15 @@ _READONLY_DOCS = {
     so only its combo and description are readable.""",
 }
 
+
 @journal.journaled(lambda args: "act" if args.get("action") == "edit" else "observe")
 def canvas(
-    path: str, action: Literal["read", "edit"] = "read", card: str = "",
-    offset: int = 0, limit: int = 100, revision: str = "",
+    path: str,
+    action: Literal["read", "edit"] = "read",
+    card: str = "",
+    offset: int = 0,
+    limit: int = 100,
+    revision: str = "",
     changes: list[dict[str, Any]] | None = None,
 ) -> str:
     """Read or edit an Obsidian .canvas file through one semantic interface.
@@ -2729,12 +2881,19 @@ def canvas(
 
     # A compact text block avoids FastMCP's indented JSON and a duplicate
     # structured result; Canvas content is intentionally sent only once.
-    return json.dumps(run(path, action, card, offset, limit, revision, changes),
-                      ensure_ascii=False, separators=(",", ":"))
+    return json.dumps(
+        run(path, action, card, offset, limit, revision, changes),
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
 
 
 def _canvas_readonly(
-    path: str, card: str = "", offset: int = 0, limit: int = 100, revision: str = "",
+    path: str,
+    card: str = "",
+    offset: int = 0,
+    limit: int = 100,
+    revision: str = "",
 ) -> str:
     """Read a saved .canvas file: titles, full text, types, colors, groups,
     file/URL references, connection directions/labels/colors. Geometry and long
@@ -2754,9 +2913,7 @@ def _canvas_readonly(
 _OBSERVE_TOOLS = (desktop, screenshot, zoom, ui, marks, binds, wait_for)
 if READONLY:
     for _observe_tool in _OBSERVE_TOOLS:
-        _observe_tool.__doc__ = _READONLY_DOCS.get(
-            _observe_tool.__name__, _observe_tool.__doc__
-        )
+        _observe_tool.__doc__ = _READONLY_DOCS.get(_observe_tool.__name__, _observe_tool.__doc__)
 
 
 # Display names for the MCP tool annotations; clients show these in tool
@@ -2813,6 +2970,7 @@ def __getattr__(name: str) -> Any:
 def main() -> None:
     if os.environ.get("OMNIMCP_PROFILE", "legacy") == "compact":
         from omnimcp.compact import main as compact_main
+
         compact_main()
         return
     if "--version" in sys.argv:

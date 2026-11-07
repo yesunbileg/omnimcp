@@ -100,3 +100,98 @@ def test_non_admin_termination_pending_does_not_block_gui_auth(tmp_path, monkeyp
         assert not store.auth_block("gui-auth")
     finally:
         store.close()
+
+
+@pytest.mark.parametrize("unsafe", [None, "owner", "writable", "symlink", "directory", "policy"])
+def test_admin_availability_checks_helper_policy_and_ancestors(tmp_path, monkeypatch, unsafe):
+    import stat
+    from pathlib import Path
+    from types import SimpleNamespace
+
+    from omnimcp.adapters import admin
+
+    helper = tmp_path / "libexec" / "helper"
+    helper.parent.mkdir()
+    helper.write_text("standalone")
+    policy = tmp_path / "config" / "allowed-configs.json"
+    policy.parent.mkdir()
+    policy.write_text('["/etc/example.conf"]')
+    if unsafe == "symlink":
+        helper.unlink()
+        helper.symlink_to(policy)
+    if unsafe == "directory":
+        helper.unlink()
+        helper.mkdir()
+    if unsafe == "policy":
+        policy.write_text('{"not":"an array"}')
+    controlled = {helper, policy, *helper.parents, *policy.parents}
+    lstat = Path.lstat
+
+    def root_metadata(path):
+        info = lstat(path)
+        if path not in controlled:
+            return info
+        mode = info.st_mode & ~0o022
+        uid = 0
+        if path == helper.parent:
+            if unsafe == "owner":
+                uid = 12345
+            elif unsafe == "writable":
+                mode |= stat.S_IWOTH
+        return SimpleNamespace(st_mode=mode, st_uid=uid)
+
+    monkeypatch.setattr(admin, "HELPER", helper)
+    monkeypatch.setattr(admin, "POLICY", policy)
+    monkeypatch.setattr(Path, "lstat", root_metadata)
+    result = admin.availability()
+    assert result["status"] == ("available" if unsafe is None else "permission_required")
+
+
+def test_admin_missing_helper_is_reported_without_trying_install(tmp_path, monkeypatch):
+    from omnimcp.adapters import admin
+
+    monkeypatch.setattr(admin, "HELPER", tmp_path / "missing")
+    # The unsafe /tmp ancestor is rejected before an absent user-side helper could
+    # be treated as trusted or automatically installed.
+    assert admin.availability()["status"] == "permission_required"
+
+
+@pytest.mark.parametrize("fail", [False, True])
+def test_admin_update_removes_sensitive_request_even_when_backend_raises(tmp_path, fail):
+    import json
+
+    from omnimcp.adapters import admin
+
+    store = Store(tmp_path / "state")
+    request_paths = []
+
+    class TestContext:
+        def __init__(self):
+            self.store = store
+
+        def run(self, argv, **kwargs):
+            from pathlib import Path
+
+            request_path = Path(argv[-1])
+            request_paths.append(request_path)
+            assert json.loads(request_path.read_text())["text"] == "secret fixture value"
+            assert kwargs["admin"] is True
+            if fail:
+                raise RuntimeError("fixture backend failed")
+            return {
+                "status": "ok",
+                "text": json.dumps(
+                    {"status": "ok", "verified": True, "revision": "new", "backup": "token"}
+                ),
+            }
+
+    try:
+        if fail:
+            with pytest.raises(RuntimeError):
+                admin.update(TestContext(), "/etc/example.conf", "old", "secret fixture value")
+        else:
+            result = admin.update(TestContext(), "/etc/example.conf", "old", "secret fixture value")
+            assert result["undo"]["params"]["restore"] == "token"
+        assert request_paths and not request_paths[0].exists()
+    finally:
+        store.close()

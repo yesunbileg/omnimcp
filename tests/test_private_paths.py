@@ -116,3 +116,55 @@ def test_open_private_file_stays_anchored_when_parent_is_swapped(tmp_path, monke
     os.close(fd)
     assert (tmp_path / "moved" / "lock").read_text() == ""
     assert victim.read_text() == "safe"
+
+
+def test_private_file_fifo_is_rejected_without_blocking(tmp_path):
+    import subprocess
+    import sys
+
+    fifo = tmp_path / "request"
+    os.mkfifo(fifo, 0o600)
+    probe = """
+import os,sys
+from pathlib import Path
+from omnimcp.private_paths import open_private_file
+try:
+    fd = open_private_file(Path(sys.argv[1]), os.O_RDONLY)
+except OSError:
+    sys.exit(0)
+os.close(fd)
+sys.exit(1)
+"""
+    result = subprocess.run([sys.executable, "-c", probe, str(fifo)], timeout=3)
+    assert result.returncode == 0
+
+
+def test_atomic_state_write_stays_bound_after_parent_swap(tmp_path, monkeypatch):
+    original = tmp_path / "original-state"
+    original.mkdir(mode=0o700)
+    victim_dir = tmp_path / "victim-state"
+    victim_dir.mkdir(mode=0o700)
+    victim = victim_dir / "state.json"
+    victim.write_text("safe")
+    original_open = private_paths._open_parent
+
+    def swap(path):
+        fd, name = original_open(path)
+        original.rename(tmp_path / "saved-state")
+        original.symlink_to(victim_dir, target_is_directory=True)
+        return fd, name
+
+    monkeypatch.setattr(private_paths, "_open_parent", swap)
+    private_paths.atomic_write_private(original / "state.json", b"updated")
+    assert (tmp_path / "saved-state/state.json").read_text() == "updated"
+    assert victim.read_text() == "safe"
+
+
+def test_private_path_rejects_writable_intermediate_ancestor(tmp_path):
+    untrusted = tmp_path / "shared"
+    untrusted.mkdir(mode=0o777)
+    untrusted.chmod(0o777)
+    nested = untrusted / "owned"
+    nested.mkdir(mode=0o700)
+    with pytest.raises(PermissionError):
+        private_paths.private_dir(nested / "state")

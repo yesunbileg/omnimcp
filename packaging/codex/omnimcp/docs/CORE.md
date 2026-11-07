@@ -211,7 +211,7 @@ install dependencies or prompt for passwords through AI input.
 ## Admin and preservation
 
 Only `pkexec` is used for core admin commands. No password parameter, terminal
-password channel or sudo retry is implemented. Concurrent admin actions do not
+password channel or sudo retry is implemented. Within one worker, concurrent admin actions do not
 fan out into concurrent GUI prompts. A cancelled or timed-out authentication
 blocks later admin prompts in persistent worker state. The compatibility
 `auth_retry` parameter does not clear that block. After the local owner has checked
@@ -282,3 +282,28 @@ The compact default must wait for >=50% median token/round-trip reduction, no
 success-rate regression and live correctness/overhead gates. Local byte savings
 alone do not satisfy that gate. No additional LLM/API is needed by the MCP server;
 the model/client comparison is an external release validation activity.
+
+
+## Transport and shutdown outcomes
+
+Compact application and transport faults set MCP `isError=true` while preserving
+one exact JSON text payload. A successful `job` lookup remains data even when the
+reported job lifecycle is `failed` or `cancelled`; inspect that result explicitly.
+Legacy desktop text carries typed failure/unknown markers rather than an English
+substring classifier. `status=ok, verified=false, outcome=unverified` means the
+call returned or a dispatch was accepted; it does not establish the desktop effect.
+
+RPC reply timeout returns `client_timeout` and states that the outcome may be
+unknown. It is not evidence that the worker is unavailable. Prefer the default
+asynchronous jobs for actions longer than the 125-second RPC wait. Inspect actual
+state before retrying any request whose connection ended after delivery.
+
+`Engine.close()` has a five-second caller budget including Store locks and adapter
+close hooks. It cancels existing contexts before waiting for request completion.
+Only `store_safe_to_close=true` permits storage closure. An uncooperative worker
+records shutdown diagnostics when storage permits and uses a hard process exit at
+the deadline; this is not graceful handler termination. Privileged or detached
+processes may remain. Independent process identities survive without a job, and
+pending/unknown termination records are retained for recovery even for failed jobs.
+The interval between starting a process and recording its identity is not protected
+by a launch handshake. Missing/reused leader identity never authorizes a blind kill.

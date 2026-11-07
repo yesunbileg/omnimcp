@@ -17,19 +17,23 @@ def _open_parent(path: Path) -> tuple[int, str]:
     parts = path.parts
     fd = os.open(parts[0], _DIR_FLAGS | getattr(os, "O_NOFOLLOW", 0))
     try:
+        root = os.fstat(fd)
+        if not stat.S_ISDIR(root.st_mode) or root.st_uid != 0 or root.st_mode & 0o022:
+            raise PermissionError("untrusted filesystem root")
         for index, part in enumerate(parts[1:-1], start=1):
             info = os.fstat(fd)
             if not stat.S_ISDIR(info.st_mode):
                 raise NotADirectoryError(path)
-            component = "/".join(parts[:index + 1])
+            component = str(Path(*parts[: index + 1]))
             child = os.open(part, _DIR_FLAGS | getattr(os, "O_NOFOLLOW", 0), dir_fd=fd)
             os.close(fd)
             fd = child
             info = os.fstat(fd)
             safe_owner = info.st_uid in (0, os.getuid())
             safe_mode = not (info.st_mode & 0o022)
-            is_safe_tmp = (component == "/tmp" and info.st_uid == 0
-                           and bool(info.st_mode & stat.S_ISVTX))
+            is_safe_tmp = (
+                component == "/tmp" and info.st_uid == 0 and bool(info.st_mode & stat.S_ISVTX)
+            )
             if not stat.S_ISDIR(info.st_mode) or not safe_owner or not (safe_mode or is_safe_tmp):
                 raise PermissionError(f"untrusted directory ancestor: {component}")
         leaf = parts[-1]
@@ -41,8 +45,7 @@ def _open_parent(path: Path) -> tuple[int, str]:
 
 def _check_private_dir(fd: int, path: Path) -> None:
     info = os.fstat(fd)
-    if (not stat.S_ISDIR(info.st_mode) or info.st_uid != os.getuid()
-            or info.st_mode & 0o077):
+    if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o077:
         raise PermissionError(f"untrusted private directory: {path}")
 
 
@@ -50,10 +53,8 @@ def _ensure_dir(path: Path) -> Path:
     path = Path(os.path.abspath(path))
     parent_fd, leaf = _open_parent(path)
     try:
-        try:
+        with contextlib.suppress(FileExistsError):
             os.mkdir(leaf, 0o700, dir_fd=parent_fd)
-        except FileExistsError:
-            pass
         fd = os.open(leaf, _DIR_FLAGS | getattr(os, "O_NOFOLLOW", 0), dir_fd=parent_fd)
         try:
             info = os.fstat(fd)
@@ -90,8 +91,11 @@ def runtime_dir() -> Path:
                 base_fd = os.open(".", _DIR_FLAGS, dir_fd=fd)
                 try:
                     info = os.fstat(base_fd)
-                    if (not stat.S_ISDIR(info.st_mode) or info.st_uid != os.getuid()
-                            or info.st_mode & 0o077):
+                    if (
+                        not stat.S_ISDIR(info.st_mode)
+                        or info.st_uid != os.getuid()
+                        or info.st_mode & 0o077
+                    ):
                         raise PermissionError("untrusted XDG_RUNTIME_DIR")
                 finally:
                     os.close(base_fd)
@@ -114,8 +118,7 @@ def open_private_file(path: Path, flags: int, mode: int = 0o600) -> int:
         fd = os.open(leaf, flags, mode, dir_fd=parent_fd)
         try:
             info = os.fstat(fd)
-            if (not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid()
-                    or info.st_mode & 0o077):
+            if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o077:
                 raise PermissionError(f"untrusted private file: {path}")
             if truncate:
                 os.ftruncate(fd, 0)
@@ -133,9 +136,16 @@ def atomic_write_private(path: Path, data: bytes) -> None:
     temporary = f".omnimcp-{secrets.token_hex(12)}.tmp"
     fd = -1
     try:
-        fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL |
-                     getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0),
-                     0o600, dir_fd=parent_fd)
+        fd = os.open(
+            temporary,
+            os.O_WRONLY
+            | os.O_CREAT
+            | os.O_EXCL
+            | getattr(os, "O_NOFOLLOW", 0)
+            | getattr(os, "O_CLOEXEC", 0),
+            0o600,
+            dir_fd=parent_fd,
+        )
         with os.fdopen(fd, "wb") as stream:
             fd = -1
             stream.write(data)

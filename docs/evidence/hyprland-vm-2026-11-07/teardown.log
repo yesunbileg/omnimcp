@@ -1,0 +1,4 @@
+[   41.422809] Hyprland[233]: segfault at 10 ip 000070ed77ad2456 sp 00007ffddbcf2fc0 error 4 in libaquamarine.so.0.10.0[85456,70ed77a76000+be000] likely on CPU 0 (core 0, socket 0)
+/home/tester/run-desktop.sh: line 14:   233 Segmentation fault         /usr/bin/Hyprland --config /home/tester/hyprland.conf > /mnt/results/hyprland.log 2>&1
+GUEST_RESULT=0
+{"desktop": "passed", "compositor_exit": 139}

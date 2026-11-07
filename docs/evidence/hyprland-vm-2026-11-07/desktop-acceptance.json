@@ -1,0 +1,41 @@
+{
+  "status": "passed",
+  "checks": {
+    "legacy_stdio": "passed",
+    "desktop": {
+      "status": "passed",
+      "monitors": 1,
+      "windows": 0
+    },
+    "launch": {
+      "status": "passed",
+      "address": "0x5e72d058c900"
+    },
+    "pointer": {
+      "status": "passed",
+      "actual_cursor": {
+        "x": 320,
+        "y": 240
+      }
+    },
+    "screenshot": {
+      "status": "passed",
+      "path": "/mnt/results/desktop-acceptance.png",
+      "width": 1280,
+      "height": 720,
+      "bytes": 13638,
+      "after_keyboard": true
+    },
+    "keyboard": {
+      "status": "passed",
+      "marker": "/mnt/results/fixture-a2e638409fab.txt",
+      "value": "omnimcp-keyboard-a2e638409fab"
+    },
+    "close": {
+      "status": "passed",
+      "response": "closed 0x5e72d058c900"
+    }
+  },
+  "fixture_class": "omnimcp-accept-a2e638409fab",
+  "hyprland_version": "Hyprland 0.53.3 built from branch v0.53.3 at commit dd220efe7b1e292415bd0ea7161f63df9c95bfd3 clean (version: bump to 0.53.3).\nDate: Sat Jan 24 20:02:06 2026\nTag: v0.53.3, commits: 6793\n\nLibraries:\nHyprgraphics: built against 0.5.0, system has unknown\nHyprutils: built against 0.11.0, system has unknown\nHyprcursor: built against 0.1.13, system has unknown\nHyprlang: built against 0.6.8, system has unknown\nAquamarine: built against 0.10.0, system has unknown\n\nVersion ABI string: dd220efe7b1e292415bd0ea7161f63df9c95bfd3_aq_0.10_hu_0.11_hg_0.5_hc_0.1_hlg_0.6\nno flags were set"
+}

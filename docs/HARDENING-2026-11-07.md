@@ -51,9 +51,12 @@ Machine-local command logs and dependency-audit JSON are retained under
 
 ## Remaining work and limits
 
-- Sixteen live Hyprland/background tests were deselected. This cloud machine has
-  no Hyprland session; desktop, real polkit and device mutation checks remain
-  unrun. Real worker/process/MCP checks are not a claim of desktop integration.
+- Sixteen live Hyprland/background pytest cases were deselected in the native
+  suite. A separate CPU-emulated VM ran actual Hyprland desktop acceptance:
+  window launch/close, cursor movement, screenshot and keyboard/file readback
+  passed. The compositor teardown exits 139; see
+  [the separate live evidence](evidence/hyprland-vm-2026-11-07/README.md).
+  Those 16 pytest cases, polkit and device mutation checks remain unrun.
 - The OS can deny signals, particularly after elevation. Such identities remain
   tracked for recovery on worker restart; another stop-all does not retry a
   denied termination. Inspect job state and processes before further action.

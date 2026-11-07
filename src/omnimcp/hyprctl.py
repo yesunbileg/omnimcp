@@ -36,9 +36,7 @@ def _run(*args: str) -> str:
     if shutil.which("hyprctl") is None:
         raise HyprctlError("hyprctl not found, omnimcp needs a running Hyprland session")
     try:
-        proc = subprocess.run(
-            ["hyprctl", *args], capture_output=True, text=True, timeout=5
-        )
+        proc = subprocess.run(["hyprctl", *args], capture_output=True, text=True, timeout=5)
     except subprocess.TimeoutExpired as exc:
         raise HyprctlError(f"hyprctl {args[0]} timed out") from exc
     out = proc.stdout.strip()
@@ -168,9 +166,7 @@ def lua_str(text: str) -> str:
     content, which turns the rest of the payload into code."""
     if "\0" in text:
         raise HyprctlError("a NUL byte cannot be sent to hyprctl")
-    body = "".join(
-        chr(b) if b in _LUA_LITERAL else f"\\{b:03d}" for b in text.encode("utf-8")
-    )
+    body = "".join(chr(b) if b in _LUA_LITERAL else f"\\{b:03d}" for b in text.encode("utf-8"))
     return f'"{body}"'
 
 
@@ -373,8 +369,8 @@ def keyword(name: str, *values: str) -> None:
 # deprecated `windowrulev2 bordercolor` to `windowrule border_color` with a
 # single 6-char color, so we try the current form first and fall back.
 _BORDER_RULES = (
-    "border_color {color}, tag {tag}",   # Hyprland 0.42+
-    "border_color {color}, tag:{tag}",   # older
+    "border_color {color}, tag {tag}",  # Hyprland 0.42+
+    "border_color {color}, tag:{tag}",  # older
 )
 
 
@@ -536,10 +532,22 @@ _LAYER_KINDS = (
     (
         "launcher",
         (
-            "wofi", "rofi", "fuzzel", "tofi", "anyrun", "walker", "launcher",
-            "omarchy-menu", "omarchy-clipboard", "omarchy-emojis",
-            "omarchy-image-selector", "omarchy-keyboard-panel", "omarchy-reminders",
-            "omarchy-network-qr", "omarchy-network-speedtest", "omarchy-disk-speedtest",
+            "wofi",
+            "rofi",
+            "fuzzel",
+            "tofi",
+            "anyrun",
+            "walker",
+            "launcher",
+            "omarchy-menu",
+            "omarchy-clipboard",
+            "omarchy-emojis",
+            "omarchy-image-selector",
+            "omarchy-keyboard-panel",
+            "omarchy-reminders",
+            "omarchy-network-qr",
+            "omarchy-network-speedtest",
+            "omarchy-disk-speedtest",
         ),
     ),
     ("bar", ("waybar", "hyprpanel", "ags-", "bar", "omarchy-bar")),

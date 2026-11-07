@@ -36,8 +36,13 @@ def test_owner_cli_stops_stubborn_job_and_can_race_normal_cancel(daemon, tmp_pat
         "open(sys.argv[1],'w').write(json.dumps([os.getpid(),psutil.Process().create_time()])); "
         "time.sleep(60)"
     )
-    submitted = rpc({"op": "act", "action": "command.exec", "params": {
-        "argv": [sys.executable, "-c", code, str(marker)]}})
+    submitted = rpc(
+        {
+            "op": "act",
+            "action": "command.exec",
+            "params": {"argv": [sys.executable, "-c", code, str(marker)]},
+        }
+    )
     assert submitted["status"] == "queued", submitted
     job = submitted["job_id"]
     pid = birth = None
@@ -50,7 +55,7 @@ def test_owner_cli_stops_stubborn_job_and_can_race_normal_cancel(daemon, tmp_pat
                     break
                 except json.JSONDecodeError:
                     pass
-            time.sleep(.02)
+            time.sleep(0.02)
         assert pid is not None, "Child did not install its SIGTERM handler"
         before = rpc({"op": "job", "job_id": job})
         assert before["status"] == "running" and before["pid"] == pid
@@ -59,7 +64,10 @@ def test_owner_cli_stops_stubborn_job_and_can_race_normal_cancel(daemon, tmp_pat
             cancellation = pool.submit(rpc, {"op": "job", "job_id": job, "cancel": True})
             cli = subprocess.run(
                 [sys.executable, "-m", "omnimcp", "worker", "stop-all"],
-                env=daemon.env, capture_output=True, text=True, timeout=10,
+                env=daemon.env,
+                capture_output=True,
+                text=True,
+                timeout=10,
             )
             assert cancellation.result(timeout=2)["status"] == "cancellation_requested"
         assert time.monotonic() - started < 10
@@ -75,8 +83,13 @@ def test_owner_cli_stops_stubborn_job_and_can_race_normal_cancel(daemon, tmp_pat
         except psutil.NoSuchProcess:
             pass
         repeated = rpc({"op": "worker_stop_all"}, timeout=10)
-        assert repeated == {"status": "ok", "cancelled": 0, "groups_terminated": 0,
-                            "killed": 0, "threads_still_busy": 0}
+        assert repeated == {
+            "status": "ok",
+            "cancelled": 0,
+            "groups_terminated": 0,
+            "killed": 0,
+            "threads_still_busy": 0,
+        }
         assert rpc({"op": "observe", "action": "system.snapshot"})["memory"]["total"] > 0
     finally:
         # Only the fixture process with its recorded birth time may be cleaned up.
@@ -92,7 +105,8 @@ def test_owner_cli_stops_stubborn_job_and_can_race_normal_cancel(daemon, tmp_pat
 def test_stop_all_is_absent_from_real_mcp_and_capability_dispatch(daemon):
     async def run():
         params = StdioServerParameters(
-            command=sys.executable, args=["-m", "omnimcp", "--profile", "compact"],
+            command=sys.executable,
+            args=["-m", "omnimcp", "--profile", "compact"],
             env=daemon.env,
         )
         async with stdio_client(params) as (read, write), ClientSession(read, write) as client:
@@ -106,4 +120,5 @@ def test_stop_all_is_absent_from_real_mcp_and_capability_dispatch(daemon):
                 result = await client.call_tool(name, args)
                 assert result.isError is True
                 assert json.loads(result.content[0].text)["status"] == "unsupported"
+
     asyncio.run(asyncio.wait_for(run(), timeout=15))

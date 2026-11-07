@@ -433,16 +433,28 @@ def journaled(
             except Exception as exc:
                 outcome = "refused" if _is_refusal(exc) else "error"
                 record(
-                    name, call_kind, bound, outcome, (time.monotonic() - started) * 1000,
-                    error=f"{type(exc).__name__}: {exc}", seq=seq, parent=parent,
+                    name,
+                    call_kind,
+                    bound,
+                    outcome,
+                    (time.monotonic() - started) * 1000,
+                    error=f"{type(exc).__name__}: {exc}",
+                    seq=seq,
+                    parent=parent,
                 )
                 raise
             finally:
                 if token is not None:
                     _pop_parent(token)
             record(
-                name, call_kind, bound, "ok", (time.monotonic() - started) * 1000,
-                result=result, seq=seq, parent=parent,
+                name,
+                call_kind,
+                bound,
+                "ok",
+                (time.monotonic() - started) * 1000,
+                result=result,
+                seq=seq,
+                parent=parent,
             )
             return result
 
@@ -539,8 +551,11 @@ def start(version: str, source: str = "") -> None:
     _resume_seq(entries)
     if source:
         last = next(
-            (e for e in reversed(entries)
-             if e.get("kind") == "session" and e.get("event") == "start"),
+            (
+                e
+                for e in reversed(entries)
+                if e.get("kind") == "session" and e.get("event") == "start"
+            ),
             None,
         )
         # every record already says `dry: true` for itself, so a rehearsal

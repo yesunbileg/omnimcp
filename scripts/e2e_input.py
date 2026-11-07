@@ -41,21 +41,17 @@ def main() -> int:
     sock = str(Path(tempfile.gettempdir()) / f"omnimcp-e2e-{int(time.time())}.sock")
 
     # cat with mouse reporting on: every click/key becomes visible text
-    inner = (
-        r"printf '\e[?1000;1006h' > /dev/tty; stty -icanon -echo min 1 time 0; exec cat -v"
-    )
+    inner = r"printf '\e[?1000;1006h' > /dev/tty; stty -icanon -echo min 1 time 0; exec cat -v"
     hyprctl.dispatch(
         "exec",
         "[float; size 900 500; center] kitty --title omnimcp-e2e "
-        f"-o allow_remote_control=yes --listen-on unix:{sock} bash -c \"{inner}\"",
+        f'-o allow_remote_control=yes --listen-on unix:{sock} bash -c "{inner}"',
     )
 
     win = None
     for _ in range(40):
         time.sleep(0.15)
-        win = next(
-            (c for c in hyprctl.query("clients") if c.get("title") == "omnimcp-e2e"), None
-        )
+        win = next((c for c in hyprctl.query("clients") if c.get("title") == "omnimcp-e2e"), None)
         if win:
             break
     if not win:

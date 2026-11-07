@@ -60,7 +60,8 @@ def reject_every_tool(profile, runtime_dir):
             tools = await session.list_tools()
             results = [
                 (tool.name, await session.call_tool(tool.name, {}))
-                for tool in tools.tools if tool.inputSchema.get("required")
+                for tool in tools.tools
+                if tool.inputSchema.get("required")
             ]
             return results
 
@@ -99,9 +100,7 @@ def test_legacy_readonly_listed_tools_reject_bad_typed_params_before_body(monkey
     monkeypatch.setattr(server, "READONLY", True)
     for variable in ("OMNIMCP_READONLY", "OMNIMCP_BACKGROUND", "OMNIMCP_DRYRUN"):
         monkeypatch.setenv(variable, "1")
-    for variable in (
-        "HYPRLAND_INSTANCE_SIGNATURE", "WAYLAND_DISPLAY", "DBUS_SESSION_BUS_ADDRESS"
-    ):
+    for variable in ("HYPRLAND_INSTANCE_SIGNATURE", "WAYLAND_DISPLAY", "DBUS_SESSION_BUS_ADDRESS"):
         monkeypatch.delenv(variable, raising=False)
     app = server.build_app()
 
@@ -117,9 +116,9 @@ def test_legacy_readonly_listed_tools_reject_bad_typed_params_before_body(monkey
                 for field, spec in schema.items()
                 if model.model_fields[field].is_required()
             }
-            object.__setattr__(tool, "fn", lambda **_: (_ for _ in ()).throw(
-                RuntimeError("BODY_REACHED")
-            ))
+            object.__setattr__(
+                tool, "fn", lambda **_: (_ for _ in ()).throw(RuntimeError("BODY_REACHED"))
+            )
             for field in schema:
                 bad = _invalid_value(model, baseline, field)
                 assert bad is not None, f"no invalid marker value for {tool.name}.{field}"
@@ -152,8 +151,14 @@ def _sample(schema):
     if "anyOf" in schema:
         return _sample(schema["anyOf"][0])
     kind = schema.get("type")
-    return {"string": "sample", "integer": 0, "number": 0.0,
-            "boolean": False, "array": [], "object": {}}.get(kind)
+    return {
+        "string": "sample",
+        "integer": 0,
+        "number": 0.0,
+        "boolean": False,
+        "array": [],
+        "object": {},
+    }.get(kind)
 
 
 def _invalid_value(model, baseline, field):
@@ -197,11 +202,13 @@ def test_engine_file_read_offset_error_redacts_value(tmp_path):
     store = Store(tmp_path / "state")
     engine = Engine(build_registry(), store)
     try:
-        result = engine.request({
-            "op": "observe",
-            "action": "file.read",
-            "params": {"path": str(target), "offset": "R2_SECRET_MARKER"},
-        })
+        result = engine.request(
+            {
+                "op": "observe",
+                "action": "file.read",
+                "params": {"path": str(target), "offset": "R2_SECRET_MARKER"},
+            }
+        )
     finally:
         engine.close()
     assert result["status"] == "invalid_params"
@@ -222,9 +229,9 @@ def test_hyprctl_failure_does_not_echo_command_arguments(monkeypatch):
     monkeypatch.setattr(
         hyprctl.subprocess,
         "run",
-        lambda *args, **kwargs: type("Proc", (), {
-            "stdout": "", "stderr": "R2_SECRET_MARKER", "returncode": 1
-        })(),
+        lambda *args, **kwargs: type(
+            "Proc", (), {"stdout": "", "stderr": "R2_SECRET_MARKER", "returncode": 1}
+        )(),
     )
     try:
         hyprctl._run("dispatch", "sendshortcut", "R2_SECRET_MARKER")
@@ -239,9 +246,7 @@ def test_wtype_failure_does_not_echo_stderr(monkeypatch):
     monkeypatch.setattr(
         hinput.subprocess,
         "run",
-        lambda *args, **kwargs: type("Proc", (), {
-            "stderr": "R2_SECRET_MARKER", "returncode": 1
-        })(),
+        lambda *args, **kwargs: type("Proc", (), {"stderr": "R2_SECRET_MARKER", "returncode": 1})(),
     )
     try:
         hinput._wtype(["-"], stdin="R2_SECRET_MARKER")

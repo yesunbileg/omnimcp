@@ -127,8 +127,12 @@ def test_launch_uses_event_socket_when_available(monkeypatch, no_sleep):
 
 
 def test_launch_refuses_wrong_class_even_on_requested_workspace(monkeypatch, no_sleep):
-    kitty = {"address": "0xc", "class": "kitty", "title": "human terminal",
-             "workspace": {"id": 2, "name": "2"}}
+    kitty = {
+        "address": "0xc",
+        "class": "kitty",
+        "title": "human terminal",
+        "workspace": {"id": 2, "name": "2"},
+    }
     fake = FakeHyprctl([[EXISTING], [EXISTING, kitty]])
     _patch(monkeypatch, fake)
     owned = set()
@@ -142,9 +146,14 @@ def test_launch_refuses_wrong_class_even_on_requested_workspace(monkeypatch, no_
 
 
 def test_launch_polling_keeps_waiting_when_event_client_is_not_ready(monkeypatch, no_sleep):
-    fake = FakeHyprctl([[EXISTING], [EXISTING], [EXISTING], [EXISTING, dict(
-        CHROME, workspace={"id": 2, "name": "2"}
-    )]])
+    fake = FakeHyprctl(
+        [
+            [EXISTING],
+            [EXISTING],
+            [EXISTING],
+            [EXISTING, dict(CHROME, workspace={"id": 2, "name": "2"})],
+        ]
+    )
     stream = FakeStream({"address": "0xb", "workspace": "2", "class": "google-chrome"})
     _patch(monkeypatch, fake, stream=stream)
 
@@ -170,9 +179,14 @@ def test_launch_resolves_workspace_name_event_after_client_appears(monkeypatch):
 
     class DelayedClientStream(FakeStream):
         def wait_for(self, names, matcher, timeout):
-            event = ("openwindow", {
-                "address": "0xb", "workspace": "work", "class": "google-chrome",
-            })
+            event = (
+                "openwindow",
+                {
+                    "address": "0xb",
+                    "workspace": "work",
+                    "class": "google-chrome",
+                },
+            )
             if matcher(*event):
                 # The event arrived before clients exposed its workspace id.
                 elapsed[0] += 0.05
@@ -242,9 +256,13 @@ def test_launch_polling_does_not_accept_after_slow_matcher(monkeypatch):
 
 def test_launch_does_not_claim_client_lookup_returned_after_deadline(monkeypatch):
     elapsed = [0.0]
-    candidate = dict(CHROME, **{
-        "class": "foot", "workspace": {"id": 2, "name": "2"},
-    })
+    candidate = dict(
+        CHROME,
+        **{
+            "class": "foot",
+            "workspace": {"id": 2, "name": "2"},
+        },
+    )
     client_queries = [0]
     owned = []
 
@@ -260,9 +278,17 @@ def test_launch_does_not_claim_client_lookup_returned_after_deadline(monkeypatch
     monkeypatch.setattr(server.safety, "touch", lambda *_: None)
     monkeypatch.setattr(server.hyprctl, "query", query)
     monkeypatch.setattr(server.hyprctl, "dispatch", lambda *args: None)
-    monkeypatch.setattr(server.events, "EventStream", lambda: FakeStream({
-        "address": "0xb", "workspace": "2", "class": "foot",
-    }))
+    monkeypatch.setattr(
+        server.events,
+        "EventStream",
+        lambda: FakeStream(
+            {
+                "address": "0xb",
+                "workspace": "2",
+                "class": "foot",
+            }
+        ),
+    )
     monkeypatch.setattr(server.time, "monotonic", lambda: elapsed[0])
     monkeypatch.setattr(server, "_active_address", lambda: None)
     monkeypatch.setattr(server.trust, "note_launched", lambda address, cls: owned.append(address))
@@ -275,9 +301,12 @@ def test_launch_does_not_claim_client_lookup_returned_after_deadline(monkeypatch
 
 def test_visible_special_workspace_event_reports_guarantee_focus_risk(monkeypatch, no_sleep):
     monkeypatch.setenv("OMNIMCP_BACKGROUND", "1")
-    candidate = {"address": "0xc", "class": "foot", "title": "", "workspace": {
-        "id": -99, "name": "special:notes"
-    }}
+    candidate = {
+        "address": "0xc",
+        "class": "foot",
+        "title": "",
+        "workspace": {"id": -99, "name": "special:notes"},
+    }
     calls = {"clients": 0}
 
     def query(cmd):
@@ -285,8 +314,12 @@ def test_visible_special_workspace_event_reports_guarantee_focus_risk(monkeypatc
             calls["clients"] += 1
             return [] if calls["clients"] == 1 else [candidate]
         if cmd == "monitors":
-            return [{"activeWorkspace": {"id": 1, "name": "1"},
-                     "specialWorkspace": {"id": -99, "name": "special:notes"}}]
+            return [
+                {
+                    "activeWorkspace": {"id": 1, "name": "1"},
+                    "specialWorkspace": {"id": -99, "name": "special:notes"},
+                }
+            ]
         if cmd == "activewindow":
             return {"address": "0xa"}
         raise AssertionError(cmd)
@@ -353,8 +386,12 @@ def test_launch_ignores_queued_event_for_client_in_predispatch_snapshot(monkeypa
 
 
 def test_launch_event_rechecks_resolved_client_class(monkeypatch, no_sleep):
-    kitty = {"address": "0xc", "class": "kitty", "title": "human terminal",
-             "workspace": {"id": 2, "name": "2"}}
+    kitty = {
+        "address": "0xc",
+        "class": "kitty",
+        "title": "human terminal",
+        "workspace": {"id": 2, "name": "2"},
+    }
     stream = FakeStream({"address": "0xc", "workspace": "2", "class": "foot"})
     monkeypatch.setattr(server.events, "EventStream", lambda: stream)
     clients = iter([[], [kitty]])
@@ -401,7 +438,7 @@ def test_launch_event_and_polling_share_one_deadline(monkeypatch):
 
 
 def test_launch_docs_describe_wrapper_class_ambiguity():
-    docs = (server.__file__.replace("src/omnimcp/server.py", "docs/CORE.md"))
+    docs = server.__file__.replace("src/omnimcp/server.py", "docs/CORE.md")
     with open(docs, encoding="utf-8") as source:
         text = source.read().lower()
     assert "xdg-open" in text and "python app.py" in text
@@ -478,9 +515,13 @@ def test_launch_refuses_a_bad_workspace_before_spawning(monkeypatch):
 
 @pytest.mark.parametrize(
     "ws, expect",
-    [({"address": "special:scratch", "type": "special", "name": "special:scratch"},
-      "special:scratch"),
-     ({"address": "notes", "type": "normal", "name": "notes"}, "notes")],
+    [
+        (
+            {"address": "special:scratch", "type": "special", "name": "special:scratch"},
+            "special:scratch",
+        ),
+        ({"address": "notes", "type": "normal", "name": "notes"}, "notes"),
+    ],
 )
 def test_launch_reports_an_id_less_057_workspace_by_name(monkeypatch, no_sleep, ws, expect):
     # Hyprland 0.57 gives special and named workspaces no id
@@ -490,19 +531,50 @@ def test_launch_reports_an_id_less_057_workspace_by_name(monkeypatch, no_sleep, 
     assert out["workspace"] == expect
 
 
-@pytest.mark.parametrize("workspace", [
-    "3", "+1", "-1", "e+1", "name:research_1.a-b", "previous", "empty",
-    "special:notes_1.a-b",
-])
+@pytest.mark.parametrize(
+    "workspace",
+    [
+        "3",
+        "+1",
+        "-1",
+        "e+1",
+        "name:research_1.a-b",
+        "previous",
+        "empty",
+        "special:notes_1.a-b",
+    ],
+)
 def test_launch_workspace_safe_selectors(workspace):
     server._validate_launch_workspace(workspace)
 
 
-@pytest.mark.parametrize("workspace", [
-    " name:foo", "name:foo ", "name:a b", "name:", "special:", "1,2", "1;2",
-    "1[2]", "1\n2", "1\x002", "1\t2", "name:a/b", "m1", "~", "bogus",
-    "m+1", "m-1", "e-1", "r+1", "r-1", "~2", "special",
-])
+@pytest.mark.parametrize(
+    "workspace",
+    [
+        " name:foo",
+        "name:foo ",
+        "name:a b",
+        "name:",
+        "special:",
+        "1,2",
+        "1;2",
+        "1[2]",
+        "1\n2",
+        "1\x002",
+        "1\t2",
+        "name:a/b",
+        "m1",
+        "~",
+        "bogus",
+        "m+1",
+        "m-1",
+        "e-1",
+        "r+1",
+        "r-1",
+        "~2",
+        "special",
+    ],
+)
 def test_launch_workspace_rejects_unsafe_selectors(workspace):
     with pytest.raises(ValueError, match="is not a workspace"):
         server._validate_launch_workspace(workspace)

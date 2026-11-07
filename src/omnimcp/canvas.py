@@ -17,12 +17,14 @@ from typing import Any
 
 from omnimcp import journal, private_paths, trust
 
-COLORS = {str(i): name for i, name in enumerate(
-    ("red", "orange", "yellow", "green", "cyan", "purple"), 1
-)}
+COLORS = {
+    str(i): name for i, name in enumerate(("red", "orange", "yellow", "green", "cyan", "purple"), 1)
+}
 NODE_FIELDS = {
-    "text": {"text", "color"}, "file": {"file", "subpath", "color"},
-    "link": {"url", "color"}, "group": {"label", "color"},
+    "text": {"text", "color"},
+    "file": {"file", "subpath", "color"},
+    "link": {"url", "color"},
+    "group": {"label", "color"},
 }
 MAX_BYTES = 32 * 1024 * 1024
 
@@ -61,8 +63,12 @@ def _validate(doc: Any) -> None:
             raise ValueError("unsupported card type")
         for key in ("x", "y", "width", "height"):
             value = node.get(key)
-            if (isinstance(value, bool) or not isinstance(value, (int, float))
-                    or not math.isfinite(value) or (key in ("width", "height") and value <= 0)):
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not math.isfinite(value)
+                or (key in ("width", "height") and value <= 0)
+            ):
                 raise ValueError("card geometry is invalid")
         required = {"text": "text", "file": "file", "link": "url"}.get(kind)
         if required and not isinstance(node.get(required), str):
@@ -100,8 +106,10 @@ def _load(path: str) -> tuple[Path, bytes, dict, str]:
 
 
 def _refs(doc: dict) -> tuple[dict, dict]:
-    return ({f"n{i}": n for i, n in enumerate(doc.get("nodes", []), 1)},
-            {f"e{i}": e for i, e in enumerate(doc.get("edges", []), 1)})
+    return (
+        {f"n{i}": n for i, n in enumerate(doc.get("nodes", []), 1)},
+        {f"e{i}": e for i, e in enumerate(doc.get("edges", []), 1)},
+    )
 
 
 def _direction(edge: dict) -> str:
@@ -111,9 +119,13 @@ def _direction(edge: dict) -> str:
 
 
 def _inside(node: dict, group: dict) -> bool:
-    return (node is not group and node["x"] >= group["x"] and node["y"] >= group["y"]
-            and node["x"] + node["width"] <= group["x"] + group["width"]
-            and node["y"] + node["height"] <= group["y"] + group["height"])
+    return (
+        node is not group
+        and node["x"] >= group["x"]
+        and node["y"] >= group["y"]
+        and node["x"] + node["width"] <= group["x"] + group["width"]
+        and node["y"] + node["height"] <= group["y"] + group["height"]
+    )
 
 
 def _view(doc: dict, revision: str, card: str, offset: int, limit: int) -> dict:
@@ -123,10 +135,13 @@ def _view(doc: dict, revision: str, card: str, offset: int, limit: int) -> dict:
         raise ValueError("unknown card reference; read the Canvas again")
     groups = [(ref, n) for ref, n in nodes.items() if n["type"] == "group"]
     selected = [(ref, n) for ref, n in nodes.items() if not card or ref == card]
-    connections = [(ref, e) for ref, e in edges.items() if not card or
-                   nodes[card]["id"] in (e["fromNode"], e["toNode"])]
+    connections = [
+        (ref, e)
+        for ref, e in edges.items()
+        if not card or nodes[card]["id"] in (e["fromNode"], e["toNode"])
+    ]
     cards = []
-    for ref, n in selected[offset:offset + limit]:
+    for ref, n in selected[offset : offset + limit]:
         text = n.get("text", n.get("label", n.get("file", n.get("url", ""))))
         title = next((line.strip().lstrip("# ") for line in text.splitlines() if line.strip()), "")
         item = {"id": ref, "type": n["type"], "title": title[:100]}
@@ -140,18 +155,27 @@ def _view(doc: dict, revision: str, card: str, offset: int, limit: int) -> dict:
             item["groups"] = membership
         cards.append(item)
     links = []
-    for ref, e in connections[offset:offset + limit]:
-        item = {"id": ref, "from": ids[e["fromNode"]], "to": ids[e["toNode"]],
-                "direction": _direction(e)}
+    for ref, e in connections[offset : offset + limit]:
+        item = {
+            "id": ref,
+            "from": ids[e["fromNode"]],
+            "to": ids[e["toNode"]],
+            "direction": _direction(e),
+        }
         if "label" in e:
             item["label"] = e["label"]
         if "color" in e:
             item["color"] = COLORS.get(e["color"], e["color"])
         links.append(item)
     total = max(len(selected), len(connections))
-    return {"revision": revision, "cards": cards, "connections": links,
-            "total_cards": len(selected), "total_connections": len(connections),
-            "next_offset": offset + limit if offset + limit < total else None}
+    return {
+        "revision": revision,
+        "cards": cards,
+        "connections": links,
+        "total_cards": len(selected),
+        "total_connections": len(connections),
+        "next_offset": offset + limit if offset + limit < total else None,
+    }
 
 
 def _ends(edge: dict, direction: str) -> None:
@@ -176,7 +200,8 @@ def _apply(doc: dict, changes: list[dict]) -> None:
             raise ValueError("each change must be an object")
         op = change.get("op")
         allowed = {
-            "update_card": {"op", "id", "set"}, "remove_card": {"op", "id"},
+            "update_card": {"op", "id", "set"},
+            "remove_card": {"op", "id"},
             "add_card": {"op", "ref", "text", "color", "group"},
             "connect": {"op", "ref", "from", "to", "label", "color", "direction"},
             "update_connection": {"op", "id", "set"},
@@ -198,16 +223,24 @@ def _apply(doc: dict, changes: list[dict]) -> None:
                 raise ValueError("group must refer to a group card")
             if group:
                 members = [n for n in doc["nodes"] if _inside(n, group)]
-                x, y = group["x"] + 30, max(
-                    [group["y"] + 50] + [n["y"] + n["height"] + 30 for n in members])
+                x, y = (
+                    group["x"] + 30,
+                    max([group["y"] + 50] + [n["y"] + n["height"] + 30 for n in members]),
+                )
                 width = max(320, group["width"] - 60)
                 group["width"] = max(group["width"], width + 60)
                 group["height"] = max(group["height"], y - group["y"] + 230)
             else:
-                x, y, width = 0, max(
-                    [0] + [n["y"] + n["height"] + 60 for n in doc["nodes"]]), 320
-            node = {"id": uuid.uuid4().hex[:16], "type": "text", "text": text,
-                    "x": x, "y": y, "width": width, "height": 200}
+                x, y, width = 0, max([0] + [n["y"] + n["height"] + 60 for n in doc["nodes"]]), 320
+            node = {
+                "id": uuid.uuid4().hex[:16],
+                "type": "text",
+                "text": text,
+                "x": x,
+                "y": y,
+                "width": width,
+                "height": 200,
+            }
             if "color" in change:
                 node["color"] = _color(change["color"])
             nodes[ref] = node
@@ -216,8 +249,9 @@ def _apply(doc: dict, changes: list[dict]) -> None:
             node = find(nodes, change.get("id"))
             if op == "remove_card":
                 doc["nodes"].remove(node)
-                doc["edges"] = [e for e in doc["edges"] if node["id"] not in
-                                (e["fromNode"], e["toNode"])]
+                doc["edges"] = [
+                    e for e in doc["edges"] if node["id"] not in (e["fromNode"], e["toNode"])
+                ]
                 nodes = {k: n for k, n in nodes.items() if n is not node}
                 edges = {k: e for k, e in edges.items() if e in doc["edges"]}
             else:
@@ -235,13 +269,13 @@ def _apply(doc: dict, changes: list[dict]) -> None:
             ref = change.get("ref", f"new_edge_{len(edges) + 1}")
             if not isinstance(ref, str) or ref in edges:
                 raise ValueError("connection ref must be a new string")
-            edge = {"id": uuid.uuid4().hex[:16], "fromNode": source["id"],
-                    "toNode": target["id"]}
+            edge = {"id": uuid.uuid4().hex[:16], "fromNode": source["id"], "toNode": target["id"]}
             vertical = abs(target["y"] - source["y"]) > abs(target["x"] - source["x"])
             edge["fromSide"], edge["toSide"] = (
-                ("bottom", "top") if target["y"] >= source["y"] else ("top", "bottom")
-            ) if vertical else (
-                ("right", "left") if target["x"] >= source["x"] else ("left", "right"))
+                (("bottom", "top") if target["y"] >= source["y"] else ("top", "bottom"))
+                if vertical
+                else (("right", "left") if target["x"] >= source["x"] else ("left", "right"))
+            )
             _ends(edge, change.get("direction", "forward"))
             for key in ("label", "color"):
                 if key in change:
@@ -280,9 +314,7 @@ def _write(target: Path, raw: bytes, doc: dict, revision: str) -> tuple[str, str
         Path(tempfile.gettempdir()) / f"omnimcp-canvas-{os.getuid()}"
     )
     lock_name = hashlib.sha256(os.fsencode(target)).hexdigest()
-    lock_fd = private_paths.open_private_file(
-        lock_dir / lock_name, os.O_CREAT | os.O_RDWR, 0o600
-    )
+    lock_fd = private_paths.open_private_file(lock_dir / lock_name, os.O_CREAT | os.O_RDWR, 0o600)
     with os.fdopen(lock_fd, "r+") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         if target.read_bytes() != raw:
@@ -316,15 +348,31 @@ def _write(target: Path, raw: bytes, doc: dict, revision: str) -> tuple[str, str
     return hashlib.sha256(data).hexdigest(), str(backup)
 
 
-def run(path: str, action: str = "read", card: str = "", offset: int = 0,
-        limit: int = 100, revision: str = "", changes: list[dict] | None = None) -> dict:
+def run(
+    path: str,
+    action: str = "read",
+    card: str = "",
+    offset: int = 0,
+    limit: int = 100,
+    revision: str = "",
+    changes: list[dict] | None = None,
+) -> dict:
     if action not in ("read", "edit"):
         raise ValueError("action must be read or edit")
-    if (isinstance(offset, bool) or not isinstance(offset, int) or offset < 0
-            or isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 200):
+    if (
+        isinstance(offset, bool)
+        or not isinstance(offset, int)
+        or offset < 0
+        or isinstance(limit, bool)
+        or not isinstance(limit, int)
+        or not 1 <= limit <= 200
+    ):
         raise ValueError("offset must be >=0 and limit must be 1-200")
     if action == "edit" and os.environ.get("OMNIMCP_READONLY", "").lower() in (
-        "1", "true", "yes", "on"
+        "1",
+        "true",
+        "yes",
+        "on",
     ):
         raise trust.TrustError("OMNIMCP_READONLY is set: Canvas edits are refused")
     target, raw, doc, current = _load(path)
@@ -345,8 +393,16 @@ def run(path: str, action: str = "read", card: str = "", offset: int = 0,
     if edited == doc:
         return {"changed": False, "revision": current}
     if journal.dry_run():
-        return {"dry_run": True, "changed": False, "revision": current,
-                "validated_changes": len(changes)}
+        return {
+            "dry_run": True,
+            "changed": False,
+            "revision": current,
+            "validated_changes": len(changes),
+        }
     current, backup = _write(target, raw, edited, current)
-    return {"changed": True, "revision": current, "backup": backup,
-            "note": "Read again for current short references."}
+    return {
+        "changed": True,
+        "revision": current,
+        "backup": backup,
+        "note": "Read again for current short references.",
+    }

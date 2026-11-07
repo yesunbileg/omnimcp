@@ -22,8 +22,12 @@ def runtime(tmp_path, monkeypatch):
     trust._owned.clear()
 
 
-MARKS = {"window": "0xaaa", "class": "kitty", "ts": 1234.5,
-         "items": {1: {"dx": 10, "dy": 20, "label": "b 'Ok'"}}}
+MARKS = {
+    "window": "0xaaa",
+    "class": "kitty",
+    "ts": 1234.5,
+    "items": {1: {"dx": 10, "dy": 20, "label": "b 'Ok'"}},
+}
 
 
 def _remember_everything():
@@ -109,8 +113,9 @@ def test_save_survives_an_unwritable_directory(monkeypatch, tmp_path):
 
 
 def test_restore_marks_rejects_malformed_items():
-    srv.restore_marks({"window": "0xaaa", "items": {"1": {"dx": 1}, "x": {"dx": 1, "dy": 2,
-                                                                        "label": "l"}}})
+    srv.restore_marks(
+        {"window": "0xaaa", "items": {"1": {"dx": 1}, "x": {"dx": 1, "dy": 2, "label": "l"}}}
+    )
     assert srv.marks_state() == {}
     srv.restore_marks({"window": "0xaaa", "items": {"2": {"dx": 1, "dy": 2, "label": "l"}}})
     assert srv.marks_state()["items"] == {2: {"dx": 1, "dy": 2, "label": "l"}}

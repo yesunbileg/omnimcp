@@ -8,19 +8,51 @@ from omnimcp import server as srv
 REAL_UI_READ = srv._ui_read  # bound before the fixture stubs it
 REAL_PROVEN_FRAME = srv._proven_frame
 
-CLIENT = {"address": "0xa", "class": "gedit", "title": "doc", "at": [100, 50],
-          "size": [800, 600], "pid": 42, "workspace": {"id": 99}, "monitor": 0,
-          "floating": False}
-MONS = [{"id": 0, "name": "eDP-1", "x": 0, "y": 0, "width": 1920, "height": 1080,
-         "scale": 1.0, "activeWorkspace": {"id": 1}, "specialWorkspace": {"id": 0}}]
+CLIENT = {
+    "address": "0xa",
+    "class": "gedit",
+    "title": "doc",
+    "at": [100, 50],
+    "size": [800, 600],
+    "pid": 42,
+    "workspace": {"id": 99},
+    "monitor": 0,
+    "floating": False,
+}
+MONS = [
+    {
+        "id": 0,
+        "name": "eDP-1",
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 1080,
+        "scale": 1.0,
+        "activeWorkspace": {"id": 1},
+        "specialWorkspace": {"id": 0},
+    }
+]
 
 
 @pytest.fixture
 def wired_bg(monkeypatch):
-    s = {"active": "0xhuman", "clicks": [], "dispatch": [], "actions": [], "grabbed": [],
-         "has_action": True, "role": "push button", "values": [{}, {}], "gone": False,
-         "inserted": [], "typed": [], "shortcuts": [], "focused_text": None,
-         "xwayland": False, "window_at_point": "0xhuman"}
+    s = {
+        "active": "0xhuman",
+        "clicks": [],
+        "dispatch": [],
+        "actions": [],
+        "grabbed": [],
+        "has_action": True,
+        "role": "push button",
+        "values": [{}, {}],
+        "gone": False,
+        "inserted": [],
+        "typed": [],
+        "shortcuts": [],
+        "focused_text": None,
+        "xwayland": False,
+        "window_at_point": "0xhuman",
+    }
     monkeypatch.delenv("OMNIMCP_BACKGROUND", raising=False)
     monkeypatch.setattr(srv.safety, "touch", lambda *a: None)
     monkeypatch.setattr(srv.time, "sleep", lambda s_: None)
@@ -31,9 +63,15 @@ def wired_bg(monkeypatch):
         return dict(CLIENT, xwayland=s["xwayland"])
 
     monkeypatch.setattr(srv, "_resolve_window", resolve)
+
     def ui_read(w="", name="", actionable=True, handles=False):
-        item = {"role": s["role"], "name": "Save" if s["role"] != "text" else "Name",
-                "x": 150, "y": 80, "clickable": True}
+        item = {
+            "role": s["role"],
+            "name": "Save" if s["role"] != "text" else "Name",
+            "x": 150,
+            "y": 80,
+            "clickable": True,
+        }
         if handles and s["frame_sure"]:  # like the real one: handles only when asked
             item["_svc"], item["_path"] = "svc", "/save" if s["role"] != "text" else "/name"
         elif handles:
@@ -54,37 +92,47 @@ def wired_bg(monkeypatch):
 
     monkeypatch.setattr(srv.hyprctl, "query", query)
     monkeypatch.setattr(srv.hyprctl, "dispatch", lambda *a: s["dispatch"].append(a))
-    monkeypatch.setattr(srv.hyprctl, "send_shortcut",
-                        lambda mods, key, addr: s["shortcuts"].append((mods, key, addr)))
+    monkeypatch.setattr(
+        srv.hyprctl,
+        "send_shortcut",
+        lambda mods, key, addr: s["shortcuts"].append((mods, key, addr)),
+    )
     monkeypatch.setattr(srv.hyprctl, "active_layout", lambda: ("us", "", ""))
     monkeypatch.setattr(srv.hyprctl, "layout_group", lambda: (0, 1))
-    monkeypatch.setattr(srv.hinput, "click",
-                        lambda x, y, button="left", double=False: s["clicks"].append((x, y)))
+    monkeypatch.setattr(
+        srv.hinput, "click", lambda x, y, button="left", double=False: s["clicks"].append((x, y))
+    )
     monkeypatch.setattr(srv.hinput, "type_text", lambda t: s["typed"].append(t))
     monkeypatch.setattr(srv.a11y, "connect", lambda: object())
     monkeypatch.setattr(srv.a11y, "has_action", lambda bus, svc, path: s["has_action"])
     s["action_name"], s["focused_after"] = "click", False
-    monkeypatch.setattr(srv.a11y, "action_name",
-                        lambda bus, svc, path, index=0: s["action_name"])
+    monkeypatch.setattr(srv.a11y, "action_name", lambda bus, svc, path, index=0: s["action_name"])
     monkeypatch.setattr(srv.a11y, "is_focused", lambda bus, svc, path: s["focused_after"])
-    monkeypatch.setattr(srv.a11y, "do_action",
-                        lambda bus, svc, path, index=0: s["actions"].append((svc, path)) or True)
-    monkeypatch.setattr(srv.a11y, "grab_focus",
-                        lambda bus, svc, path: s["grabbed"].append((svc, path)) or True)
+    monkeypatch.setattr(
+        srv.a11y,
+        "do_action",
+        lambda bus, svc, path, index=0: s["actions"].append((svc, path)) or True,
+    )
+    monkeypatch.setattr(
+        srv.a11y, "grab_focus", lambda bus, svc, path: s["grabbed"].append((svc, path)) or True
+    )
     values = iter(s["values"])
-    monkeypatch.setattr(srv.a11y, "current_value",
-                        lambda bus, svc, path: next(values, {}))
-    monkeypatch.setattr(srv.a11y, "app_for_pid",
-                        lambda bus, pid, title="", size=None: ("app", "/root"))
-    monkeypatch.setattr(srv.a11y, "window_frame",
-                        lambda bus, svc, path, title="", size=None: (svc, path))
-    monkeypatch.setattr(srv, "_proven_frame",
-                        lambda bus, client, app: app if s["frame_sure"] else None)
+    monkeypatch.setattr(srv.a11y, "current_value", lambda bus, svc, path: next(values, {}))
+    monkeypatch.setattr(
+        srv.a11y, "app_for_pid", lambda bus, pid, title="", size=None: ("app", "/root")
+    )
+    monkeypatch.setattr(
+        srv.a11y, "window_frame", lambda bus, svc, path, title="", size=None: (svc, path)
+    )
+    monkeypatch.setattr(
+        srv, "_proven_frame", lambda bus, client, app: app if s["frame_sure"] else None
+    )
     monkeypatch.setattr(srv.a11y, "focused_text", lambda bus, svc, path: s["focused_text"])
     s["fields"] = []
     s["fields_complete"] = True
-    monkeypatch.setattr(srv.a11y, "editable_fields",
-                        lambda bus, svc, path: (s["fields"], s["fields_complete"]))
+    monkeypatch.setattr(
+        srv.a11y, "editable_fields", lambda bus, svc, path: (s["fields"], s["fields_complete"])
+    )
     texts = {"field": ""}
 
     def insert(bus, svc, path, text):
@@ -200,9 +248,14 @@ def test_the_guarantee_never_clicks_even_the_active_window(wired_bg, monkeypatch
 
 def test_marks_carry_what_a_background_press_needs(wired_bg, monkeypatch):
     # the documented flow: marks() on a hidden window, then click_ui(mark=N)
-    monkeypatch.setattr(srv, "_grab_env", lambda **kw: (b"IMG", {
-        "geometry": [100, 50, 800, 600], "scale": 1.0, "image": [800, 600],
-        "format": "jpeg"}))
+    monkeypatch.setattr(
+        srv,
+        "_grab_env",
+        lambda **kw: (
+            b"IMG",
+            {"geometry": [100, 50, 800, 600], "scale": 1.0, "image": [800, 600], "format": "jpeg"},
+        ),
+    )
     srv._last_marks.clear()
     srv.marks(window="0xa")
     srv.click_ui(mark=1)
@@ -210,9 +263,14 @@ def test_marks_carry_what_a_background_press_needs(wired_bg, monkeypatch):
 
 
 def test_a_mark_from_an_unproven_frame_is_refused_in_the_background(wired_bg, monkeypatch):
-    monkeypatch.setattr(srv, "_grab_env", lambda **kw: (b"IMG", {
-        "geometry": [100, 50, 800, 600], "scale": 1.0, "image": [800, 600],
-        "format": "jpeg"}))
+    monkeypatch.setattr(
+        srv,
+        "_grab_env",
+        lambda **kw: (
+            b"IMG",
+            {"geometry": [100, 50, 800, 600], "scale": 1.0, "image": [800, 600], "format": "jpeg"},
+        ),
+    )
     wired_bg["frame_sure"] = False
     srv._last_marks.clear()
     srv.marks(window="0xa")
@@ -390,8 +448,9 @@ def test_a_drag_checks_both_ends(wired_bg):
 
 def test_default_seat_drag_guards_and_delivers_rounded_endpoints(wired_bg, monkeypatch):
     guarded, delivered = [], []
-    monkeypatch.setattr(srv.hinput, "normalize_pointer_point",
-                        lambda x, y: (float(round(x)), float(round(y))))
+    monkeypatch.setattr(
+        srv.hinput, "normalize_pointer_point", lambda x, y: (float(round(x)), float(round(y)))
+    )
     monkeypatch.setattr(srv.trust, "guard_pointer", lambda x, y, *a: guarded.append((x, y)))
     monkeypatch.setattr(srv.hinput, "drag", lambda *a, **k: delivered.append(a))
     monkeypatch.setattr(srv.trust, "remember_seat", lambda: None)
@@ -403,22 +462,33 @@ def test_default_seat_drag_guards_and_delivers_rounded_endpoints(wired_bg, monke
 
 def test_click_ui_checks_and_delivers_rounded_default_seat_point(wired_bg, monkeypatch):
     guarded, delivered = [], []
-    monkeypatch.setattr(srv, "_ui_read", lambda *a, **k: [
-        {"role": "push button", "name": "Save", "x": 639.6, "y": 80.4,
-         "clickable": True, "_svc": "svc", "_path": "/save"}
-    ])
-    monkeypatch.setattr(srv.hinput, "normalize_pointer_point",
-                        lambda x, y: (float(round(x)), float(round(y))))
+    monkeypatch.setattr(
+        srv,
+        "_ui_read",
+        lambda *a, **k: [
+            {
+                "role": "push button",
+                "name": "Save",
+                "x": 639.6,
+                "y": 80.4,
+                "clickable": True,
+                "_svc": "svc",
+                "_path": "/save",
+            }
+        ],
+    )
+    monkeypatch.setattr(
+        srv.hinput, "normalize_pointer_point", lambda x, y: (float(round(x)), float(round(y)))
+    )
     monkeypatch.setattr(srv.trust, "guard_client", lambda *a: None)
     monkeypatch.setattr(srv.trust, "guard_auth_client", lambda *a: None)
     monkeypatch.setattr(srv.trust, "guard_session_lock", lambda *a: "")
-    monkeypatch.setattr(srv.trust, "guard_covering_layer",
-                        lambda x, y, *a: guarded.append((x, y)))
-    monkeypatch.setattr(srv.trust, "check_click_point",
-                        lambda client, x, y, *a, **k: guarded.append((x, y)))
+    monkeypatch.setattr(srv.trust, "guard_covering_layer", lambda x, y, *a: guarded.append((x, y)))
+    monkeypatch.setattr(
+        srv.trust, "check_click_point", lambda client, x, y, *a, **k: guarded.append((x, y))
+    )
     monkeypatch.setattr(srv.trust, "remember_seat", lambda: None)
-    monkeypatch.setattr(srv.hinput, "click",
-                        lambda x, y, **k: delivered.append((x, y)))
+    monkeypatch.setattr(srv.hinput, "click", lambda x, y, **k: delivered.append((x, y)))
     srv.click_ui(name="Save", window="0xa", background=False)
     assert guarded == [(640.0, 80.0)] * 4
     assert delivered == [(640.0, 80.0)]
@@ -442,15 +512,15 @@ def test_pointer_with_background_off_is_unchanged(wired_bg, monkeypatch):
     assert wired_bg["clicks"] == [(100, 100)] and wired_bg["at_points"] == []
 
 
-def test_the_guarantee_refuses_pointer_workspace_focus_fullscreen_and_binds(
-    wired_bg, monkeypatch
-):
+def test_the_guarantee_refuses_pointer_workspace_focus_fullscreen_and_binds(wired_bg, monkeypatch):
     monkeypatch.setenv("OMNIMCP_BACKGROUND", "1")
-    for call in (lambda: srv.pointer("click", x=1, y=1),
-                 lambda: srv.pointer("move", x=1, y=1),
-                 lambda: srv.hypr("workspace", workspace="3"),
-                 lambda: srv.hypr("focus_window", target="0xa"),
-                 lambda: srv.hypr("fullscreen", target="0xa")):
+    for call in (
+        lambda: srv.pointer("click", x=1, y=1),
+        lambda: srv.pointer("move", x=1, y=1),
+        lambda: srv.hypr("workspace", workspace="3"),
+        lambda: srv.hypr("focus_window", target="0xa"),
+        lambda: srv.hypr("fullscreen", target="0xa"),
+    ):
         with pytest.raises(srv.trust.TrustError, match="OMNIMCP_BACKGROUND"):
             call()
     assert wired_bg["clicks"] == [] and wired_bg["dispatch"] == []
@@ -474,8 +544,16 @@ def test_automatic_mode_still_switches_workspaces_on_request(wired_bg):
 
 @pytest.fixture
 def launch_fake(monkeypatch):
-    s = {"rule": None, "clients": [], "seat": 0, "active": ["0xhuman"],
-         "lands": None, "dispatch": [], "monitors": MONS, "owned": []}
+    s = {
+        "rule": None,
+        "clients": [],
+        "seat": 0,
+        "active": ["0xhuman"],
+        "lands": None,
+        "dispatch": [],
+        "monitors": MONS,
+        "owned": [],
+    }
     monkeypatch.delenv("OMNIMCP_BACKGROUND", raising=False)
     monkeypatch.setattr(srv.safety, "touch", lambda *a: None)
 
@@ -483,15 +561,23 @@ def launch_fake(monkeypatch):
         s["rule"] = rule_command.removesuffix("foot").strip()
         ws = s["lands"] or (rule_command.split()[1] if rule_command.startswith("[") else "1")
         name = ws.removeprefix("name:")
-        return {"address": "0xnew", "class": "foot", "title": "~",
-                "workspace": {"id": int(ws) if ws.isdigit() else -1337, "name": name}}
+        return {
+            "address": "0xnew",
+            "class": "foot",
+            "title": "~",
+            "workspace": {"id": int(ws) if ws.isdigit() else -1337, "name": name},
+        }
 
     monkeypatch.setattr(srv, "_launch_and_wait", launch_and_wait)
-    monkeypatch.setattr(srv.hyprctl, "query",
-                        lambda what: s["monitors"] if what == "monitors" else s["clients"])
+    monkeypatch.setattr(
+        srv.hyprctl, "query", lambda what: s["monitors"] if what == "monitors" else s["clients"]
+    )
     monkeypatch.setattr(srv.hyprctl, "dispatch", lambda *a: s["dispatch"].append(a))
-    monkeypatch.setattr(srv, "_active_address",
-                        lambda: s["active"].pop(0) if len(s["active"]) > 1 else s["active"][0])
+    monkeypatch.setattr(
+        srv,
+        "_active_address",
+        lambda: s["active"].pop(0) if len(s["active"]) > 1 else s["active"][0],
+    )
     monkeypatch.setattr(srv.trust, "note_launched", lambda address, cls: s["owned"].append(address))
     monkeypatch.setattr(srv.trust, "owned", lambda: {"0xmine"})
 
@@ -613,8 +699,9 @@ def test_a_right_or_double_click_is_refused_in_the_background(wired_bg):
 
 def test_ui_of_a_hidden_window_says_its_points_are_not_on_screen(wired_bg, monkeypatch):
     # a pointer click at those points would land on whatever the human sees
-    monkeypatch.setattr(srv.shot, "_hidden_reason",
-                        lambda c, m, cl=None: "its workspace is not on any monitor")
+    monkeypatch.setattr(
+        srv.shot, "_hidden_reason", lambda c, m, cl=None: "its workspace is not on any monitor"
+    )
     monkeypatch.setattr(srv.hyprctl, "batch_query", lambda cmds: [MONS, [CLIENT]])
     out = srv.ui(window="0xa")
     note = out[-1]["note"]
@@ -629,8 +716,9 @@ def test_ui_of_a_shown_window_has_no_note(wired_bg, monkeypatch):
 
 
 def test_then_ui_after_a_background_press_carries_the_note(wired_bg, monkeypatch):
-    monkeypatch.setattr(srv.shot, "_hidden_reason",
-                        lambda c, m, cl=None: "its workspace is not on any monitor")
+    monkeypatch.setattr(
+        srv.shot, "_hidden_reason", lambda c, m, cl=None: "its workspace is not on any monitor"
+    )
     monkeypatch.setattr(srv.hyprctl, "batch_query", lambda cmds: [MONS, [CLIENT]])
     out = srv.click_ui(name="Save", window="0xa", then="ui")
     assert "not on screen" in out[-1].text
@@ -656,9 +744,23 @@ def test_a_press_in_a_window_its_tree_cannot_tell_apart_is_refused(wired_bg):
 
 
 def test_ui_read_hands_out_controls_only_from_a_proven_frame(wired_bg, monkeypatch):
-    monkeypatch.setattr(srv.a11y, "find_elements", lambda bus, s_, p, name="", actionable=True: (
-        [{"role": "push button", "name": "Save", "extent": (10, 10, 20, 20),
-          "clickable": True, "svc": s_, "path": p + "/save"}], False))
+    monkeypatch.setattr(
+        srv.a11y,
+        "find_elements",
+        lambda bus, s_, p, name="", actionable=True: (
+            [
+                {
+                    "role": "push button",
+                    "name": "Save",
+                    "extent": (10, 10, 20, 20),
+                    "clickable": True,
+                    "svc": s_,
+                    "path": p + "/save",
+                }
+            ],
+            False,
+        ),
+    )
     sure = REAL_UI_READ("0xa", handles=True)
     assert sure[0]["_svc"] == "app" and "_unsure" not in sure[0]
     wired_bg["frame_sure"] = False
@@ -801,15 +903,21 @@ def test_visible_named_or_special_ambiguous_launch_warns_under_guarantee(
 ):
     monkeypatch.setenv("OMNIMCP_BACKGROUND", "1")
     launch_fake["lands"] = workspace.removeprefix("name:")
-    launch_fake["monitors"] = [dict(
-        MONS[0], activeWorkspace={"id": 1, "name": "1"},
-        specialWorkspace={"id": -1337, "name": "special:notes"},
-    )]
+    launch_fake["monitors"] = [
+        dict(
+            MONS[0],
+            activeWorkspace={"id": 1, "name": "1"},
+            specialWorkspace={"id": -1337, "name": "special:notes"},
+        )
+    ]
     if workspace.startswith("name:"):
-        launch_fake["monitors"] = [dict(
-            MONS[0], activeWorkspace={"id": 1, "name": "1"},
-            specialWorkspace={"id": 0, "name": ""},
-        )]
+        launch_fake["monitors"] = [
+            dict(
+                MONS[0],
+                activeWorkspace={"id": 1, "name": "1"},
+                specialWorkspace={"id": 0, "name": ""},
+            )
+        ]
         # The candidate is visible on a named workspace without a numeric id.
         launch_fake["lands"] = "research"
         launch_fake["monitors"][0]["activeWorkspace"] = {"name": "research"}
@@ -845,6 +953,7 @@ def test_launch_waits_for_its_own_window_not_one_the_human_opens(monkeypatch):
     monkeypatch.setattr(srv.events, "EventStream", lambda: _Stream([human, ours]))
     monkeypatch.setattr(srv.hyprctl, "dispatch", lambda *a: None)
     monkeypatch.setattr(srv.hyprctl, "query", lambda what: [])
+
     def client_by_address(address):
         if address == "0xkitty":
             return {"address": address, "class": "kitty", "workspace": {"id": 1, "name": "1"}}
@@ -864,9 +973,11 @@ def test_a_single_instance_app_is_recognised_by_its_class(monkeypatch):
     assert accept({"address": "0xff", "workspace": "1", "class": "firefox"})
     assert accept({"address": "0xt", "workspace": "1", "class": "org.gnome.TextEditor"}) is False
     assert srv._launched_window("2", "gnome-text-editor")(
-        {"workspace": "1", "class": "org.gnome.TextEditor"})
+        {"workspace": "1", "class": "org.gnome.TextEditor"}
+    )
     assert srv._launched_window("2", "env GDK_BACKEND=wayland foot")(
-        {"workspace": "1", "class": "foot"})
+        {"workspace": "1", "class": "foot"}
+    )
 
 
 # --- review fixes: the seat, focus, dry runs, sequence --------------------------
@@ -899,9 +1010,22 @@ def test_focusing_a_gtk3_field_is_refused_when_hyprland_focuses_on_activate(wire
 
 def test_a_field_is_told_by_its_flag_not_its_role_name(wired_bg, monkeypatch):
     # GTK4 calls a text field "text box"; pressing its action would activate it
-    monkeypatch.setattr(srv, "_ui_read", lambda w="", name="", actionable=True, handles=False: [
-        {"role": "text box", "name": "Name", "x": 150, "y": 80, "clickable": True,
-         "_svc": "svc", "_path": "/name", "_field": True}])
+    monkeypatch.setattr(
+        srv,
+        "_ui_read",
+        lambda w="", name="", actionable=True, handles=False: [
+            {
+                "role": "text box",
+                "name": "Name",
+                "x": 150,
+                "y": 80,
+                "clickable": True,
+                "_svc": "svc",
+                "_path": "/name",
+                "_field": True,
+            }
+        ],
+    )
     srv.click_ui(name="Name", window="0xa")
     assert wired_bg["grabbed"] == [("svc", "/name")] and wired_bg["actions"] == []
 
@@ -929,8 +1053,18 @@ def test_then_ui_after_a_background_press_that_closed_its_window_shows_no_other(
     def gone(w="", name="", actionable=True, handles=False):
         if w == "0xa" and not handles:
             raise ValueError("window '0xa' not found")
-        return [{"role": "push button", "name": "Save", "x": 1, "y": 1, "clickable": True,
-                 "_svc": "svc", "_path": "/save", "_field": False}]
+        return [
+            {
+                "role": "push button",
+                "name": "Save",
+                "x": 1,
+                "y": 1,
+                "clickable": True,
+                "_svc": "svc",
+                "_path": "/save",
+                "_field": False,
+            }
+        ]
 
     monkeypatch.setattr(srv, "_ui_read", gone)
     out = srv.click_ui(name="Save", window="0xa", then="ui")
@@ -951,8 +1085,9 @@ def test_the_guarantee_keeps_click_and_keys_off_the_humans_windows(wired_bg, mon
         srv.click_ui(name="Save", window="0xa")
     with pytest.raises(srv.trust.TrustError, match="agent's workspaces"):
         srv.keyboard("type", text="x", window="0xa")
-    assert not (wired_bg["actions"] or wired_bg["grabbed"] or wired_bg["inserted"]
-                or wired_bg["shortcuts"])
+    assert not (
+        wired_bg["actions"] or wired_bg["grabbed"] or wired_bg["inserted"] or wired_bg["shortcuts"]
+    )
 
 
 def test_confinement_still_applies_to_background_input(wired_bg, monkeypatch):
@@ -964,8 +1099,9 @@ def test_confinement_still_applies_to_background_input(wired_bg, monkeypatch):
 
 
 def test_an_auth_dialog_and_a_locked_session_refuse_background_input(wired_bg, monkeypatch):
-    monkeypatch.setattr(srv, "_resolve_window",
-                        lambda w="": dict(CLIENT, **{"class": "hyprpolkitagent"}))
+    monkeypatch.setattr(
+        srv, "_resolve_window", lambda w="": dict(CLIENT, **{"class": "hyprpolkitagent"})
+    )
     with pytest.raises(srv.trust.TrustError, match="authentication"):
         srv.click_ui(name="Save", window="0xa")
     with pytest.raises(srv.trust.TrustError, match="authentication"):
@@ -984,8 +1120,12 @@ def test_a_shifted_keysym_name_goes_through_the_layout(wired_bg):
 
 
 def test_sequence_background_refuses_steps_that_take_the_humans_view(wired_bg):
-    out = srv.sequence([{"op": "hypr", "action": "workspace", "workspace": "3"}],
-                       background=True, stop_on_change=False, then="none")
+    out = srv.sequence(
+        [{"op": "hypr", "action": "workspace", "workspace": "3"}],
+        background=True,
+        stop_on_change=False,
+        then="none",
+    )
     assert "ERROR" in str(out) and wired_bg["dispatch"] == []
 
 
@@ -1005,9 +1145,23 @@ def test_an_unproven_window_with_a_password_field_anywhere_refuses_typing(wired_
 
 
 def test_ui_of_an_unproven_window_says_its_controls_may_be_anothers(wired_bg, monkeypatch):
-    monkeypatch.setattr(srv.a11y, "find_elements", lambda bus, s_, p, name="", actionable=True: (
-        [{"role": "push button", "name": "Save", "extent": (10, 10, 20, 20),
-          "clickable": True, "svc": s_, "path": p + "/save"}], False))
+    monkeypatch.setattr(
+        srv.a11y,
+        "find_elements",
+        lambda bus, s_, p, name="", actionable=True: (
+            [
+                {
+                    "role": "push button",
+                    "name": "Save",
+                    "extent": (10, 10, 20, 20),
+                    "clickable": True,
+                    "svc": s_,
+                    "path": p + "/save",
+                }
+            ],
+            False,
+        ),
+    )
     wired_bg["frame_sure"] = False
     assert "another window" in REAL_UI_READ("0xa")[-1]["note"]
     wired_bg["frame_sure"] = True
@@ -1048,9 +1202,15 @@ def test_focusing_is_refused_where_the_window_could_come_forward(wired_bg, toolk
 
 
 def test_the_window_rule_for_focus_on_activate_is_read(monkeypatch):
-    monkeypatch.setattr(srv.hyprctl, "query", lambda what: (
-        {"focus_on_activate": True} if what.startswith("getprop address:0xa")
-        else {"option": "misc:focus_on_activate", "int": 0}))
+    monkeypatch.setattr(
+        srv.hyprctl,
+        "query",
+        lambda what: (
+            {"focus_on_activate": True}
+            if what.startswith("getprop address:0xa")
+            else {"option": "misc:focus_on_activate", "int": 0}
+        ),
+    )
     assert srv.__dict__["_focus_on_activate"]("0xa") == 1
     assert srv.__dict__["_focus_on_activate"]() == 0
 
@@ -1078,8 +1238,18 @@ def test_then_ui_says_gone_only_when_the_window_is(wired_bg, monkeypatch):
     def fails(w="", name="", actionable=True, handles=False):
         if not handles:
             raise ValueError("busctl timed out")
-        return [{"role": "push button", "name": "Save", "x": 1, "y": 1, "clickable": True,
-                 "_svc": "svc", "_path": "/save", "_field": False}]
+        return [
+            {
+                "role": "push button",
+                "name": "Save",
+                "x": 1,
+                "y": 1,
+                "clickable": True,
+                "_svc": "svc",
+                "_path": "/save",
+                "_field": False,
+            }
+        ]
 
     monkeypatch.setattr(srv, "_ui_read", fails)
     out = srv.click_ui(name="Save", window="0xa", then="ui")
@@ -1088,12 +1258,28 @@ def test_then_ui_says_gone_only_when_the_window_is(wired_bg, monkeypatch):
 
 def test_sequence_then_ui_reads_the_window_its_steps_named(wired_bg, monkeypatch):
     seen = []
-    monkeypatch.setattr(srv, "_ui_read", lambda w="", name="", actionable=True, handles=False:
-                        seen.append(w) or [{"role": "push button", "name": "Save", "x": 1,
-                                            "y": 1, "clickable": True, "_svc": "svc",
-                                            "_path": "/save", "_field": False}])
-    srv.sequence([{"op": "click_ui", "name": "Save", "window": "0xa"}],
-                 stop_on_change=False, then="ui")
+    monkeypatch.setattr(
+        srv,
+        "_ui_read",
+        lambda w="", name="", actionable=True, handles=False: (
+            seen.append(w)
+            or [
+                {
+                    "role": "push button",
+                    "name": "Save",
+                    "x": 1,
+                    "y": 1,
+                    "clickable": True,
+                    "_svc": "svc",
+                    "_path": "/save",
+                    "_field": False,
+                }
+            ]
+        ),
+    )
+    srv.sequence(
+        [{"op": "click_ui", "name": "Save", "window": "0xa"}], stop_on_change=False, then="ui"
+    )
     assert seen[-1] == "0xa"
 
 
@@ -1147,28 +1333,46 @@ def test_a_disjoint_confinement_under_the_guarantee_says_why(launch_fake, monkey
 
 def test_the_guarantee_moves_windows_only_to_agent_workspaces_off_screen(wired_bg, monkeypatch):
     monkeypatch.setenv("OMNIMCP_BACKGROUND", "1")
-    monkeypatch.setattr(srv.hyprctl, "query", lambda what: (
-        [dict(MONS[0], activeWorkspace={"id": 98, "name": "98"})] if what == "monitors"
-        else [dict(CLIENT)]))
+    monkeypatch.setattr(
+        srv.hyprctl,
+        "query",
+        lambda what: (
+            [dict(MONS[0], activeWorkspace={"id": 98, "name": "98"})]
+            if what == "monitors"
+            else [dict(CLIENT)]
+        ),
+    )
     with pytest.raises(srv.trust.TrustError, match="on screen"):
         srv.hypr("move_window", target="0xa", workspace="98")
 
 
 def test_sequence_background_refuses_toggle_floating_without_a_target(wired_bg):
-    out = srv.sequence([{"op": "hypr", "action": "toggle_floating"}],
-                       background=True, stop_on_change=False, then="none")
+    out = srv.sequence(
+        [{"op": "hypr", "action": "toggle_floating"}],
+        background=True,
+        stop_on_change=False,
+        then="none",
+    )
     assert "ERROR" in str(out) and wired_bg["dispatch"] == []
 
 
 def test_a_wrapped_command_is_recognised_by_the_program_it_runs():
-    for command in ("uwsm app -- firefox", "setsid -f firefox", "flatpak run org.mozilla.firefox",
-                    "sh -c 'firefox --new-window'", "gtk-launch firefox"):
+    for command in (
+        "uwsm app -- firefox",
+        "setsid -f firefox",
+        "flatpak run org.mozilla.firefox",
+        "sh -c 'firefox --new-window'",
+        "gtk-launch firefox",
+    ):
         assert srv._launched_window("2", command)({"workspace": "1", "class": "firefox"}), command
 
 
 def test_a_landing_is_recognised_by_the_workspace_id_too(monkeypatch):
     # a workspace with a default name reports that name in the event, not 99
-    monkeypatch.setattr(srv, "_client_by_address",
-                        lambda a: {"address": a, "workspace": {"id": 99, "name": "agent"}})
+    monkeypatch.setattr(
+        srv,
+        "_client_by_address",
+        lambda a: {"address": a, "workspace": {"id": 99, "name": "agent"}},
+    )
     accept = srv._launched_window("99", "foot")
     assert accept({"address": "0xf", "workspace": "agent", "class": "zz"})

@@ -634,8 +634,10 @@ def test_workflow_allows_whole_params_reference_and_runtime_defaults(store):
         (dict[str, int] | None, {"one": {"$ref": "source.value"}}),
     ],
     ids=[
-        "constrained-list", "constrained-dict",
-        "constrained-optional-list", "constrained-optional-dict",
+        "constrained-list",
+        "constrained-dict",
+        "constrained-optional-list",
+        "constrained-optional-dict",
     ],
 )
 def test_workflow_preflights_constrained_container_with_dynamic_items(

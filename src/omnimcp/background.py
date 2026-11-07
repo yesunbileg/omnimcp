@@ -185,8 +185,11 @@ def next_workspace(
             continue
         usable.append((sel, len(here)))
     if not usable:
-        why = ("every free agent workspace is on screen" if on_screen
-               else "every agent workspace holds a window the agent did not open")
+        why = (
+            "every free agent workspace is on screen"
+            if on_screen
+            else "every agent workspace holds a window the agent did not open"
+        )
         raise trust.TrustError(
             f"{why}, so an app cannot open out of the human's sight; free one or widen "
             "OMNIMCP_AGENT_WORKSPACES"

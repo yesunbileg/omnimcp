@@ -139,8 +139,15 @@ def test_parse_binds_keeps_scroll_binds():
     # carry a real dispatcher, so dropping them by a
     # bare "mouse" prefix would take a working bind away
     scroll = [
-        {"modmask": 64, "key": "mouse_down", "dispatcher": "workspace", "arg": "e+1",
-         "submap": "", "mouse": False, "keycode": 0}
+        {
+            "modmask": 64,
+            "key": "mouse_down",
+            "dispatcher": "workspace",
+            "arg": "e+1",
+            "submap": "",
+            "mouse": False,
+            "keycode": 0,
+        }
     ]
     assert hyprctl.parse_binds(scroll) == [
         {"combo": "SUPER+mouse_down", "action": "workspace", "arg": "e+1"}

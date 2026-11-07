@@ -56,9 +56,7 @@ def test_then_ui_reads_the_callers_window(monkeypatch):
     # a caller that knows which window it acted on passes it through, so
     # the observation shows THAT window, not whatever holds focus now
     seen = {}
-    monkeypatch.setattr(
-        srv, "_ui_read", lambda window="": seen.update(window=window) or []
-    )
+    monkeypatch.setattr(srv, "_ui_read", lambda window="": seen.update(window=window) or [])
     srv._acted("clicked", "ui", window="0xw")
     assert seen["window"] == "0xw"
 
@@ -173,9 +171,7 @@ def test_pointer_warns_under_a_focus_stealing_layer(monkeypatch, action, extra):
     # pointer may legitimately aim at the layer itself (that is how a
     # launcher is driven), so every input-delivering arm warns instead of
     # refusing, and the warning tells the truth about where the input went
-    _pointer_wired(
-        monkeypatch, lambda x, y: {"namespace": "rofi", "kind": "launcher"}
-    )
+    _pointer_wired(monkeypatch, lambda x, y: {"namespace": "rofi", "kind": "launcher"})
     out = srv.pointer(action, x=600, y=350, **extra)
     assert "rofi" in out and "not to any window beneath" in out
 
@@ -295,22 +291,27 @@ def test_marks_rearms_the_strict_seat_guard(monkeypatch):
     srv.trust._seat.update(cursor=(1, 1), active="0xa")
     monkeypatch.setattr(srv.hyprctl, "cursor_pos", lambda: (9, 9))
     monkeypatch.setattr(
-        srv, "_resolve_window",
+        srv,
+        "_resolve_window",
         lambda w="": {"address": "0xa", "at": [0, 0], "size": [10, 10], "class": "x"},
     )
     monkeypatch.setattr(
         srv.hyprctl, "query", lambda cmd: {"address": "0xb"} if cmd == "activewindow" else {}
     )
     monkeypatch.setattr(
-        srv, "_ui_read",
+        srv,
+        "_ui_read",
         lambda w="", name="", actionable=True, handles=False: [
             {"role": "button", "name": "Ok", "x": 5, "y": 5, "clickable": True}
         ],
     )
     monkeypatch.setattr(
-        srv, "_grab_env",
-        lambda **kw: (b"IMG", {"geometry": [0, 0, 10, 10], "scale": 1.0,
-                               "image": [10, 10], "format": "jpeg"}),
+        srv,
+        "_grab_env",
+        lambda **kw: (
+            b"IMG",
+            {"geometry": [0, 0, 10, 10], "scale": 1.0, "image": [10, 10], "format": "jpeg"},
+        ),
     )
     with pytest.raises(srv.trust.TrustError, match="seat moved"):
         srv.trust.guard_seat()
@@ -340,10 +341,27 @@ def test_pointer_guard_pointer_wiring_refuses_out_of_scope(monkeypatch):
     monkeypatch.setenv("OMNIMCP_CONFINE", "class:kitty")
     monkeypatch.setenv("OMNIMCP_AUTH_GUARD", "0")
     monkeypatch.setattr(srv.safety, "touch", lambda *a: None)
-    mon = [{"name": "m", "x": 0, "y": 0, "width": 1920, "height": 1080,
-            "scale": 1.0, "activeWorkspace": {"id": 1}}]
-    windows = [{"address": "0xff", "class": "firefox", "at": [0, 0], "size": [200, 200],
-                "workspace": {"id": 1}, "mapped": True}]
+    mon = [
+        {
+            "name": "m",
+            "x": 0,
+            "y": 0,
+            "width": 1920,
+            "height": 1080,
+            "scale": 1.0,
+            "activeWorkspace": {"id": 1},
+        }
+    ]
+    windows = [
+        {
+            "address": "0xff",
+            "class": "firefox",
+            "at": [0, 0],
+            "size": [200, 200],
+            "workspace": {"id": 1},
+            "mapped": True,
+        }
+    ]
     monkeypatch.setattr(srv.hyprctl, "batch_query", lambda cmds: [mon, windows])
     fired = []
     monkeypatch.setattr(srv.hinput, "click", lambda *a, **k: fired.append(1))
@@ -355,10 +373,27 @@ def test_pointer_guard_pointer_wiring_refuses_out_of_scope(monkeypatch):
 def test_pointer_guard_pointer_wiring_refuses_auth_dialog(monkeypatch):
     # the default-on auth guard refuses a click over a polkit dialog, wired
     monkeypatch.setattr(srv.safety, "touch", lambda *a: None)
-    mon = [{"name": "m", "x": 0, "y": 0, "width": 1920, "height": 1080,
-            "scale": 1.0, "activeWorkspace": {"id": 1}}]
-    windows = [{"address": "0xpk", "class": "hyprpolkitagent", "at": [0, 0],
-                "size": [400, 200], "workspace": {"id": 1}, "mapped": True}]
+    mon = [
+        {
+            "name": "m",
+            "x": 0,
+            "y": 0,
+            "width": 1920,
+            "height": 1080,
+            "scale": 1.0,
+            "activeWorkspace": {"id": 1},
+        }
+    ]
+    windows = [
+        {
+            "address": "0xpk",
+            "class": "hyprpolkitagent",
+            "at": [0, 0],
+            "size": [400, 200],
+            "workspace": {"id": 1},
+            "mapped": True,
+        }
+    ]
     monkeypatch.setattr(srv.hyprctl, "batch_query", lambda cmds: [mon, windows])
     fired = []
     monkeypatch.setattr(srv.hinput, "click", lambda *a, **k: fired.append(1))

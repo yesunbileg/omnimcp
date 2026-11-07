@@ -49,9 +49,7 @@ def wired(monkeypatch):
     monkeypatch.setattr(srv.hyprctl, "snapshot", lambda: {"snap": True})
     # activeworkspace-shaped for most queries; the layer pre-check asks for
     # "layers", whose real shape is a per-monitor dict (empty = none mapped)
-    monkeypatch.setattr(
-        srv.hyprctl, "query", lambda cmd: {} if cmd == "layers" else {"name": ""}
-    )
+    monkeypatch.setattr(srv.hyprctl, "query", lambda cmd: {} if cmd == "layers" else {"name": ""})
 
     def fake_dispatch(step):
         ran.append(step)
@@ -390,15 +388,22 @@ def test_failed_wait_never_runs_following_action(wired, monkeypatch, monitor, fa
 
     def dispatch(step):
         if step["op"] == "wait_for":
-            return ("timeout: no matching window_open event" if failure == "timeout"
-                    else "event socket unavailable: no socket")
+            return (
+                "timeout: no matching window_open event"
+                if failure == "timeout"
+                else "event socket unavailable: no socket"
+            )
         return dispatched(step)
 
     monkeypatch.setattr(srv, "_dispatch_step", dispatch)
-    out = srv.sequence([
-        {"op": "wait_for", "event": "window_open", "timeout_s": 1},
-        {"op": "pointer", "action": "click", "x": 1, "y": 2},
-    ], stop_on_change=monitor, then="none")
+    out = srv.sequence(
+        [
+            {"op": "wait_for", "event": "window_open", "timeout_s": 1},
+            {"op": "pointer", "action": "click", "x": 1, "y": 2},
+        ],
+        stop_on_change=monitor,
+        then="none",
+    )
     assert wired == []
     assert "stopped after 1/2" in _head(out)
     assert ("timeout" if failure == "timeout" else "event socket unavailable") in _head(out)
@@ -410,13 +415,23 @@ def test_failed_wait_never_runs_following_action(wired, monkeypatch, monitor, fa
 def test_satisfied_wait_allows_following_action(wired, monkeypatch, monitor):
     _stream(monkeypatch, [], waits=[("openwindow", {"address": "0xnew"})])
     dispatched = srv._dispatch_step
-    monkeypatch.setattr(srv, "_dispatch_step", lambda step:
-                        {"event": "openwindow", "address": "0xnew"}
-                        if step["op"] == "wait_for" else dispatched(step))
-    out = srv.sequence([
-        {"op": "wait_for", "event": "window_open"},
-        {"op": "pointer", "action": "click", "x": 1, "y": 2},
-    ], stop_on_change=monitor, then="none")
+    monkeypatch.setattr(
+        srv,
+        "_dispatch_step",
+        lambda step: (
+            {"event": "openwindow", "address": "0xnew"}
+            if step["op"] == "wait_for"
+            else dispatched(step)
+        ),
+    )
+    out = srv.sequence(
+        [
+            {"op": "wait_for", "event": "window_open"},
+            {"op": "pointer", "action": "click", "x": 1, "y": 2},
+        ],
+        stop_on_change=monitor,
+        then="none",
+    )
     assert [step["op"] for step in wired] == ["pointer"]
     assert "all 2/2" in _head(out)
 
@@ -457,10 +472,18 @@ def test_real_dispatch_wiring(monkeypatch):
     monkeypatch.setattr(srv.hinput, "type_text", lambda t: calls["typed"].append(t))
     monkeypatch.setattr(srv.hyprctl, "dispatch", lambda *a: calls["dispatch"].append(a))
     monkeypatch.setattr(srv.hyprctl, "cursor_pos", lambda: (3, 4))
-    _client = {"address": "0xabc", "class": "kitty", "pid": 1, "title": "t",
-               "at": [0, 0], "size": [9, 9], "workspace": {"id": 1}}
+    _client = {
+        "address": "0xabc",
+        "class": "kitty",
+        "pid": 1,
+        "title": "t",
+        "at": [0, 0],
+        "size": [9, 9],
+        "workspace": {"id": 1},
+    }
     monkeypatch.setattr(
-        srv.hyprctl, "query",
+        srv.hyprctl,
+        "query",
         lambda cmd: [_client] if cmd == "clients" else _client if cmd == "activewindow" else {},
     )
     monkeypatch.setattr(srv.time, "sleep", lambda s: None)
@@ -513,10 +536,16 @@ def test_expected_signatures_mapping():
 
 
 def test_sequence_background_applies_to_every_step_that_takes_it(wired):
-    srv.sequence([{"op": "click_ui", "name": "Save", "window": "0xa"},
-                  {"op": "keyboard", "action": "key", "keys": "enter", "background": False},
-                  {"op": "hypr", "action": "close_window", "target": "0xa"}],
-                 background=True, stop_on_change=False, then="none")
+    srv.sequence(
+        [
+            {"op": "click_ui", "name": "Save", "window": "0xa"},
+            {"op": "keyboard", "action": "key", "keys": "enter", "background": False},
+            {"op": "hypr", "action": "close_window", "target": "0xa"},
+        ],
+        background=True,
+        stop_on_change=False,
+        then="none",
+    )
     assert wired[0]["background"] is True
     assert wired[1]["background"] is False  # a step's own choice wins
     assert "background" not in wired[2]  # hypr takes no background

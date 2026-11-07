@@ -234,9 +234,7 @@ def _find_window(window: str, clients: list[dict[str, Any]], active: str | None)
     for c in clients:
         if c.get("address") == target:
             return c
-    raise CaptureRefused(
-        f"window {target!r} not found, call desktop() for current addresses"
-    )
+    raise CaptureRefused(f"window {target!r} not found, call desktop() for current addresses")
 
 
 def _hidden_reason(
@@ -267,11 +265,15 @@ def _hidden_reason(
             if tiled:
                 return "it is scrolled out of view of its monitor"
             return "it sits off every monitor, and focusing does not move it"
-    if c.get("acceptsInput") is False and not c.get("fullscreen") and any(
-        o.get("address") != c.get("address")
-        and o.get("fullscreen")
-        and hyprctl.workspace_ref(o.get("workspace")) == ref
-        for o in clients or []
+    if (
+        c.get("acceptsInput") is False
+        and not c.get("fullscreen")
+        and any(
+            o.get("address") != c.get("address")
+            and o.get("fullscreen")
+            and hyprctl.workspace_ref(o.get("workspace")) == ref
+            for o in clients or []
+        )
     ):
         return "a fullscreen window on its workspace hides it"
     return None
@@ -305,9 +307,7 @@ def _bring_forward(c: dict[str, Any], reason: str = "") -> str:
     return f"bring it on screen with hypr(action='focus_window', target='{c['address']}')"
 
 
-def _not_shown(
-    c: dict[str, Any], reason: str, why: str, final: bool = True
-) -> ScreenshotError:
+def _not_shown(c: dict[str, Any], reason: str, why: str, final: bool = True) -> ScreenshotError:
     """A refusal for a window that is not on screen. `final` when trying
     again cannot help (no -T, no window id): capture_stable stops on it."""
     cls = CaptureRefused if final else ScreenshotError
@@ -481,8 +481,9 @@ def capture(
     # another workspace's windows when its own is hidden (#4); but an
     # XWayland app's own open menu is a separate window only the crop shows
     if window and (hidden is not None or not _xwayland_popup_over(c, clients, monitors)):
-        grabbed = _toplevel_or_reason(c, scale, max_edge, max_bytes, lossless,
-                                      _own_scale(c, monitors, base_scale), hidden)
+        grabbed = _toplevel_or_reason(
+            c, scale, max_edge, max_bytes, lossless, _own_scale(c, monitors, base_scale), hidden
+        )
         if isinstance(grabbed, _NoToplevel):
             if hidden is not None:
                 # _toplevel_or_reason already retried what a moment could fix
@@ -496,9 +497,7 @@ def capture(
         factor = base_scale * applied
         if window:
             meta["source"] = "screen"
-            meta["note"] = (
-                "cropped from the screen: anything over the window shows in its place"
-            )
+            meta["note"] = "cropped from the screen: anything over the window shows in its place"
     iw, ih = image_size(data)
     meta["image"] = [iw, ih]
     meta["format"] = fmt

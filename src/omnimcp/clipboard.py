@@ -26,9 +26,7 @@ def _tool(name: str) -> str:
 
 def read() -> str:
     """The clipboard's text content; empty string when nothing is copied."""
-    proc = subprocess.run(
-        [_tool("wl-paste"), "--no-newline"], capture_output=True, timeout=5
-    )
+    proc = subprocess.run([_tool("wl-paste"), "--no-newline"], capture_output=True, timeout=5)
     if proc.returncode != 0:
         err = proc.stderr.decode(errors="replace").strip()
         if "Nothing is copied" in err:
@@ -38,8 +36,7 @@ def read() -> str:
         return proc.stdout.decode()
     except UnicodeDecodeError:
         raise ClipboardError(
-            f"clipboard holds non-text content ({len(proc.stdout)} bytes); "
-            "only text is supported"
+            f"clipboard holds non-text content ({len(proc.stdout)} bytes); only text is supported"
         ) from None
 
 

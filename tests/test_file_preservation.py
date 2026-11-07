@@ -65,9 +65,7 @@ def test_restore_refuses_changed_new_file(ctx, tmp_path):
     assert path.read_bytes() == b"user edit"
 
 
-def test_restore_quarantines_and_restores_a_replacement_racing_undo(
-    ctx, tmp_path, monkeypatch
-):
+def test_restore_quarantines_and_restores_a_replacement_racing_undo(ctx, tmp_path, monkeypatch):
     path = tmp_path / "created.txt"
     receipt = files.write(ctx, str(path), "original", "missing")
     original_rename = files._rename_noreplace
@@ -89,9 +87,7 @@ def test_restore_quarantines_and_restores_a_replacement_racing_undo(
     assert list(tmp_path.glob(".created.txt.undo-*")) == []
 
 
-def test_move_detects_source_replacement_before_atomic_rename(
-    ctx, tmp_path, monkeypatch
-):
+def test_move_detects_source_replacement_before_atomic_rename(ctx, tmp_path, monkeypatch):
     source = tmp_path / "source.txt"
     destination = tmp_path / "destination.txt"
     source.write_bytes(b"expected source")

@@ -134,10 +134,26 @@ def test_find_window_active_and_missing():
 # A window on a workspace no monitor shows (#4): its `at` is a rect on the
 # monitor, but the monitor is showing something else there, so cropping
 # that rect returns another window's pixels under this window's name.
-ONE_MONITOR = [{"name": "eDP-1", "x": 0, "y": 0, "width": 1920, "height": 1080,
-                "scale": 1.0, "activeWorkspace": {"id": 1}, "specialWorkspace": {"id": 0}}]
-HIDDEN = {"address": "0xb", "class": "foot", "at": [10, 20], "size": [800, 600],
-          "workspace": {"id": 2}, "stableId": "1800002a"}
+ONE_MONITOR = [
+    {
+        "name": "eDP-1",
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 1080,
+        "scale": 1.0,
+        "activeWorkspace": {"id": 1},
+        "specialWorkspace": {"id": 0},
+    }
+]
+HIDDEN = {
+    "address": "0xb",
+    "class": "foot",
+    "at": [10, 20],
+    "size": [800, 600],
+    "workspace": {"id": 2},
+    "stableId": "1800002a",
+}
 SHOWN = {**HIDDEN, "address": "0xa", "workspace": {"id": 1}, "stableId": "18000010"}
 
 
@@ -193,9 +209,11 @@ def test_hidden_window_without_a_stable_id_is_refused(monkeypatch):
     # Hyprland before stableId: no toplevel handle to ask grim for
     calls = _desktop(monkeypatch)
     old = {k: v for k, v in HIDDEN.items() if k != "stableId"}
-    monkeypatch.setattr(screenshot.hyprctl, "query",
-                        lambda w: {"monitors": ONE_MONITOR, "clients": [old],
-                                   "activewindow": SHOWN}[w])
+    monkeypatch.setattr(
+        screenshot.hyprctl,
+        "query",
+        lambda w: {"monitors": ONE_MONITOR, "clients": [old], "activewindow": SHOWN}[w],
+    )
     with pytest.raises(screenshot.ScreenshotError, match="not shown"):
         screenshot.capture(window="0xb")
     assert calls == []
@@ -239,19 +257,47 @@ def test_window_on_a_pulled_up_special_workspace_without_an_id_is_shown():
 # monitor, and grim's -s then scales THAT buffer. -g is different: there -s
 # is an absolute logical-to-pixel factor. This fake follows both rules.
 HIDPI = [
-    {"id": 0, "name": "eDP-1", "x": 0, "y": 0, "width": 2880, "height": 1800,
-     "scale": 2.0, "activeWorkspace": {"id": 1}, "specialWorkspace": {"id": 0}},
-    {"id": 1, "name": "DP-1", "x": 1440, "y": 0, "width": 1920, "height": 1080,
-     "scale": 1.0, "activeWorkspace": {"id": 3}, "specialWorkspace": {"id": 0}},
+    {
+        "id": 0,
+        "name": "eDP-1",
+        "x": 0,
+        "y": 0,
+        "width": 2880,
+        "height": 1800,
+        "scale": 2.0,
+        "activeWorkspace": {"id": 1},
+        "specialWorkspace": {"id": 0},
+    },
+    {
+        "id": 1,
+        "name": "DP-1",
+        "x": 1440,
+        "y": 0,
+        "width": 1920,
+        "height": 1080,
+        "scale": 1.0,
+        "activeWorkspace": {"id": 3},
+        "specialWorkspace": {"id": 0},
+    },
 ]
-WIDE_HIDDEN = {"address": "0xh", "class": "foot", "at": [10, 20], "size": [1000, 600],
-               "workspace": {"id": 2}, "monitor": 0, "stableId": "1800002a"}
+WIDE_HIDDEN = {
+    "address": "0xh",
+    "class": "foot",
+    "at": [10, 20],
+    "size": [1000, 600],
+    "workspace": {"id": 2},
+    "monitor": 0,
+    "stableId": "1800002a",
+}
 WIDE_SHOWN = {**WIDE_HIDDEN, "address": "0xs", "workspace": {"id": 1}, "stableId": "18000010"}
 
 
 def _hidpi_grim(monkeypatch, clients):
-    monkeypatch.setattr(screenshot.hyprctl, "query", lambda what: {
-        "monitors": HIDPI, "clients": clients, "activewindow": clients[0]}[what])
+    monkeypatch.setattr(
+        screenshot.hyprctl,
+        "query",
+        lambda what: {"monitors": HIDPI, "clients": clients, "activewindow": clients[0]}[what],
+    )
     calls = []
 
     def fake_grim(args):
@@ -304,8 +350,14 @@ def test_hidpi_full_resolution(monkeypatch):
 def test_window_overhanging_a_sharper_monitor_uses_its_own_scale(monkeypatch):
     # a floating window on the 1.0 monitor whose rect pokes onto the 2.0 one:
     # its buffer is at 1.0, so the size check must not expect 2.0
-    over = {**WIDE_SHOWN, "address": "0xo", "at": [1300, 100], "size": [400, 300],
-            "workspace": {"id": 3}, "monitor": 1}
+    over = {
+        **WIDE_SHOWN,
+        "address": "0xo",
+        "at": [1300, 100],
+        "size": [400, 300],
+        "workspace": {"id": 3},
+        "monitor": 1,
+    }
     calls = _hidpi_grim(monkeypatch, [over])
     _, meta = screenshot.capture(window="0xo")
     assert all("-g" not in a for a in calls)
@@ -350,8 +402,13 @@ def _scene(monkeypatch, clients, toplevel=None):
     """hyprctl sees ONE_MONITOR and `clients`; grim answers -T with
     `toplevel(args)` (default: the window's own size) and -g with an image
     of the requested rect, recording every call."""
-    monkeypatch.setattr(screenshot.hyprctl, "query", lambda what: {
-        "monitors": ONE_MONITOR, "clients": clients, "activewindow": clients[0]}[what])
+    monkeypatch.setattr(
+        screenshot.hyprctl,
+        "query",
+        lambda what: {"monitors": ONE_MONITOR, "clients": clients, "activewindow": clients[0]}[
+            what
+        ],
+    )
     calls = []
 
     def fake_grim(args):
@@ -403,8 +460,15 @@ def test_a_screen_crop_fallback_says_covering_windows_show(monkeypatch):
 def test_an_xwayland_app_with_its_own_popup_open_is_cropped_from_the_screen(monkeypatch):
     # an X11 menu or tooltip is a separate window, which -T would leave out
     app = {**SHOWN, "xwayland": True}
-    menu = {"address": "0xm", "class": "steam", "at": [50, 60], "size": [200, 300],
-            "workspace": {"id": 1}, "xwayland": True, "mapped": True}
+    menu = {
+        "address": "0xm",
+        "class": "steam",
+        "at": [50, 60],
+        "size": [200, 300],
+        "workspace": {"id": 1},
+        "xwayland": True,
+        "mapped": True,
+    }
     calls = _scene(monkeypatch, [app, menu])
     _, meta = screenshot.capture(window="0xa")
     assert all("-T" not in a for a in calls) and meta["source"] == "screen"
@@ -447,8 +511,13 @@ def test_a_hidden_window_caught_mid_animation_is_retried(monkeypatch):
 
 
 def test_capture_stable_keeps_its_last_good_frame_when_one_capture_fails(monkeypatch):
-    frames = iter([(b"a", {"visible": True}), screenshot.ScreenshotError("mid-animation"),
-                   (b"a", {"visible": True})])
+    frames = iter(
+        [
+            (b"a", {"visible": True}),
+            screenshot.ScreenshotError("mid-animation"),
+            (b"a", {"visible": True}),
+        ]
+    )
 
     def fake_capture(*a, **k):
         f = next(frames)
@@ -482,8 +551,12 @@ def test_the_size_check_tolerates_grim_truncating(monkeypatch):
 def test_capture_stable_reports_a_window_that_closed_mid_loop(monkeypatch):
     # a dialog that closes on its own must not come back as a stale frame
     # of a window that is gone
-    frames = iter([(b"a", {"visible": True}),
-                   screenshot.CaptureRefused("window '0xa' not found, call desktop()")])
+    frames = iter(
+        [
+            (b"a", {"visible": True}),
+            screenshot.CaptureRefused("window '0xa' not found, call desktop()"),
+        ]
+    )
 
     def fake_capture(*a, **k):
         f = next(frames)
@@ -556,25 +629,41 @@ def test_capture_stable_raises_when_the_last_captures_all_failed(monkeypatch):
 
 
 TWO_MONITORS = [
-    {"id": 0, "name": "eDP-1", "x": 0, "y": 0, "width": 1920, "height": 1080, "scale": 1.0,
-     "activeWorkspace": {"id": 1}, "specialWorkspace": {"id": 0}},
-    {"id": 1, "name": "DP-1", "x": 1920, "y": 0, "width": 1920, "height": 1080, "scale": 1.0,
-     "activeWorkspace": {"id": 3}, "specialWorkspace": {"id": 0}},
+    {
+        "id": 0,
+        "name": "eDP-1",
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 1080,
+        "scale": 1.0,
+        "activeWorkspace": {"id": 1},
+        "specialWorkspace": {"id": 0},
+    },
+    {
+        "id": 1,
+        "name": "DP-1",
+        "x": 1920,
+        "y": 0,
+        "width": 1920,
+        "height": 1080,
+        "scale": 1.0,
+        "activeWorkspace": {"id": 3},
+        "specialWorkspace": {"id": 0},
+    },
 ]
 
 
 def test_a_tiled_window_scrolled_onto_a_neighbour_monitor_is_not_shown():
     # Hyprland draws a tiled window only on its own monitor
-    column = {**SHOWN, "at": [1927, 7], "size": [900, 1066], "monitor": 0,
-              "floating": False}
+    column = {**SHOWN, "at": [1927, 7], "size": [900, 1066], "monitor": 0, "floating": False}
     assert "scrolled out of view" in screenshot._hidden_reason(column, TWO_MONITORS, [column])
     floating = {**column, "floating": True}
     assert screenshot._hidden_reason(floating, TWO_MONITORS, [floating]) is None
 
 
 def test_a_floating_window_off_every_monitor_needs_moving_not_focus(monkeypatch):
-    stray = {**SHOWN, "address": "0xo", "at": [4000, 100], "floating": True,
-             "stableId": "180000ad"}
+    stray = {**SHOWN, "address": "0xo", "at": [4000, 100], "floating": True, "stableId": "180000ad"}
     _scene(monkeypatch, [SHOWN, stray], toplevel=_no_toplevel_capture)
     with pytest.raises(screenshot.CaptureRefused) as e:
         screenshot.capture(window="0xo")
@@ -585,8 +674,13 @@ def test_capture_stable_keeps_the_good_frame_through_one_last_failure(monkeypatc
     clock = iter(range(100))
     monkeypatch.setattr(screenshot.time, "monotonic", lambda: next(clock))
     monkeypatch.setattr(screenshot.time, "sleep", lambda s: None)
-    frames = iter([(b"a", {"visible": True}), (b"b", {"visible": True}),
-                   screenshot.ScreenshotError("grim failed: once")])
+    frames = iter(
+        [
+            (b"a", {"visible": True}),
+            (b"b", {"visible": True}),
+            screenshot.ScreenshotError("grim failed: once"),
+        ]
+    )
 
     def fake_capture(*a, **k):
         f = next(frames)

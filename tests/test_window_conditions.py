@@ -49,8 +49,14 @@ def test_hypr_focus_window_refused_out_of_scope(monkeypatch):
     # an out-of-scope window by address is refused before dispatch
     monkeypatch.setenv("OMNIMCP_CONFINE", "class:kitty")
     monkeypatch.setattr(server.safety, "touch", lambda *a: None)
-    firefox = {"address": "0xff", "class": "firefox", "workspace": {"id": 1},
-               "at": [0, 0], "size": [10, 10], "mapped": True}
+    firefox = {
+        "address": "0xff",
+        "class": "firefox",
+        "workspace": {"id": 1},
+        "at": [0, 0],
+        "size": [10, 10],
+        "mapped": True,
+    }
     dispatched = []
     monkeypatch.setattr(server.hyprctl, "query", lambda cmd: [firefox])
     monkeypatch.setattr(server.hyprctl, "dispatch", lambda *a: dispatched.append(a))

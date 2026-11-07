@@ -175,15 +175,49 @@ def test_snapshot_handles_no_active_window(monkeypatch):
 LAYERS_RAW = {
     "eDP-1": {
         "levels": {
-            "0": [{"address": "0x1", "x": 0, "y": 0, "w": 1920, "h": 1080,
-                   "namespace": "awww-daemon", "pid": 100}],
-            "1": [{"address": "0x2", "x": 0, "y": 0, "w": 1920, "h": 38,
-                   "namespace": "waybar", "pid": 101}],
+            "0": [
+                {
+                    "address": "0x1",
+                    "x": 0,
+                    "y": 0,
+                    "w": 1920,
+                    "h": 1080,
+                    "namespace": "awww-daemon",
+                    "pid": 100,
+                }
+            ],
+            "1": [
+                {
+                    "address": "0x2",
+                    "x": 0,
+                    "y": 0,
+                    "w": 1920,
+                    "h": 38,
+                    "namespace": "waybar",
+                    "pid": 101,
+                }
+            ],
             "2": [],
-            "3": [{"address": "0x3", "x": 660, "y": 300, "w": 600, "h": 400,
-                   "namespace": "wofi", "pid": 102},
-                  {"address": "0x4", "x": 1540, "y": 48, "w": 370, "h": 110,
-                   "namespace": "notifications", "pid": 103}],
+            "3": [
+                {
+                    "address": "0x3",
+                    "x": 660,
+                    "y": 300,
+                    "w": 600,
+                    "h": 400,
+                    "namespace": "wofi",
+                    "pid": 102,
+                },
+                {
+                    "address": "0x4",
+                    "x": 1540,
+                    "y": 48,
+                    "w": 370,
+                    "h": 110,
+                    "namespace": "notifications",
+                    "pid": 103,
+                },
+            ],
         }
     }
 }
@@ -196,16 +230,21 @@ def test_parse_layers_flattens_and_classifies():
     assert by_ns["waybar"]["kind"] == "bar"
     assert by_ns["waybar"]["level"] == "bottom"
     assert by_ns["wofi"] == {
-        "namespace": "wofi", "kind": "launcher", "level": "overlay",
-        "monitor": "eDP-1", "geometry": [660, 300, 600, 400],
+        "namespace": "wofi",
+        "kind": "launcher",
+        "level": "overlay",
+        "monitor": "eDP-1",
+        "geometry": [660, 300, 600, 400],
     }
     assert by_ns["notifications"]["kind"] == "notifications"
 
 
 def test_parse_layers_unknown_namespace_degrades():
-    raw = {"DP-1": {"levels": {"2": [
-        {"x": 0, "y": 0, "w": 10, "h": 10, "namespace": "some-custom-widget"}
-    ]}}}
+    raw = {
+        "DP-1": {
+            "levels": {"2": [{"x": 0, "y": 0, "w": 10, "h": 10, "namespace": "some-custom-widget"}]}
+        }
+    }
     out = hyprctl.parse_layers(raw)
     assert out[0]["kind"] == "unknown"  # heuristic degrades, never mislabels
     assert hyprctl.parse_layers({}) == []
@@ -277,26 +316,25 @@ def test_dispatch_on_hyprlang_sends_the_legacy_strings(monkeypatch):
 
 # every dispatcher omnimcp emits, and the exact Lua it must become
 LUA_FORMS = [
-    (("exec", "[workspace 2 silent] foot"),
-     'hl.dsp.exec_cmd("[workspace 2 silent] foot")'),
-    (("movecursor", "694", "438"),
-     "hl.dsp.cursor.move({ x = 694, y = 438 })"),
-    (("focuswindow", "address:0xabc"),
-     'hl.dsp.focus({ window = "address:0xabc" })'),
-    (("workspace", "special:magic"),
-     'hl.dsp.focus({ workspace = "special:magic" })'),
-    (("closewindow", "address:0xabc"),
-     'hl.dsp.window.close({ window = "address:0xabc" })'),
-    (("movetoworkspacesilent", "3,address:0xabc"),
-     'hl.dsp.window.move({ workspace = "3", window = "address:0xabc", follow = false })'),
-    (("fullscreen", "0"),
-     'hl.dsp.window.fullscreen({ mode = "fullscreen", action = "toggle" })'),
-    (("togglefloating", "address:0xabc"),
-     'hl.dsp.window.float({ action = "toggle", window = "address:0xabc" })'),
-    (("togglefloating",),
-     'hl.dsp.window.float({ action = "toggle" })'),
-    (("tagwindow", "+omnimcp-owned", "address:0xabc"),
-     'hl.dsp.window.tag({ tag = "+omnimcp-owned", window = "address:0xabc" })'),
+    (("exec", "[workspace 2 silent] foot"), 'hl.dsp.exec_cmd("[workspace 2 silent] foot")'),
+    (("movecursor", "694", "438"), "hl.dsp.cursor.move({ x = 694, y = 438 })"),
+    (("focuswindow", "address:0xabc"), 'hl.dsp.focus({ window = "address:0xabc" })'),
+    (("workspace", "special:magic"), 'hl.dsp.focus({ workspace = "special:magic" })'),
+    (("closewindow", "address:0xabc"), 'hl.dsp.window.close({ window = "address:0xabc" })'),
+    (
+        ("movetoworkspacesilent", "3,address:0xabc"),
+        'hl.dsp.window.move({ workspace = "3", window = "address:0xabc", follow = false })',
+    ),
+    (("fullscreen", "0"), 'hl.dsp.window.fullscreen({ mode = "fullscreen", action = "toggle" })'),
+    (
+        ("togglefloating", "address:0xabc"),
+        'hl.dsp.window.float({ action = "toggle", window = "address:0xabc" })',
+    ),
+    (("togglefloating",), 'hl.dsp.window.float({ action = "toggle" })'),
+    (
+        ("tagwindow", "+omnimcp-owned", "address:0xabc"),
+        'hl.dsp.window.tag({ tag = "+omnimcp-owned", window = "address:0xabc" })',
+    ),
 ]
 
 
@@ -324,7 +362,7 @@ def test_the_silent_move_says_follow_false_and_means_it(monkeypatch):
 def test_move_to_workspace_without_a_window_targets_the_focused_one(monkeypatch):
     seen = _argv(monkeypatch, hyprctl.LUA)
     hyprctl.dispatch("movetoworkspacesilent", "3")
-    assert seen == [('dispatch', 'hl.dsp.window.move({ workspace = "3", follow = false })')]
+    assert seen == [("dispatch", 'hl.dsp.window.move({ workspace = "3", follow = false })')]
 
 
 def test_lua_dispatch_refuses_a_dispatcher_it_cannot_translate():
@@ -348,7 +386,7 @@ def test_lua_str_is_a_byte_exact_literal():
     # non-ASCII goes out as its UTF-8 bytes, so the payload stays plain
     # ASCII and cannot disturb hyprctl's argv join or the socket framing
     assert hyprctl.lua_str("é") == '"\\195\\169"'
-    assert all(0x20 <= ord(c) < 0x7F for c in hyprctl.lua_str("é\n\t\"\\"))
+    assert all(0x20 <= ord(c) < 0x7F for c in hyprctl.lua_str('é\n\t"\\'))
 
 
 def test_lua_str_closes_the_bracket_escape():
@@ -369,9 +407,7 @@ def test_an_agent_string_cannot_become_lua_code(monkeypatch):
     # arrive as a literal, not as an expression
     seen = _argv(monkeypatch, hyprctl.LUA)
     hyprctl.dispatch("exec", 'foo") or os.execute("touch /tmp/pwn')
-    assert seen == [
-        ("dispatch", 'hl.dsp.exec_cmd("foo\\034) or os.execute(\\034touch /tmp/pwn")')
-    ]
+    assert seen == [("dispatch", 'hl.dsp.exec_cmd("foo\\034) or os.execute(\\034touch /tmp/pwn")')]
 
 
 def test_dispatch_reprobes_and_retries_when_the_manager_changed(monkeypatch):
@@ -513,13 +549,31 @@ def test_visible_workspaces_without_ids():
 def test_snapshot_without_workspace_ids():
     # sorting the workspace list by w["id"] raised KeyError here, taking
     # the whole desktop snapshot down for anyone with a scratchpad
-    monitors = [{"name": "eDP-1", "x": 0, "y": 0, "width": 1920, "height": 1080,
-                 "scale": 1.0, "activeWorkspace": NAMED_057,
-                 "specialWorkspace": SPECIAL_057}]
-    workspaces = [{**w, "monitor": "eDP-1", "windows": 1}
-                  for w in (SPECIAL_057, NAMED_057, NUMBERED_057)]
-    clients = [{"address": "0xa", "class": "foot", "title": "t", "at": [0, 0],
-                "size": [10, 10], "workspace": SPECIAL_057}]
+    monitors = [
+        {
+            "name": "eDP-1",
+            "x": 0,
+            "y": 0,
+            "width": 1920,
+            "height": 1080,
+            "scale": 1.0,
+            "activeWorkspace": NAMED_057,
+            "specialWorkspace": SPECIAL_057,
+        }
+    ]
+    workspaces = [
+        {**w, "monitor": "eDP-1", "windows": 1} for w in (SPECIAL_057, NAMED_057, NUMBERED_057)
+    ]
+    clients = [
+        {
+            "address": "0xa",
+            "class": "foot",
+            "title": "t",
+            "at": [0, 0],
+            "size": [10, 10],
+            "workspace": SPECIAL_057,
+        }
+    ]
     s = hyprctl.snapshot_from(monitors, workspaces, clients, None, None)
     assert [w["id"] for w in s["workspaces"]] == [1, "notes", "special:vault"]
     shown = {w["id"]: w["visible"] for w in s["workspaces"]}
@@ -544,20 +598,31 @@ def test_send_shortcut_legacy(monkeypatch):
 
 def test_send_shortcut_lua():
     expr = hyprctl.lua_dispatch("sendshortcut", ("SHIFT, ampersand, address:0xabc",))
-    assert expr == ('hl.dsp.send_shortcut({ mods = "SHIFT", key = "ampersand", '
-                    'window = "address:0xabc" })')
+    assert expr == (
+        'hl.dsp.send_shortcut({ mods = "SHIFT", key = "ampersand", window = "address:0xabc" })'
+    )
 
 
 def test_active_layout(monkeypatch):
-    monkeypatch.setattr(hyprctl, "query", lambda what: {"keyboards": [
-        {"main": False, "layout": "us"},
-        {"main": True, "layout": "fr", "variant": "", "options": ""}]})
+    monkeypatch.setattr(
+        hyprctl,
+        "query",
+        lambda what: {
+            "keyboards": [
+                {"main": False, "layout": "us"},
+                {"main": True, "layout": "fr", "variant": "", "options": ""},
+            ]
+        },
+    )
     assert hyprctl.active_layout() == ("fr", "", "")
 
 
 def test_layout_group_reads_the_main_keyboards_index_and_count(monkeypatch):
-    monkeypatch.setattr(hyprctl, "query", lambda what: {"keyboards": [
-        {"main": True, "layout": "us,fr", "active_layout_index": 1}]})
+    monkeypatch.setattr(
+        hyprctl,
+        "query",
+        lambda what: {"keyboards": [{"main": True, "layout": "us,fr", "active_layout_index": 1}]},
+    )
     assert hyprctl.layout_group() == (1, 2)
 
 

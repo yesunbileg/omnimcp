@@ -4,8 +4,9 @@ import pytest
 
 from omnimcp import keymap
 
-pytestmark = pytest.mark.skipif(ctypes.util.find_library("xkbcommon") is None,
-                                reason="libxkbcommon not installed")
+pytestmark = pytest.mark.skipif(
+    ctypes.util.find_library("xkbcommon") is None, reason="libxkbcommon not installed"
+)
 
 
 def test_us_layout():

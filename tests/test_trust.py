@@ -12,9 +12,7 @@ from omnimcp.trust import session_locked as real_session_locked
 
 @pytest.fixture(autouse=True)
 def clean_env(monkeypatch):
-    for var in (
-        "OMNIMCP_CONFINE", "OMNIMCP_AUTH_GUARD", "OMNIMCP_STRICT", "OMNIMCP_MARK"
-    ):
+    for var in ("OMNIMCP_CONFINE", "OMNIMCP_AUTH_GUARD", "OMNIMCP_STRICT", "OMNIMCP_MARK"):
         monkeypatch.delenv(var, raising=False)
     trust._owned.clear()
     trust._seat["cursor"] = None
@@ -22,8 +20,16 @@ def clean_env(monkeypatch):
 
 
 def client(addr="0xa", cls="kitty", ws=1):
-    return {"address": addr, "class": cls, "at": [0, 0], "size": [100, 100],
-            "workspace": {"id": ws}, "mapped": True, "pid": 1, "title": ""}
+    return {
+        "address": addr,
+        "class": cls,
+        "at": [0, 0],
+        "size": [100, 100],
+        "workspace": {"id": ws},
+        "mapped": True,
+        "pid": 1,
+        "title": "",
+    }
 
 
 # --- confinement ------------------------------------------------------------
@@ -67,8 +73,17 @@ def _batch(monkeypatch, monitors, windows):
     monkeypatch.setattr(trust.hyprctl, "batch_query", lambda cmds: [monitors, windows])
 
 
-MON = [{"name": "m", "x": 0, "y": 0, "width": 1920, "height": 1080,
-        "scale": 1.0, "activeWorkspace": {"id": 1}}]
+MON = [
+    {
+        "name": "m",
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 1080,
+        "scale": 1.0,
+        "activeWorkspace": {"id": 1},
+    }
+]
 
 
 def test_guard_pointer_refuses_over_out_of_scope_window(monkeypatch):
@@ -76,8 +91,14 @@ def test_guard_pointer_refuses_over_out_of_scope_window(monkeypatch):
     monkeypatch.setenv("OMNIMCP_AUTH_GUARD", "0")
     windows = [
         client(addr="0xk", cls="kitty"),
-        {"address": "0xbank", "class": "firefox", "at": [50, 50], "size": [200, 200],
-         "workspace": {"id": 1}, "mapped": True},
+        {
+            "address": "0xbank",
+            "class": "firefox",
+            "at": [50, 50],
+            "size": [200, 200],
+            "workspace": {"id": 1},
+            "mapped": True,
+        },
     ]
     _batch(monkeypatch, MON, windows)
     trust.guard_pointer(10, 10)  # only over the in-scope kitty
@@ -99,11 +120,27 @@ def test_guard_pointer_includes_special_workspace(monkeypatch):
     # coverage check must add specialWorkspace to the visible set
     monkeypatch.setenv("OMNIMCP_CONFINE", "class:kitty")
     monkeypatch.setenv("OMNIMCP_AUTH_GUARD", "0")
-    monitors = [{"name": "m", "x": 0, "y": 0, "width": 1920, "height": 1080, "scale": 1.0,
-                 "activeWorkspace": {"id": 1}, "specialWorkspace": {"id": -99}}]
+    monitors = [
+        {
+            "name": "m",
+            "x": 0,
+            "y": 0,
+            "width": 1920,
+            "height": 1080,
+            "scale": 1.0,
+            "activeWorkspace": {"id": 1},
+            "specialWorkspace": {"id": -99},
+        }
+    ]
     windows = [
-        {"address": "0xvault", "class": "keepassxc", "at": [40, 40], "size": [300, 300],
-         "workspace": {"id": -99}, "mapped": True},
+        {
+            "address": "0xvault",
+            "class": "keepassxc",
+            "at": [40, 40],
+            "size": [300, 300],
+            "workspace": {"id": -99},
+            "mapped": True,
+        },
     ]
     _batch(monkeypatch, monitors, windows)
     with pytest.raises(trust.TrustError, match="outside the confinement"):
@@ -115,12 +152,27 @@ def test_guard_pointer_includes_special_workspace_without_ids(monkeypatch):
     # scratchpad is known only by name and must still count as on screen
     monkeypatch.setenv("OMNIMCP_CONFINE", "class:kitty")
     monkeypatch.setenv("OMNIMCP_AUTH_GUARD", "0")
-    monitors = [{"name": "m", "x": 0, "y": 0, "width": 1920, "height": 1080, "scale": 1.0,
-                 "activeWorkspace": {"id": 1, "type": "normal", "name": "1"},
-                 "specialWorkspace": {"type": "special", "name": "special:vault"}}]
+    monitors = [
+        {
+            "name": "m",
+            "x": 0,
+            "y": 0,
+            "width": 1920,
+            "height": 1080,
+            "scale": 1.0,
+            "activeWorkspace": {"id": 1, "type": "normal", "name": "1"},
+            "specialWorkspace": {"type": "special", "name": "special:vault"},
+        }
+    ]
     windows = [
-        {"address": "0xvault", "class": "keepassxc", "at": [40, 40], "size": [300, 300],
-         "workspace": {"type": "special", "name": "special:vault"}, "mapped": True},
+        {
+            "address": "0xvault",
+            "class": "keepassxc",
+            "at": [40, 40],
+            "size": [300, 300],
+            "workspace": {"type": "special", "name": "special:vault"},
+            "mapped": True,
+        },
     ]
     _batch(monkeypatch, monitors, windows)
     with pytest.raises(trust.TrustError, match="outside the confinement"):
@@ -132,8 +184,16 @@ def test_guard_pointer_coordinate_less_uses_cursor(monkeypatch):
     # resolve and check THAT point, not skip
     monkeypatch.setenv("OMNIMCP_CONFINE", "class:kitty")
     monkeypatch.setenv("OMNIMCP_AUTH_GUARD", "0")
-    windows = [{"address": "0xother", "class": "firefox", "at": [0, 0], "size": [100, 100],
-                "workspace": {"id": 1}, "mapped": True}]
+    windows = [
+        {
+            "address": "0xother",
+            "class": "firefox",
+            "at": [0, 0],
+            "size": [100, 100],
+            "workspace": {"id": 1},
+            "mapped": True,
+        }
+    ]
     _batch(monkeypatch, MON, windows)
     monkeypatch.setattr(trust.hyprctl, "cursor_pos", lambda: (50, 50))
     with pytest.raises(trust.TrustError, match="outside the confinement"):
@@ -158,8 +218,16 @@ def test_guard_pointer_coordinate_less_fails_closed_on_cursor_error(monkeypatch)
 def test_guard_pointer_auth_over_polkit(monkeypatch):
     # default auth guard: a click over a polkit dialog is refused even with
     # no confinement configured
-    windows = [{"address": "0xpk", "class": "hyprpolkitagent", "at": [0, 0],
-                "size": [400, 200], "workspace": {"id": 1}, "mapped": True}]
+    windows = [
+        {
+            "address": "0xpk",
+            "class": "hyprpolkitagent",
+            "at": [0, 0],
+            "size": [400, 200],
+            "workspace": {"id": 1},
+            "mapped": True,
+        }
+    ]
     _batch(monkeypatch, MON, windows)
     with pytest.raises(trust.TrustError, match="authentication dialog"):
         trust.guard_pointer(10, 10)
@@ -388,16 +456,13 @@ def test_covering_layer_skips_partial_geometry(monkeypatch):
 
 
 LOCK_RAW = {
-    "DP-1": {
-        "levels": {"3": [{"namespace": "hyprlock", "x": 0, "y": 0, "w": 1920, "h": 1080}]}
-    }
+    "DP-1": {"levels": {"3": [{"namespace": "hyprlock", "x": 0, "y": 0, "w": 1920, "h": 1080}]}}
 }
 
 
 def test_guard_keyboard_layer_quiet_without_grabbers(monkeypatch):
     # bars and notification popups do not hold the keyboard
-    raw = {"DP-1": {"levels": {"1": [{"namespace": "waybar", "x": 0, "y": 0,
-                                      "w": 1920, "h": 30}]}}}
+    raw = {"DP-1": {"levels": {"1": [{"namespace": "waybar", "x": 0, "y": 0, "w": 1920, "h": 30}]}}}
     monkeypatch.setattr(trust.hyprctl, "query", lambda cmd: raw)
     assert trust.guard_keyboard_layer(True, False) == ""
 
@@ -497,16 +562,12 @@ def _fake_proc(tmp_path, procs):
 def test_session_locked_reads_proc(monkeypatch, tmp_path):
     # hyprlock is an ext-session-lock-v1 client, so it appears in NEITHER
     # `hyprctl clients` nor `hyprctl layers`; the process is the signal
-    monkeypatch.setattr(
-        trust, "_PROC", _fake_proc(tmp_path, {"101": "waybar", "102": "hyprlock"})
-    )
+    monkeypatch.setattr(trust, "_PROC", _fake_proc(tmp_path, {"101": "waybar", "102": "hyprlock"}))
     assert real_session_locked() == "hyprlock"
 
 
 def test_session_locked_none_when_no_locker(monkeypatch, tmp_path):
-    monkeypatch.setattr(
-        trust, "_PROC", _fake_proc(tmp_path, {"101": "waybar", "102": "kitty"})
-    )
+    monkeypatch.setattr(trust, "_PROC", _fake_proc(tmp_path, {"101": "waybar", "102": "kitty"}))
     assert real_session_locked() is None
 
 
@@ -526,9 +587,7 @@ def test_session_locked_fails_open_on_unreadable_proc(monkeypatch):
     assert real_session_locked() is None  # best-effort, never blocks
 
 
-def test_session_locked_trusts_the_compositor_without_a_locker_process(
-    monkeypatch, tmp_path
-):
+def test_session_locked_trusts_the_compositor_without_a_locker_process(monkeypatch, tmp_path):
     # Omarchy 4 locks from inside its Quickshell shell, so no locker
     # process exists to find; and a crashed locker leaves the session
     # locked (ext-session-lock-v1), so a process scan would read "unlocked"
@@ -555,8 +614,7 @@ def test_session_locked_believes_an_unlocked_compositor(monkeypatch, tmp_path):
     [({"locked": True}, True), ({"locked": False}, False), ({}, None), ("ok", None)],
 )
 def test_compositor_locked_reads_hyprctl_locked(monkeypatch, reply, expected):
-    monkeypatch.setattr(trust.hyprctl, "query",
-                        lambda what: reply if what == "locked" else {})
+    monkeypatch.setattr(trust.hyprctl, "query", lambda what: reply if what == "locked" else {})
     assert real_compositor_locked() is expected
 
 
@@ -683,9 +741,7 @@ def test_every_locker_comm_can_actually_match_the_kernel_cap():
     assert "swaylock-effects" not in trust._LOCKER_COMMS  # the 16-char form
 
 
-def test_session_locked_skips_non_pid_entries_even_named_like_a_locker(
-    monkeypatch, tmp_path
-):
+def test_session_locked_skips_non_pid_entries_even_named_like_a_locker(monkeypatch, tmp_path):
     # a non-numeric /proc entry whose comm reads as a locker (a stray file,
     # or /proc/self) must be skipped: deleting the isdigit guard would turn
     # such an entry into a false lock that refuses all input
@@ -714,8 +770,11 @@ def test_osk_does_not_grab_the_keyboard():
 
 
 def test_covering_layer_refuses_over_an_osk(monkeypatch):
-    raw = {"DP-1": {"levels": {"3": [
-        {"namespace": "wvkbd-mobintl", "x": 0, "y": 900, "w": 1920, "h": 180}]}}}
+    raw = {
+        "DP-1": {
+            "levels": {"3": [{"namespace": "wvkbd-mobintl", "x": 0, "y": 900, "w": 1920, "h": 180}]}
+        }
+    }
     monkeypatch.setattr(trust.hyprctl, "query", lambda cmd: raw)
     hit = trust.covering_layer(500, 1000)
     assert hit is not None and hit["kind"] == "osk"
@@ -723,8 +782,11 @@ def test_covering_layer_refuses_over_an_osk(monkeypatch):
 
 def test_keyboard_layer_ignores_a_mapped_osk(monkeypatch):
     # a windowless type with only an OSK up is fine and earns no note
-    raw = {"DP-1": {"levels": {"3": [
-        {"namespace": "wvkbd-mobintl", "x": 0, "y": 900, "w": 1920, "h": 180}]}}}
+    raw = {
+        "DP-1": {
+            "levels": {"3": [{"namespace": "wvkbd-mobintl", "x": 0, "y": 900, "w": 1920, "h": 180}]}
+        }
+    }
     monkeypatch.setattr(trust.hyprctl, "query", lambda cmd: raw)
     assert trust.guard_keyboard_layer(False, False) == ""
 
@@ -753,8 +815,9 @@ def test_level_rank_places_unknown_below_every_named_level(monkeypatch):
 def test_covering_layer_edges_are_half_open(monkeypatch):
     # a surface at x..x+w covers [x, x+w); a click exactly on the right or
     # bottom edge belongs to the window beneath, not the layer
-    raw = {"DP-1": {"levels": {"3": [
-        {"namespace": "rofi", "x": 100, "y": 100, "w": 200, "h": 100}]}}}
+    raw = {
+        "DP-1": {"levels": {"3": [{"namespace": "rofi", "x": 100, "y": 100, "w": 200, "h": 100}]}}
+    }
     monkeypatch.setattr(trust.hyprctl, "query", lambda cmd: raw)
     assert trust.covering_layer(100, 100) is not None  # top-left corner: inside
     assert trust.covering_layer(299, 199) is not None  # last inside pixel
@@ -776,8 +839,14 @@ def test_windows_under_ignores_unmapped_clients(monkeypatch):
     monkeypatch.setenv("OMNIMCP_CONFINE", "class:kitty")
     monkeypatch.setenv("OMNIMCP_AUTH_GUARD", "0")
     windows = [
-        {"address": "0xhidden", "class": "firefox", "at": [0, 0], "size": [100, 100],
-         "workspace": {"id": 1}, "mapped": False},
+        {
+            "address": "0xhidden",
+            "class": "firefox",
+            "at": [0, 0],
+            "size": [100, 100],
+            "workspace": {"id": 1},
+            "mapped": False,
+        },
     ]
     _batch(monkeypatch, MON, windows)
     trust.guard_pointer(50, 50)  # the only covering window is unmapped: allowed
@@ -839,9 +908,7 @@ def test_init_marking_uses_the_lua_rule_on_a_lua_config(monkeypatch):
     ]
 
 
-def test_init_marking_warns_instead_of_dying_when_the_rule_will_not_install(
-    monkeypatch, capsys
-):
+def test_init_marking_warns_instead_of_dying_when_the_rule_will_not_install(monkeypatch, capsys):
     # marking makes the agent legible; it is not a containment boundary, so
     # losing it must not take the desktop's guards down with it. But a
     # visibility layer that quietly is not running is worse than none.
@@ -904,12 +971,17 @@ def test_keyboard_refuses_to_type_into_a_polkit_layer(monkeypatch):
         trust.guard_keyboard_layer(True, True)
 
 
-@pytest.mark.parametrize("order", [("omarchy-polkit", "omarchy-menu"),
-                                   ("omarchy-menu", "omarchy-polkit")])
+@pytest.mark.parametrize(
+    "order", [("omarchy-polkit", "omarchy-menu"), ("omarchy-menu", "omarchy-polkit")]
+)
 def test_polkit_layer_outranks_a_launcher_for_the_keyboard(monkeypatch, order):
-    raw = {"DP-1": {"levels": {"3": [
-        {"namespace": ns, "x": 0, "y": 0, "w": 1920, "h": 1080} for ns in order
-    ]}}}
+    raw = {
+        "DP-1": {
+            "levels": {
+                "3": [{"namespace": ns, "x": 0, "y": 0, "w": 1920, "h": 1080} for ns in order]
+            }
+        }
+    }
     monkeypatch.setattr(trust.hyprctl, "query", lambda cmd: raw)
     with pytest.raises(trust.TrustError, match="authentication"):
         trust.guard_keyboard_layer(False, False)
@@ -934,10 +1006,16 @@ def test_click_ui_under_a_polkit_layer_says_a_human_must_answer(monkeypatch):
 def test_pointer_refuses_a_polkit_prompt_under_an_on_screen_keyboard(monkeypatch):
     # an OSK mapped after the prompt is the topmost surface, but its keys
     # feed the prompt's password field
-    raw = {"DP-1": {"levels": {"3": [
-        {"namespace": "omarchy-polkit", "x": 0, "y": 0, "w": 1920, "h": 1080},
-        {"namespace": "wvkbd-mobintl", "x": 0, "y": 700, "w": 1920, "h": 380},
-    ]}}}
+    raw = {
+        "DP-1": {
+            "levels": {
+                "3": [
+                    {"namespace": "omarchy-polkit", "x": 0, "y": 0, "w": 1920, "h": 1080},
+                    {"namespace": "wvkbd-mobintl", "x": 0, "y": 700, "w": 1920, "h": 380},
+                ]
+            }
+        }
+    }
     monkeypatch.delenv("OMNIMCP_CONFINE", raising=False)
     monkeypatch.setattr(trust.hyprctl, "query", lambda cmd: raw)
     _batch(monkeypatch, MON, [])
@@ -947,8 +1025,9 @@ def test_pointer_refuses_a_polkit_prompt_under_an_on_screen_keyboard(monkeypatch
 
 @pytest.mark.parametrize("namespace", ["rofi", "omarchy-menu", "wvkbd-mobintl"])
 def test_pointer_still_clicks_into_launchers_and_on_screen_keyboards(monkeypatch, namespace):
-    raw = {"DP-1": {"levels": {"3": [
-        {"namespace": namespace, "x": 0, "y": 0, "w": 1920, "h": 1080}]}}}
+    raw = {
+        "DP-1": {"levels": {"3": [{"namespace": namespace, "x": 0, "y": 0, "w": 1920, "h": 1080}]}}
+    }
     monkeypatch.delenv("OMNIMCP_CONFINE", raising=False)
     monkeypatch.setattr(trust.hyprctl, "query", lambda cmd: raw)
     _batch(monkeypatch, MON, [])
@@ -979,8 +1058,13 @@ def test_auth_guard_off_lets_typing_reach_a_polkit_layer_with_a_note(monkeypatch
     assert "omarchy-polkit" in trust.guard_keyboard_layer(False, False)
 
 
-LOCK_PREVIEW_RAW = {"DP-1": {"levels": {"3": [
-    {"namespace": "omarchy-lock-preview", "x": 0, "y": 0, "w": 1920, "h": 1080}]}}}
+LOCK_PREVIEW_RAW = {
+    "DP-1": {
+        "levels": {
+            "3": [{"namespace": "omarchy-lock-preview", "x": 0, "y": 0, "w": 1920, "h": 1080}]
+        }
+    }
+}
 
 
 def test_omarchy_lock_preview_is_not_a_credential_prompt(monkeypatch):
@@ -1010,8 +1094,14 @@ def test_pointer_refuses_a_point_off_every_monitor_under_a_guard(monkeypatch):
     # Hyprland moves the cursor to the nearest monitor edge, where a window
     # the guard never checked would take the click
     monkeypatch.setenv("OMNIMCP_CONFINE", "class:kitty")
-    full = {"address": "0xf", "class": "firefox", "at": [0, 0], "size": [1920, 1080],
-            "workspace": {"id": 1}, "mapped": True}
+    full = {
+        "address": "0xf",
+        "class": "firefox",
+        "at": [0, 0],
+        "size": [1920, 1080],
+        "workspace": {"id": 1},
+        "mapped": True,
+    }
     _batch(monkeypatch, MON, [full])
     monkeypatch.setattr(trust.hyprctl, "query", lambda cmd: {})
     with pytest.raises(trust.TrustError, match="off every monitor"):
@@ -1062,8 +1152,16 @@ def test_under_the_guarantee_an_explicit_confinement_narrows_never_widens(monkey
 
 
 def _w(addr, at, size, ws=1, **kw):
-    return {"address": addr, "class": addr[2:], "at": at, "size": size,
-            "workspace": {"id": ws}, "monitor": 0, "mapped": True, **kw}
+    return {
+        "address": addr,
+        "class": addr[2:],
+        "at": at,
+        "size": size,
+        "workspace": {"id": ws},
+        "monitor": 0,
+        "mapped": True,
+        **kw,
+    }
 
 
 def test_a_point_on_the_active_window_lands_on_it(monkeypatch):
@@ -1077,8 +1175,11 @@ def test_a_point_on_another_window_lands_on_that_window(monkeypatch):
 
 
 def test_a_floating_window_over_the_active_one_takes_the_point(monkeypatch):
-    _batch(monkeypatch, MON, [_w("0xme", [0, 0], [1920, 1080]),
-                              _w("0xf", [50, 50], [200, 200], floating=True)])
+    _batch(
+        monkeypatch,
+        MON,
+        [_w("0xme", [0, 0], [1920, 1080]), _w("0xf", [50, 50], [200, 200], floating=True)],
+    )
     assert trust.other_window_at(100, 100, "0xme")["address"] == "0xf"
     assert trust.other_window_at(500, 500, "0xme") is None
 
@@ -1111,9 +1212,18 @@ def test_an_unreadable_desktop_does_not_block_the_pointer(monkeypatch):
 def test_a_layer_over_the_point_takes_the_pointer(monkeypatch):
     # a launcher drawn over the window the human is not in
     _batch(monkeypatch, MON, [_w("0xme", [0, 0], [960, 1080]), _w("0xb", [960, 0], [960, 1080])])
-    monkeypatch.setattr(trust, "_read_layers", lambda: [
-        {"namespace": "wofi", "kind": "launcher", "level": "overlay",
-         "geometry": [900, 0, 400, 400]}])
+    monkeypatch.setattr(
+        trust,
+        "_read_layers",
+        lambda: [
+            {
+                "namespace": "wofi",
+                "kind": "launcher",
+                "level": "overlay",
+                "geometry": [900, 0, 400, 400],
+            }
+        ],
+    )
     assert trust.other_window_at(1000, 100, "0xme") is None
     assert trust.other_window_at(1000, 600, "0xme")["address"] == "0xb"
 
@@ -1122,7 +1232,16 @@ def test_a_layer_that_may_take_no_input_does_not_let_the_pointer_through(monkeyp
     # a full-screen overlay that is listed but transparent to input would
     # let the click land on the window beneath
     _batch(monkeypatch, MON, [_w("0xme", [0, 0], [960, 1080]), _w("0xb", [960, 0], [960, 1080])])
-    monkeypatch.setattr(trust, "_read_layers", lambda: [
-        {"namespace": "hyprshade", "kind": "", "level": "overlay",
-         "geometry": [0, 0, 1920, 1080]}])
+    monkeypatch.setattr(
+        trust,
+        "_read_layers",
+        lambda: [
+            {
+                "namespace": "hyprshade",
+                "kind": "",
+                "level": "overlay",
+                "geometry": [0, 0, 1920, 1080],
+            }
+        ],
+    )
     assert trust.other_window_at(1000, 100, "0xme")["address"] == "0xb"

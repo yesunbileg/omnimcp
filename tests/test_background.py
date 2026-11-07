@@ -4,9 +4,18 @@ from omnimcp import background as bg
 from omnimcp import trust
 
 
-@pytest.mark.parametrize("raw, mode", [
-    (None, bg.AUTO), ("", bg.AUTO), ("auto", bg.AUTO), ("0", bg.OFF), ("off", bg.OFF),
-    ("1", bg.GUARANTEE), ("on", bg.GUARANTEE)])
+@pytest.mark.parametrize(
+    "raw, mode",
+    [
+        (None, bg.AUTO),
+        ("", bg.AUTO),
+        ("auto", bg.AUTO),
+        ("0", bg.OFF),
+        ("off", bg.OFF),
+        ("1", bg.GUARANTEE),
+        ("on", bg.GUARANTEE),
+    ],
+)
 def test_mode(monkeypatch, raw, mode):
     if raw is None:
         monkeypatch.delenv("OMNIMCP_BACKGROUND", raising=False)
@@ -21,15 +30,18 @@ def test_a_malformed_mode_refuses_everything(monkeypatch):
         bg.mode()
 
 
-@pytest.mark.parametrize("env, active, explicit, expect", [
-    (None, True, None, False),   # automatic: the human's own window, foreground
-    (None, False, None, True),   # automatic: any other window, background
-    (None, False, False, False),  # the agent asks for the foreground
-    (None, True, True, True),    # the agent asks for the background
-    ("0", False, None, False),   # off: 0.12 behaviour
-    ("0", False, True, True),    # off still honours an explicit request
-    ("1", True, None, True),     # guarantee: always background
-])
+@pytest.mark.parametrize(
+    "env, active, explicit, expect",
+    [
+        (None, True, None, False),  # automatic: the human's own window, foreground
+        (None, False, None, True),  # automatic: any other window, background
+        (None, False, False, False),  # the agent asks for the foreground
+        (None, True, True, True),  # the agent asks for the background
+        ("0", False, None, False),  # off: 0.12 behaviour
+        ("0", False, True, True),  # off still honours an explicit request
+        ("1", True, None, True),  # guarantee: always background
+    ],
+)
 def test_decide(monkeypatch, env, active, explicit, expect):
     if env is None:
         monkeypatch.delenv("OMNIMCP_BACKGROUND", raising=False)
@@ -64,9 +76,15 @@ def test_the_default_range_counts_down_from_99(monkeypatch):
     assert bg.agent_workspaces() == [str(i) for i in range(99, 89, -1)]
 
 
-@pytest.mark.parametrize("raw, expect", [
-    ("99-97", ["99", "98", "97"]), ("90-92", ["90", "91", "92"]),
-    ("99,98,50", ["99", "98", "50"]), ("name:research,99", ["name:research", "99"])])
+@pytest.mark.parametrize(
+    "raw, expect",
+    [
+        ("99-97", ["99", "98", "97"]),
+        ("90-92", ["90", "91", "92"]),
+        ("99,98,50", ["99", "98", "50"]),
+        ("name:research,99", ["name:research", "99"]),
+    ],
+)
 def test_ranges_and_lists(monkeypatch, raw, expect):
     monkeypatch.setenv("OMNIMCP_AGENT_WORKSPACES", raw)
     assert bg.agent_workspaces() == expect

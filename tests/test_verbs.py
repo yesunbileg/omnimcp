@@ -21,8 +21,12 @@ def isolated(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
     monkeypatch.setenv("HYPRLAND_INSTANCE_SIGNATURE", "sig-test")
     for var in (
-        "OMNIMCP_READONLY", "OMNIMCP_CLIPBOARD", "OMNIMCP_CONFINE",
-        "OMNIMCP_STRICT", "OMNIMCP_MARK", "OMNIMCP_SCREENSHOT_MODE",
+        "OMNIMCP_READONLY",
+        "OMNIMCP_CLIPBOARD",
+        "OMNIMCP_CONFINE",
+        "OMNIMCP_STRICT",
+        "OMNIMCP_MARK",
+        "OMNIMCP_SCREENSHOT_MODE",
     ):
         monkeypatch.delenv(var, raising=False)
     monkeypatch.setattr(session, "ensure_session_env", lambda: None)
@@ -114,44 +118,63 @@ def test_owner_subcommands_are_looked_up_at_call_time(monkeypatch):
     assert verbs.main(["journal", "--acts", "-n", "3"]) == 0
     assert seen == [["--acts", "-n", "3"]]
 
+
 # --- argv to tool call --------------------------------------------------------
 
 
 def test_only_passed_flags_reach_the_tool():
     assert kwargs_of("pointer", "click") == {"action": "click"}
-    assert kwargs_of("pointer", "click", "800", "60", "--button", "right", "--double",
-                     "--then", "ui") == {
-        "action": "click", "x": 800.0, "y": 60.0, "button": "right", "double": True,
+    assert kwargs_of(
+        "pointer", "click", "800", "60", "--button", "right", "--double", "--then", "ui"
+    ) == {
+        "action": "click",
+        "x": 800.0,
+        "y": 60.0,
+        "button": "right",
+        "double": True,
         "then": "ui",
     }
     assert kwargs_of("pointer", "move", "1", "2") == {"action": "move", "x": 1.0, "y": 2.0}
     assert kwargs_of("pointer", "drag", "1", "2", "3", "4", "--allow-auth") == {
-        "action": "drag", "x": 1.0, "y": 2.0, "to_x": 3.0, "to_y": 4.0, "allow_auth": True,
+        "action": "drag",
+        "x": 1.0,
+        "y": 2.0,
+        "to_x": 3.0,
+        "to_y": 4.0,
+        "allow_auth": True,
     }
 
 
 def test_keyboard_hypr_click_ui_launch_wait_for_mappings():
     assert kwargs_of("keyboard", "type", "hello", "--window", "0xabc") == {
-        "action": "type", "text": "hello", "window": "0xabc",
+        "action": "type",
+        "text": "hello",
+        "window": "0xabc",
     }
     assert kwargs_of("keyboard", "key", "ctrl+s") == {"action": "key", "keys": "ctrl+s"}
     assert kwargs_of("hypr", "move_window", "0xabc", "3") == {
-        "action": "move_window", "target": "0xabc", "workspace": "3",
+        "action": "move_window",
+        "target": "0xabc",
+        "workspace": "3",
     }
     assert kwargs_of("hypr", "fullscreen") == {"action": "fullscreen"}
     assert kwargs_of("hypr", "workspace", "special:notes") == {
-        "action": "workspace", "workspace": "special:notes",
+        "action": "workspace",
+        "workspace": "special:notes",
     }
     assert kwargs_of("click_ui", "Save", "--index", "1") == {"name": "Save", "index": 1}
     assert kwargs_of("click-ui", "--mark", "3") == {"mark": 3}
     assert kwargs_of("wait-for", "window_open", "--match", "kitty", "--timeout", "5") == {
-        "event": "window_open", "match": "kitty", "timeout_s": 5.0,
+        "event": "window_open",
+        "match": "kitty",
+        "timeout_s": 5.0,
     }
     assert kwargs_of("ui", "--all") == {"actionable": False}
     assert kwargs_of("launch", "firefox") == {"command": "firefox"}
     # several words are joined the way a shell would quote them
     assert kwargs_of("launch", "--workspace", "2", "--", "firefox", "--new-window", "a b") == {
-        "command": "firefox --new-window 'a b'", "workspace": "2",
+        "command": "firefox --new-window 'a b'",
+        "workspace": "2",
     }
     assert kwargs_of("launch", "kitty", "--wait", "3") == {"command": "kitty", "wait_s": 3.0}
 
@@ -210,14 +233,15 @@ def test_sequence_steps_inline_file_and_stdin(tmp_path, monkeypatch):
     f = tmp_path / "steps.json"
     f.write_text(json.dumps(steps))
     assert kwargs_of("sequence", f"@{f}", "--no-stop-on-change") == {
-        "steps": steps, "stop_on_change": False,
+        "steps": steps,
+        "stop_on_change": False,
     }
     monkeypatch.setattr("sys.stdin", __import__("io").StringIO(json.dumps(steps)))
     assert kwargs_of("sequence", "-") == {"steps": steps}
 
 
 def test_bad_steps_are_usage_errors(capsys):
-    for bad in ("{not json", '{"op": "hypr"}', '[1, 2]', "@/nonexistent/steps.json"):
+    for bad in ("{not json", '{"op": "hypr"}', "[1, 2]", "@/nonexistent/steps.json"):
         assert verbs.main(["sequence", bad]) == verbs.EXIT_USAGE
         assert "omnimcp: usage:" in capsys.readouterr().err
 
@@ -248,8 +272,10 @@ def test_read_only_mode_refuses_acting_verbs_before_calling_them(stub, monkeypat
     err = capsys.readouterr().err
     assert err.startswith("omnimcp: refused:") and "OMNIMCP_READONLY" in err
     # observation still works
-    stub("desktop", {"monitors": [], "workspaces": [], "windows": [], "active_window": None,
-                     "cursor": [1, 2]})
+    stub(
+        "desktop",
+        {"monitors": [], "workspaces": [], "windows": [], "active_window": None, "cursor": [1, 2]},
+    )
     assert verbs.main(["desktop"]) == 0
 
 
@@ -290,8 +316,10 @@ def test_no_result_is_exit_four():
     assert verbs.exit_for("ui", [{"role": "push button"}]) == 0
     assert verbs.exit_for("marks", "no actionable elements in kitty") == 4
     assert verbs.exit_for("click_ui", "kitty exposes no accessibility tree") == 4
-    ambiguous = [TextContent(type="text", text="'Ok' is ambiguous (2 candidates); call again"),
-                 TextContent(type="text", text="[]")]
+    ambiguous = [
+        TextContent(type="text", text="'Ok' is ambiguous (2 candidates); call again"),
+        TextContent(type="text", text="[]"),
+    ]
     assert verbs.exit_for("click_ui", ambiguous) == 4
     assert verbs.exit_for("click_ui", "clicked push button 'Ok' at (1, 2) in kitty") == 0
     assert verbs.exit_for("sequence", "sequence: stopped after 1/3 steps, desktop changed") == 4
@@ -303,19 +331,50 @@ def test_no_result_is_exit_four():
 # --- output ---------------------------------------------------------------------
 
 SNAP = {
-    "monitors": [{"name": "eDP-1", "geometry": [0, 0, 1920, 1080], "scale": 1.0,
-                  "focused": True, "active_workspace": 7}],
+    "monitors": [
+        {
+            "name": "eDP-1",
+            "geometry": [0, 0, 1920, 1080],
+            "scale": 1.0,
+            "focused": True,
+            "active_workspace": 7,
+        }
+    ],
     "workspaces": [{"id": 7, "name": "7", "monitor": "eDP-1", "windows": 2, "visible": True}],
     "windows": [
-        {"address": "0x1", "workspace": 7, "class": "kitty", "title": "~ ◐",
-         "at": [964, 7], "size": [949, 1066], "floating": False, "pid": 1},
-        {"address": "0x2", "workspace": 7, "class": "firefox", "title": "Inbox\x1b[2J",
-         "at": [7, 7], "size": [950, 1066], "floating": True, "pid": 2, "fullscreen": True},
+        {
+            "address": "0x1",
+            "workspace": 7,
+            "class": "kitty",
+            "title": "~ ◐",
+            "at": [964, 7],
+            "size": [949, 1066],
+            "floating": False,
+            "pid": 1,
+        },
+        {
+            "address": "0x2",
+            "workspace": 7,
+            "class": "firefox",
+            "title": "Inbox\x1b[2J",
+            "at": [7, 7],
+            "size": [950, 1066],
+            "floating": True,
+            "pid": 2,
+            "fullscreen": True,
+        },
     ],
     "active_window": "0x1",
     "cursor": [642, 516],
-    "layers": [{"namespace": "wofi", "kind": "launcher", "level": "top", "monitor": "eDP-1",
-                "geometry": [660, 300, 600, 400]}],
+    "layers": [
+        {
+            "namespace": "wofi",
+            "kind": "launcher",
+            "level": "top",
+            "monitor": "eDP-1",
+            "geometry": [660, 300, 600, 400],
+        }
+    ],
 }
 
 
@@ -343,15 +402,37 @@ def test_json_mode_is_one_compact_line_with_the_raw_result(stub, capsys):
 
 
 def test_ui_and_binds_render_as_lines(stub, capsys):
-    stub("ui", [
-        {"role": "push button", "name": "Save", "x": 1204, "y": 88, "clickable": True},
-        {"role": "text", "name": "Name", "x": 900, "y": 140, "clickable": False,
-         "value": "report.txt"},
-        {"role": "check box", "name": "Remember", "x": 1, "y": 2, "clickable": True,
-         "checked": True, "percent": 50},
-        {"role": "table cell", "name": "Yasser", "x": 3, "y": 4, "clickable": True,
-         "action": "SetFocus"},
-    ])
+    stub(
+        "ui",
+        [
+            {"role": "push button", "name": "Save", "x": 1204, "y": 88, "clickable": True},
+            {
+                "role": "text",
+                "name": "Name",
+                "x": 900,
+                "y": 140,
+                "clickable": False,
+                "value": "report.txt",
+            },
+            {
+                "role": "check box",
+                "name": "Remember",
+                "x": 1,
+                "y": 2,
+                "clickable": True,
+                "checked": True,
+                "percent": 50,
+            },
+            {
+                "role": "table cell",
+                "name": "Yasser",
+                "x": 3,
+                "y": 4,
+                "clickable": True,
+                "action": "SetFocus",
+            },
+        ],
+    )
     assert verbs.main(["ui"]) == 0
     assert capsys.readouterr().out == (
         '[0] push button "Save" @1204,88\n'
@@ -359,22 +440,42 @@ def test_ui_and_binds_render_as_lines(stub, capsys):
         '[2] check box "Remember" @1,2 percent=50 checked=true\n'
         '[3] table cell "Yasser" @3,4 action=SetFocus\n'
     )
-    stub("binds", [{"combo": "SUPER+Q", "action": "exec", "arg": "kitty",
-                    "description": "terminal"},
-                   {"combo": "SUPER+F", "action": "lua"}])
+    stub(
+        "binds",
+        [
+            {"combo": "SUPER+Q", "action": "exec", "arg": "kitty", "description": "terminal"},
+            {"combo": "SUPER+F", "action": "lua"},
+        ],
+    )
     assert verbs.main(["binds"]) == 0
     assert capsys.readouterr().out == 'SUPER+Q  exec kitty  "terminal"\nSUPER+F  lua\n'
 
 
 def test_launch_and_wait_for_dicts(stub, capsys):
-    stub("launch", {"address": "0x9", "class": "firefox", "title": "Mozilla Firefox",
-                    "workspace": "3", "note": "window opened elsewhere; moved"})
+    stub(
+        "launch",
+        {
+            "address": "0x9",
+            "class": "firefox",
+            "title": "Mozilla Firefox",
+            "workspace": "3",
+            "note": "window opened elsewhere; moved",
+        },
+    )
     assert verbs.main(["launch", "firefox", "--workspace", "3"]) == 0
     assert capsys.readouterr().out == (
         '0x9 firefox "Mozilla Firefox" workspace 3\nnote window opened elsewhere; moved\n'
     )
-    stub("wait_for", {"event": "openwindow", "address": "0x9", "class": "firefox",
-                      "title": "New Tab", "already": True})
+    stub(
+        "wait_for",
+        {
+            "event": "openwindow",
+            "address": "0x9",
+            "class": "firefox",
+            "title": "New Tab",
+            "already": True,
+        },
+    )
     assert verbs.main(["wait_for", "window_open"]) == 0
     assert capsys.readouterr().out == (
         'already: openwindow address=0x9 class=firefox title="New Tab"\n'
@@ -386,16 +487,22 @@ def test_launch_and_wait_for_dicts(stub, capsys):
 
 def test_a_capture_prints_its_path_and_metadata_and_honors_out(monkeypatch, tmp_path, capsys):
     shot = tmp_path / "shot-1.jpg"
-    meta = {"geometry": [0, 0, 64, 48], "scale": 1.0, "image": [64, 48], "format": "jpeg",
-            "path": str(shot)}
+    meta = {
+        "geometry": [0, 0, 64, 48],
+        "scale": 1.0,
+        "image": [64, 48],
+        "format": "jpeg",
+        "path": str(shot),
+    }
     calls = []
 
     def fake_screenshot(**kw):  # a fresh capture each call, as the real tool makes one
         calls.append(kw)
         shot.write_bytes(b"jpeg")
         return [
-            TextContent(type="text",
-                        text=f"screenshot saved, read this file to view the screen: {shot}"),
+            TextContent(
+                type="text", text=f"screenshot saved, read this file to view the screen: {shot}"
+            ),
             TextContent(type="text", text=json.dumps(meta)),
         ]
 
@@ -427,18 +534,25 @@ def test_a_capture_prints_its_path_and_metadata_and_honors_out(monkeypatch, tmp_
 
 
 def test_then_observations_render_in_their_own_shape(stub, capsys):
-    stub("hypr", [TextContent(type="text", text="on workspace 3"),
-                  TextContent(type="text", text=json.dumps(SNAP))])
+    stub(
+        "hypr",
+        [
+            TextContent(type="text", text="on workspace 3"),
+            TextContent(type="text", text=json.dumps(SNAP)),
+        ],
+    )
     assert verbs.main(["hypr", "workspace", "3", "--then", "desktop"]) == 0
     out = capsys.readouterr().out
     assert out.startswith("on workspace 3\nmonitor eDP-1 at 0,0")
-    legend = {"legend": [{"mark": 1, "role": "push button", "name": "Ok", "x": 5, "y": 6,
-                          "clickable": True}], "hint": "click_ui(mark=N)"}
+    legend = {
+        "legend": [
+            {"mark": 1, "role": "push button", "name": "Ok", "x": 5, "y": 6, "clickable": True}
+        ],
+        "hint": "click_ui(mark=N)",
+    }
     stub("marks", [TextContent(type="text", text=json.dumps(legend))])
     assert verbs.main(["marks"]) == 0
-    assert capsys.readouterr().out == (
-        '[1] push button "Ok" @5,6\n'
-    )
+    assert capsys.readouterr().out == ('[1] push button "Ok" @5,6\n')
 
 
 def test_captures_are_always_files_for_a_shell_caller(stub, monkeypatch):
@@ -536,8 +650,9 @@ def test_take_beacon_is_used_when_no_server_holds_it(stub, monkeypatch):
     assert took == [True]  # init() armed it already; arm() is not called again
 
 
-def test_journal_entries_from_the_cli_carry_a_source_and_one_header(stub, monkeypatch,
-                                                                     tmp_path, capsys):
+def test_journal_entries_from_the_cli_carry_a_source_and_one_header(
+    stub, monkeypatch, tmp_path, capsys
+):
     log = tmp_path / "journal.ndjson"
     monkeypatch.setenv("OMNIMCP_JOURNAL", str(log))
     monkeypatch.setattr(journal, "_seq", 0)
@@ -621,11 +736,18 @@ def test_acting_verbs_take_the_cross_process_lock(stub, monkeypatch, tmp_path):
 def test_stale_or_foreign_marks_are_refused_not_clicked(monkeypatch):
     import time
 
-    monkeypatch.setattr(srv, "_resolve_window", lambda w: {"address": w, "class": "kitty",
-                                                            "at": [0, 0], "size": [10, 10]})
+    monkeypatch.setattr(
+        srv,
+        "_resolve_window",
+        lambda w: {"address": w, "class": "kitty", "at": [0, 0], "size": [10, 10]},
+    )
     item = {"dx": 1, "dy": 2, "label": "push button 'Ok'"}
-    srv._last_marks = {"window": "0x1", "class": "kitty", "ts": time.time() - 700,
-                       "items": {1: item}}
+    srv._last_marks = {
+        "window": "0x1",
+        "class": "kitty",
+        "ts": time.time() - 700,
+        "items": {1: item},
+    }
     with pytest.raises(ValueError, match="minutes old"):
         srv.click_ui(mark=1)
     srv._last_marks = {"window": "0x1", "class": "firefox", "ts": time.time(), "items": {1: item}}
@@ -644,8 +766,12 @@ def test_an_observe_verb_does_not_clobber_what_another_verb_saved(stub, monkeypa
     verbs.main(["desktop"])  # creates the state file
     on_disk = json.loads(cli_state.path().read_text())
     on_disk["trust"]["owned"] = ["0xaaa"]
-    on_disk["marks"] = {"window": "0x1", "class": "kitty", "ts": 1.0,
-                        "items": {"1": {"dx": 1, "dy": 2, "label": "l"}}}
+    on_disk["marks"] = {
+        "window": "0x1",
+        "class": "kitty",
+        "ts": 1.0,
+        "items": {"1": {"dx": 1, "dy": 2, "label": "l"}},
+    }
 
     def slow_desktop(**kw):
         cli_state.path().write_text(json.dumps(on_disk))  # the concurrent save lands here
@@ -671,13 +797,36 @@ def test_desktop_quotes_workspace_names_that_are_not_numbers(stub, capsys):
     # Hyprland 0.57 names special and named workspaces by name; a name can
     # hold a space, which would shift every field after it
     snap = {
-        "monitors": [{"name": "eDP-1", "geometry": [0, 0, 1920, 1080], "scale": 1.0,
-                      "focused": True, "active_workspace": "my notes"}],
-        "workspaces": [{"id": "my notes", "name": "my notes", "monitor": "eDP-1",
-                        "windows": 1, "visible": True}],
-        "windows": [{"address": "0x1", "workspace": "special:vault", "class": "kitty",
-                     "title": "t", "at": [0, 0], "size": [10, 10]}],
-        "active_window": "0x1", "cursor": [1, 2],
+        "monitors": [
+            {
+                "name": "eDP-1",
+                "geometry": [0, 0, 1920, 1080],
+                "scale": 1.0,
+                "focused": True,
+                "active_workspace": "my notes",
+            }
+        ],
+        "workspaces": [
+            {
+                "id": "my notes",
+                "name": "my notes",
+                "monitor": "eDP-1",
+                "windows": 1,
+                "visible": True,
+            }
+        ],
+        "windows": [
+            {
+                "address": "0x1",
+                "workspace": "special:vault",
+                "class": "kitty",
+                "title": "t",
+                "at": [0, 0],
+                "size": [10, 10],
+            }
+        ],
+        "active_window": "0x1",
+        "cursor": [1, 2],
     }
     stub("desktop", snap)
     assert verbs.main(["desktop"]) == 0
@@ -703,8 +852,9 @@ def test_background_and_foreground_exclude_each_other(capsys):
 
 
 def test_a_ui_note_renders_as_its_own_line():
-    out = verbs._render_ui([{"role": "push button", "name": "Save", "x": 1, "y": 2},
-                            {"note": "0xa is not on screen"}])
+    out = verbs._render_ui(
+        [{"role": "push button", "name": "Save", "x": 1, "y": 2}, {"note": "0xa is not on screen"}]
+    )
     assert out.splitlines() == ['[0] push button "Save" @1,2', "note 0xa is not on screen"]
 
 
@@ -715,6 +865,15 @@ def test_a_background_click_is_a_delivered_click():
 
 
 def test_the_launch_warning_is_printed():
-    out = verbs.render("launch", {"address": "0x1", "class": "foot", "title": "~",
-                                  "workspace": 99, "note": "n", "warning": "careful"})
+    out = verbs.render(
+        "launch",
+        {
+            "address": "0x1",
+            "class": "foot",
+            "title": "~",
+            "workspace": 99,
+            "note": "n",
+            "warning": "careful",
+        },
+    )
     assert out.splitlines()[-1] == "warning careful"

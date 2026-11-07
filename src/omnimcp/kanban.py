@@ -99,8 +99,9 @@ class Board:
         except StopIteration as exc:
             raise ValueError("Kanban frontmatter is not closed") from exc
         frontmatter = "".join(self.lines[1:end])
-        if not re.search(r"^kanban-plugin:\s*['\"]?(?:board|basic)['\"]?\s*$",
-                         frontmatter, re.MULTILINE):
+        if not re.search(
+            r"^kanban-plugin:\s*['\"]?(?:board|basic)['\"]?\s*$", frontmatter, re.MULTILINE
+        ):
             raise ValueError("Not an Obsidian Kanban board: kanban-plugin must be board or basic")
 
         column: Column | None = None
@@ -111,8 +112,10 @@ class Board:
         for i in range(end + 1, len(self.lines)):
             line = self.lines[i].rstrip("\r\n")
             # Settings and the plugin's archive are opaque, never active columns.
-            if not fence and not comment and (
-                line.startswith("%% kanban:settings") or line.strip() == "***"
+            if (
+                not fence
+                and not comment
+                and (line.startswith("%% kanban:settings") or line.strip() == "***")
             ):
                 stop = i
                 break
@@ -156,17 +159,19 @@ class Board:
         seen: set[str] = set()
         for item in self.cards:
             body = _CARD.fullmatch(self.lines[item.start].rstrip("\r\n"))[2]
-            continuation = [re.sub(r"^(?:\t| {2,4})", "", line.rstrip("\r\n"))
-                            for line in self.lines[item.start + 1:item.end]]
+            continuation = [
+                re.sub(r"^(?:\t| {2,4})", "", line.rstrip("\r\n"))
+                for line in self.lines[item.start + 1 : item.end]
+            ]
             body = "\n".join([body, *continuation])
             anchor = _ANCHOR.search(body)
             if anchor:
                 item.id = anchor[1]
                 item.anchored = True
-                body = body[:anchor.start()]
+                body = body[: anchor.start()]
             else:
                 # Legacy IDs are valid only with the matching board revision.
-                digest = _digest("".join(self.lines[item.start:item.end]).encode())[:16]
+                digest = _digest("".join(self.lines[item.start : item.end]).encode())[:16]
                 item.id = f"legacy-{item.start + 1}-{digest}"
             if item.id in seen:
                 raise ValueError(f"Duplicate Kanban task ID: {item.id}")
@@ -188,13 +193,19 @@ class Board:
     @staticmethod
     def view(card: Card, *, full: bool = False) -> dict[str, Any]:
         limit = MAX_TEXT if full else 1200
-        return {"id": card.id, "column": card.column, "checked": card.checked,
-                "text": card.text[:limit], "text_truncated": len(card.text) > limit,
-                "stable_id": card.anchored}
+        return {
+            "id": card.id,
+            "column": card.column,
+            "checked": card.checked,
+            "text": card.text[:limit],
+            "text_truncated": len(card.text) > limit,
+            "stable_id": card.anchored,
+        }
 
 
-def read(column: str = "", query: str = "", task_id: str = "",
-         limit: int = 50, offset: int = 0) -> dict[str, Any]:
+def read(
+    column: str = "", query: str = "", task_id: str = "", limit: int = 50, offset: int = 0
+) -> dict[str, Any]:
     if not 1 <= limit <= 100 or offset < 0:
         raise ValueError("limit must be 1..100 and offset must be non-negative")
     path = _path()
@@ -203,14 +214,22 @@ def read(column: str = "", query: str = "", task_id: str = "",
     if column:
         board.column(column)
     cards = [board.card(task_id)] if task_id else board.cards
-    cards = [card for card in cards if (not column or card.column == column)
-             and (not query or query.casefold() in card.text.casefold())]
-    page = cards[offset:offset + limit]
-    return {"path": str(path), "revision": board.revision,
-            "columns": [{"name": c.name, "count": len(c.cards)} for c in board.columns],
-            "tasks": [board.view(c, full=bool(task_id)) for c in page],
-            "total": len(cards), "offset": offset,
-            "next_offset": offset + len(page) if offset + len(page) < len(cards) else None}
+    cards = [
+        card
+        for card in cards
+        if (not column or card.column == column)
+        and (not query or query.casefold() in card.text.casefold())
+    ]
+    page = cards[offset : offset + limit]
+    return {
+        "path": str(path),
+        "revision": board.revision,
+        "columns": [{"name": c.name, "count": len(c.cards)} for c in board.columns],
+        "tasks": [board.view(c, full=bool(task_id)) for c in page],
+        "total": len(cards),
+        "offset": offset,
+        "next_offset": offset + len(page) if offset + len(page) < len(cards) else None,
+    }
 
 
 @contextlib.contextmanager
@@ -276,8 +295,12 @@ def _save(path: Path, original: bytes, info: os.stat_result, updated: bytes) -> 
             os.fsync(stream.fileno())
         current, current_info = _snapshot(path)
         before = (info.st_dev, info.st_ino, info.st_mtime_ns, info.st_ctime_ns)
-        now = (current_info.st_dev, current_info.st_ino,
-               current_info.st_mtime_ns, current_info.st_ctime_ns)
+        now = (
+            current_info.st_dev,
+            current_info.st_ino,
+            current_info.st_mtime_ns,
+            current_info.st_ctime_ns,
+        )
         if current != original or before != now:
             raise ValueError(
                 "Kanban revision conflict: the file changed; read again before writing"
@@ -288,8 +311,9 @@ def _save(path: Path, original: bytes, info: os.stat_result, updated: bytes) -> 
             os.unlink(name)
 
 
-def _mutate(expected_revision: str,
-            change: Callable[[Board], tuple[list[str], str]]) -> dict[str, Any]:
+def _mutate(
+    expected_revision: str, change: Callable[[Board], tuple[list[str], str]]
+) -> dict[str, Any]:
     if os.environ.get("OMNIMCP_READONLY", "").lower() in _ON:
         raise ValueError("Kanban writes are disabled in OMNIMCP_READONLY mode")
     if not re.fullmatch(r"[0-9a-f]{64}", expected_revision):
@@ -304,8 +328,12 @@ def _mutate(expected_revision: str,
         lines, task_id = change(board)
         updated = "".join(lines).encode("utf-8")
         parsed = Board(updated)  # malformed output must never replace the board
-        result = {"path": str(path), "revision": board.revision if dry_run else parsed.revision,
-                  "task": parsed.view(parsed.card(task_id), full=True), "dry_run": dry_run}
+        result = {
+            "path": str(path),
+            "revision": board.revision if dry_run else parsed.revision,
+            "task": parsed.view(parsed.card(task_id), full=True),
+            "dry_run": dry_run,
+        }
         if len(updated) > MAX_BYTES:
             raise ValueError("Updated Kanban board would exceed the size limit")
         if dry_run:
@@ -325,9 +353,14 @@ def add(column: str, text: str, expected_revision: str) -> dict[str, Any]:
     return _mutate(expected_revision, change)
 
 
-def update(task_id: str, expected_revision: str, text: str | None = None,
-           column: str | None = None, checked: bool | None = None,
-           append_text: str | None = None) -> dict[str, Any]:
+def update(
+    task_id: str,
+    expected_revision: str,
+    text: str | None = None,
+    column: str | None = None,
+    checked: bool | None = None,
+    append_text: str | None = None,
+) -> dict[str, Any]:
     if text is not None and append_text is not None:
         raise ValueError("Supply text or append_text, not both")
     if text is None and column is None and checked is None and append_text is None:
@@ -346,20 +379,19 @@ def update(task_id: str, expected_revision: str, text: str | None = None,
         if append_text is not None:
             replacement = _text(card.text + "\n" + append_text)
         if replacement is not None:
-            card_lines = _render(replacement, stable_id,
-                                 card.checked if checked is None else checked,
-                                 board.newline)
+            card_lines = _render(
+                replacement, stable_id, card.checked if checked is None else checked, board.newline
+            )
         else:
-            card_lines = board.lines[card.start:card.end].copy()
+            card_lines = board.lines[card.start : card.end].copy()
             if checked is not None:
                 card_lines[0] = card_lines[0][:3] + ("x" if checked else " ") + card_lines[0][4:]
             if not card.anchored:
-                card_lines[-1] = (card_lines[-1].rstrip("\r\n")
-                                  + f" ^{stable_id}" + board.newline)
+                card_lines[-1] = card_lines[-1].rstrip("\r\n") + f" ^{stable_id}" + board.newline
         if target == card.column:
-            lines = board.lines[:card.start] + card_lines + board.lines[card.end:]
+            lines = board.lines[: card.start] + card_lines + board.lines[card.end :]
         else:
-            remainder = Board("".join(board.lines[:card.start] + board.lines[card.end:]).encode())
+            remainder = Board("".join(board.lines[: card.start] + board.lines[card.end :]).encode())
             lines = _insert(remainder, target, card_lines)
         return lines, stable_id
 

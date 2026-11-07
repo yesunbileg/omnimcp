@@ -19,8 +19,14 @@ def wired(monkeypatch):
     # covers the unproven case)
     monkeypatch.setattr(srv, "_proven_frame", lambda bus, client, app: app)
     clients = [
-        {"address": "0xw", "pid": 42, "at": [100, 200], "size": [400, 200],
-         "class": "yad", "title": "T"}
+        {
+            "address": "0xw",
+            "pid": 42,
+            "at": [100, 200],
+            "size": [400, 200],
+            "class": "yad",
+            "title": "T",
+        }
     ]
     monkeypatch.setattr(
         srv.hyprctl,
@@ -48,7 +54,8 @@ def test_ui_maps_window_extent_to_global(wired):
 def test_ui_defaults_to_active_window(wired):
     seen = {}
     wired.setattr(
-        srv.a11y, "app_for_pid",
+        srv.a11y,
+        "app_for_pid",
         lambda bus, pid, title, size=None: seen.update(pid=pid) or ("a", "/root"),
     )
     wired.setattr(srv.a11y, "find_elements", lambda *a, **k: ([], False))
@@ -87,10 +94,13 @@ def test_ui_drops_elements_outside_the_window(wired):
         "find_elements",
         lambda *a, **k: (
             [
-                {"role": "button", "name": "Inside", "extent": (10, 20, 80, 40),
-                 "clickable": True},
-                {"role": "button", "name": "Elsewhere", "extent": (9000, 20, 80, 40),
-                 "clickable": True},
+                {"role": "button", "name": "Inside", "extent": (10, 20, 80, 40), "clickable": True},
+                {
+                    "role": "button",
+                    "name": "Elsewhere",
+                    "extent": (9000, 20, 80, 40),
+                    "clickable": True,
+                },
             ],
             False,
         ),
@@ -110,17 +120,35 @@ def test_ui_truncation_is_surfaced(wired):
 
 def test_ui_names_the_action_of_an_element_found_by_it(wired):
     wired.setattr(srv.a11y, "app_for_pid", lambda *a: ("a", "/root"))
-    wired.setattr(srv.a11y, "find_elements", lambda *a, **k: (
-        [{"role": "table cell", "name": "Yasser", "extent": (10, 20, 80, 40),
-          "clickable": True, "action": "SetFocus"}], False))
+    wired.setattr(
+        srv.a11y,
+        "find_elements",
+        lambda *a, **k: (
+            [
+                {
+                    "role": "table cell",
+                    "name": "Yasser",
+                    "extent": (10, 20, 80, 40),
+                    "clickable": True,
+                    "action": "SetFocus",
+                }
+            ],
+            False,
+        ),
+    )
     assert srv.ui(window="0xw", name="Yasser")[0]["action"] == "SetFocus"
 
 
 def test_ui_says_a_listing_was_cut_short(wired):
     wired.setattr(srv.a11y, "app_for_pid", lambda *a: ("a", "/root"))
-    wired.setattr(srv.a11y, "find_elements", lambda *a, **k: (
-        [{"role": "button", "name": "Near", "extent": (10, 20, 80, 40), "clickable": True}],
-        True))
+    wired.setattr(
+        srv.a11y,
+        "find_elements",
+        lambda *a, **k: (
+            [{"role": "button", "name": "Near", "extent": (10, 20, 80, 40), "clickable": True}],
+            True,
+        ),
+    )
     out = srv.ui(window="0xw")
     assert [e.get("name") for e in out if "name" in e] == ["Near"]
     assert any("stopped after reading" in e.get("note", "") for e in out)

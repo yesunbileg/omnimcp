@@ -10,8 +10,15 @@ def test_no_previous_project_name_remains():
     former = "agent" + "ic" + r"[ _.-]?" + "os"
     pattern = re.compile(former, re.IGNORECASE)
     excluded = {
-        ".git", ".venv", ".agent-scratch", ".axiomcode", "__pycache__",
-        ".pytest_cache", ".ruff_cache", "dist", "build",
+        ".git",
+        ".venv",
+        ".agent-scratch",
+        ".axiomcode",
+        "__pycache__",
+        ".pytest_cache",
+        ".ruff_cache",
+        "dist",
+        "build",
     }
     # Compatibility intentionally retains the previous identity in exactly
     # these three places: translation, its regression tests, and migration help.

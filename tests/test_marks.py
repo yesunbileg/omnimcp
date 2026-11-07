@@ -9,16 +9,42 @@ from omnimcp import server as srv
 
 def make_client():
     return {
-        "address": "0xa", "class": "gedit", "title": "doc",
-        "at": [100, 50], "size": [800, 600], "pid": 42, "workspace": {"id": 1},
-        "monitor": 0, "floating": False,
+        "address": "0xa",
+        "class": "gedit",
+        "title": "doc",
+        "at": [100, 50],
+        "size": [800, 600],
+        "pid": 42,
+        "workspace": {"id": 1},
+        "monitor": 0,
+        "floating": False,
     }
 
 
-MONS = [{"id": 0, "name": "eDP-1", "x": 0, "y": 0, "width": 1920, "height": 1080,
-         "scale": 1.0, "activeWorkspace": {"id": 1}, "specialWorkspace": {"id": 0}},
-        {"id": 1, "name": "DP-1", "x": 1920, "y": 0, "width": 1920, "height": 1080,
-         "scale": 1.0, "activeWorkspace": {"id": 5}, "specialWorkspace": {"id": 0}}]
+MONS = [
+    {
+        "id": 0,
+        "name": "eDP-1",
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 1080,
+        "scale": 1.0,
+        "activeWorkspace": {"id": 1},
+        "specialWorkspace": {"id": 0},
+    },
+    {
+        "id": 1,
+        "name": "DP-1",
+        "x": 1920,
+        "y": 0,
+        "width": 1920,
+        "height": 1080,
+        "scale": 1.0,
+        "activeWorkspace": {"id": 5},
+        "specialWorkspace": {"id": 0},
+    },
+]
 
 
 ELEMENTS = [
@@ -28,8 +54,11 @@ ELEMENTS = [
 ]
 
 META = {
-    "target": "window", "geometry": [100, 50, 800, 600],
-    "image": [800, 600], "format": "jpeg", "scale": 1.0,
+    "target": "window",
+    "geometry": [100, 50, 800, 600],
+    "image": [800, 600],
+    "format": "jpeg",
+    "scale": 1.0,
 }
 
 
@@ -40,14 +69,16 @@ def wired(monkeypatch):
     monkeypatch.setattr(srv.safety, "touch", lambda *a: None)
     monkeypatch.setattr(srv, "_resolve_window", lambda w="": client)
     monkeypatch.setattr(
-        srv, "_ui_read",
+        srv,
+        "_ui_read",
         lambda w="", name="", actionable=True, handles=False: [
             e for e in ELEMENTS if name.lower() in e["name"].lower()
         ],
     )
     monkeypatch.setattr(srv.hyprctl, "dispatch", lambda *a: calls["dispatch"].append(a))
     monkeypatch.setattr(
-        srv.hinput, "click",
+        srv.hinput,
+        "click",
         lambda x, y, button="left", double=False: calls["clicks"].append((x, y, button)),
     )
     monkeypatch.setattr(srv.time, "sleep", lambda s: None)
@@ -110,7 +141,10 @@ def test_marks_numbers_controls_without_capturing_the_screen(wired, monkeypatch)
     assert [x["mark"] for x in legend] == [1, 2, 3]
     assert legend[2]["value"] == "hi"
     assert srv._last_marks["items"][1] == {
-        "dx": 50, "dy": 30, "label": "push button 'Save'", "role": "push button",
+        "dx": 50,
+        "dy": 30,
+        "label": "push button 'Save'",
+        "role": "push button",
     }
 
 
@@ -154,8 +188,12 @@ def test_click_ui_refuses_under_a_focus_stealing_layer(wired, monkeypatch):
     # claimed success; the refusal must come before any side effect
     # a 1x1 launcher exactly at the control's click point: refused only if
     # the guard checks the ACTUAL point
-    rofi = {"namespace": "rofi", "kind": "launcher", "level": "overlay",
-            "geometry": [150, 80, 1, 1]}
+    rofi = {
+        "namespace": "rofi",
+        "kind": "launcher",
+        "level": "overlay",
+        "geometry": [150, 80, 1, 1],
+    }
     monkeypatch.setattr(srv.trust, "_read_layers", lambda: [rofi])
     with pytest.raises(srv.trust.TrustError, match="rofi"):
         srv.click_ui(name="Save")
@@ -204,8 +242,15 @@ def test_click_ui_auth_wiring_refuses_polkit(wired, monkeypatch):
 
 # --- click_ui checks the point it will click (0.12.1 review rounds) -------
 
-AUTH_DIALOG = {"address": "0xp", "class": "hyprpolkitagent", "floating": True,
-               "at": [100, 50], "size": [400, 200], "workspace": {"id": 1}, "monitor": 0}
+AUTH_DIALOG = {
+    "address": "0xp",
+    "class": "hyprpolkitagent",
+    "floating": True,
+    "at": [100, 50],
+    "size": [400, 200],
+    "workspace": {"id": 1},
+    "monitor": 0,
+}
 
 
 def _scene(monkeypatch, clients, fallthrough=0):
@@ -245,8 +290,16 @@ def test_a_floating_target_does_not_hide_a_floating_auth_dialog(monkeypatch):
 
 def test_a_pinned_window_over_the_point_counts(monkeypatch):
     monkeypatch.setenv("OMNIMCP_CONFINE", "class:gedit")
-    pip = {"address": "0xq", "class": "mpv", "floating": True, "pinned": True,
-           "at": [120, 60], "size": [200, 120], "workspace": {"id": 5}, "monitor": 1}
+    pip = {
+        "address": "0xq",
+        "class": "mpv",
+        "floating": True,
+        "pinned": True,
+        "at": [120, 60],
+        "size": [200, 120],
+        "workspace": {"id": 5},
+        "monitor": 1,
+    }
     _scene(monkeypatch, [pip])
     with pytest.raises(srv.trust.TrustError, match="confinement"):
         _check(dict(make_client(), floating=True))
@@ -264,8 +317,7 @@ def test_windows_that_cannot_cover_the_target_do_not_count(monkeypatch):
     tiled = dict(AUTH_DIALOG, address="0xt", floating=False)  # tiled: no overlap
     tab = dict(AUTH_DIALOG, address="0xg", visible=False)  # an inactive tab
     replaced = dict(AUTH_DIALOG, address="0xe", workspace={"id": 9}, monitor=0)
-    other_tiled = dict(AUTH_DIALOG, address="0xo", floating=False,
-                       workspace={"id": 5}, monitor=1)
+    other_tiled = dict(AUTH_DIALOG, address="0xo", floating=False, workspace={"id": 5}, monitor=1)
     _scene(monkeypatch, [tiled, tab, replaced, other_tiled])
     _check(make_client())
 
@@ -274,9 +326,15 @@ def test_a_scratchpad_focusing_will_hide_does_not_count_before_focus(monkeypatch
     # with input:special_fallthrough 0 (the default), focusing a window on a
     # regular workspace hides the monitor's scratchpad
     monkeypatch.setenv("OMNIMCP_CONFINE", "class:gedit")
-    pad = {"address": "0xk", "class": "kitty", "floating": False, "at": [0, 0],
-           "size": [1920, 1080], "workspace": {"id": -98, "name": "special:term"},
-           "monitor": 0}
+    pad = {
+        "address": "0xk",
+        "class": "kitty",
+        "floating": False,
+        "at": [0, 0],
+        "size": [1920, 1080],
+        "workspace": {"id": -98, "name": "special:term"},
+        "monitor": 0,
+    }
     mons = [dict(MONS[0], specialWorkspace={"id": -98, "name": "special:term"}), MONS[1]]
     monkeypatch.setattr(srv.trust, "_click_scene", lambda: (mons, [pad]))
     monkeypatch.setattr(srv.trust, "_special_fallthrough", lambda: 0)
@@ -304,9 +362,15 @@ def test_click_ui_refuses_a_point_outside_its_window(monkeypatch):
 
 def test_a_mark_on_a_resized_window_must_be_taken_again(wired, monkeypatch):
     srv._last_marks.clear()
-    srv._last_marks.update({"window": "0xa", "class": "gedit", "ts": srv.time.time(),
-                            "size": [1200, 600],
-                            "items": {1: {"dx": 50, "dy": 30, "label": "push button 'Save'"}}})
+    srv._last_marks.update(
+        {
+            "window": "0xa",
+            "class": "gedit",
+            "ts": srv.time.time(),
+            "size": [1200, 600],
+            "items": {1: {"dx": 50, "dy": 30, "label": "push button 'Save'"}},
+        }
+    )
     with pytest.raises(ValueError, match="resized"):
         srv.click_ui(mark=1)
     assert wired["clicks"] == []
@@ -314,9 +378,15 @@ def test_a_mark_on_a_resized_window_must_be_taken_again(wired, monkeypatch):
 
 def test_a_moved_window_tells_a_mark_caller_to_take_marks_again(wired, monkeypatch):
     srv._last_marks.clear()
-    srv._last_marks.update({"window": "0xa", "class": "gedit", "ts": srv.time.time(),
-                            "size": [800, 600],
-                            "items": {1: {"dx": 50, "dy": 30, "label": "push button 'Save'"}}})
+    srv._last_marks.update(
+        {
+            "window": "0xa",
+            "class": "gedit",
+            "ts": srv.time.time(),
+            "size": [800, 600],
+            "items": {1: {"dx": 50, "dy": 30, "label": "push button 'Save'"}},
+        }
+    )
     moved = dict(wired["client"], at=[300, 200])
     seen = iter([wired["client"], moved])
     monkeypatch.setattr(srv, "_resolve_window", lambda w="": next(seen))
@@ -340,12 +410,24 @@ def test_click_ui_refuses_when_focusing_moved_the_window(wired, monkeypatch):
 # target; at 1 the scratchpad's windows come first.
 def _overhang(monkeypatch, fallthrough, pad_covers=True):
     monkeypatch.setenv("OMNIMCP_CONFINE", "class:gedit")
-    target = dict(make_client(), floating=True, at=[1700, 200], size=[800, 500],
-                  workspace={"id": 5}, monitor=1)
+    target = dict(
+        make_client(),
+        floating=True,
+        at=[1700, 200],
+        size=[800, 500],
+        workspace={"id": 5},
+        monitor=1,
+    )
     mons = [dict(MONS[0], specialWorkspace={"id": -98, "name": "special:term"}), MONS[1]]
-    pad = {"address": "0xk", "class": "kitty", "floating": False,
-           "at": [0, 0] if pad_covers else [0, 600], "size": [1920, 1080 if pad_covers else 480],
-           "workspace": {"id": -98, "name": "special:term"}, "monitor": 0}
+    pad = {
+        "address": "0xk",
+        "class": "kitty",
+        "floating": False,
+        "at": [0, 0] if pad_covers else [0, 600],
+        "size": [1920, 1080 if pad_covers else 480],
+        "workspace": {"id": -98, "name": "special:term"},
+        "monitor": 0,
+    }
     monkeypatch.setattr(srv.trust, "_click_scene", lambda: (mons, [pad]))
     monkeypatch.setattr(srv.trust, "_special_fallthrough", lambda: fallthrough)
     return target
@@ -367,11 +449,14 @@ def test_at_fallthrough_1_the_scratchpads_own_windows_count(monkeypatch):
     _check(target, x=1800, y=300)  # the scratchpad window is not at the point
 
 
-@pytest.mark.parametrize("reply, expect", [
-    ({"option": "input:special_fallthrough", "int": 0, "set": False}, 0),  # hyprland.conf
-    ({"option": "input:special_fallthrough", "bool": True, "set": True}, 1),  # hyprland.lua
-    ({"option": "input:special_fallthrough"}, None),
-])
+@pytest.mark.parametrize(
+    "reply, expect",
+    [
+        ({"option": "input:special_fallthrough", "int": 0, "set": False}, 0),  # hyprland.conf
+        ({"option": "input:special_fallthrough", "bool": True, "set": True}, 1),  # hyprland.lua
+        ({"option": "input:special_fallthrough"}, None),
+    ],
+)
 def test_special_fallthrough_reads_both_config_managers(monkeypatch, reply, expect):
     from omnimcp.trust import _special_fallthrough as real
 
@@ -400,10 +485,19 @@ def test_a_target_on_its_own_open_scratchpad_reaches_past_another(monkeypatch):
     target = _overhang(monkeypatch, 0)
     notes = {"id": -97, "name": "special:notes"}
     target["workspace"] = notes
-    mons = [dict(MONS[0], specialWorkspace={"id": -98, "name": "special:term"}),
-            dict(MONS[1], specialWorkspace=notes)]
-    pad = {"address": "0xk", "class": "kitty", "floating": False, "at": [0, 600],
-           "size": [1920, 480], "workspace": {"id": -98, "name": "special:term"}, "monitor": 0}
+    mons = [
+        dict(MONS[0], specialWorkspace={"id": -98, "name": "special:term"}),
+        dict(MONS[1], specialWorkspace=notes),
+    ]
+    pad = {
+        "address": "0xk",
+        "class": "kitty",
+        "floating": False,
+        "at": [0, 600],
+        "size": [1920, 480],
+        "workspace": {"id": -98, "name": "special:term"},
+        "monitor": 0,
+    }
     monkeypatch.setattr(srv.trust, "_click_scene", lambda: (mons, [pad]))
     _check(target, x=1800, y=300)
 
@@ -411,8 +505,15 @@ def test_a_target_on_its_own_open_scratchpad_reaches_past_another(monkeypatch):
 # Hyprland's own permission prompt (hyprland-dialog, Deny / Allow once /
 # Allow and remember) has priority focus: the pointer goes to it before
 # even the pinned pass. A click there can grant a permission.
-PERMISSION = {"address": "0xh", "class": "hyprland-dialog", "floating": True,
-              "at": [100, 50], "size": [500, 300], "workspace": {"id": 1}, "monitor": 0}
+PERMISSION = {
+    "address": "0xh",
+    "class": "hyprland-dialog",
+    "floating": True,
+    "at": [100, 50],
+    "size": [500, 300],
+    "workspace": {"id": 1},
+    "monitor": 0,
+}
 
 
 @pytest.mark.parametrize("focused", [False, True])
@@ -438,16 +539,22 @@ def test_click_ui_clicks_nothing_under_the_permission_prompt(wired, monkeypatch)
 def test_click_ui_refuses_a_tiled_target_on_another_monitor(wired, monkeypatch):
     wide = dict(wired["client"], at=[1500, 50], size=[960, 1000])
     monkeypatch.setattr(srv, "_resolve_window", lambda w="": wide)
-    monkeypatch.setattr(srv, "_ui_read", lambda w="", name="", actionable=True, handles=False: [
-        {"role": "push button", "name": "Save", "x": 2000, "y": 300, "clickable": True}])
+    monkeypatch.setattr(
+        srv,
+        "_ui_read",
+        lambda w="", name="", actionable=True, handles=False: [
+            {"role": "push button", "name": "Save", "x": 2000, "y": 300, "clickable": True}
+        ],
+    )
     _scene(monkeypatch, [])
     with pytest.raises(srv.trust.TrustError, match="own monitor"):
         srv.click_ui(name="Save")
     assert wired["clicks"] == [] and wired["dispatch"] == []
 
 
-@pytest.mark.parametrize("target", [
-    {"floating": True, "pinned": True}, {"floating": True}, {"fullscreen": 1}])
+@pytest.mark.parametrize(
+    "target", [{"floating": True, "pinned": True}, {"floating": True}, {"fullscreen": 1}]
+)
 def test_a_tiled_permission_prompt_still_takes_the_click(monkeypatch, target):
     # its priority is keyed on the dialog process, not on floating: a user
     # rule (or an agent toggling it) can tile it and it still comes first

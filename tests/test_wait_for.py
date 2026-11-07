@@ -128,8 +128,9 @@ def test_layer_open_precheck_matches_by_substring(monkeypatch):
     # real launcher namespaces are rarely bare words (wofi-dialog,
     # swaync-notification-window), so the pre-check must be a substring
     # match, not exact, or it fails to rescue the late-subscribe case
-    raw = {"DP-1": {"levels": {"3": [
-        {"namespace": "wofi-dialog", "x": 0, "y": 0, "w": 8, "h": 8}]}}}
+    raw = {
+        "DP-1": {"levels": {"3": [{"namespace": "wofi-dialog", "x": 0, "y": 0, "w": 8, "h": 8}]}}
+    }
     monkeypatch.setattr(srv.safety, "touch", lambda *a: None)
     monkeypatch.setattr(srv.hyprctl, "query", lambda cmd: raw)
 
@@ -159,8 +160,9 @@ WEB_057 = {"address": "2", "id": 2, "type": "normal", "name": "web"}
 
 
 def test_a_renamed_workspace_matches_by_its_display_name_in_events(monkeypatch):
-    monkeypatch.setattr(srv.hyprctl, "query",
-                        lambda what: [WEB_057] if what == "workspaces" else {})
+    monkeypatch.setattr(
+        srv.hyprctl, "query", lambda what: [WEB_057] if what == "workspaces" else {}
+    )
     matches = srv._event_matcher("web")
     assert matches("workspace", {"name": "2"})
     opened = {"address": "0xa", "workspace": "2", "class": "foot", "title": "t"}
@@ -184,8 +186,9 @@ def test_a_digit_filter_does_not_match_a_named_workspace_on_056(monkeypatch):
     # a name anyone filtered on
     named = {"id": -1337, "name": "web"}
     renamed = {"id": 2, "name": "mail"}
-    monkeypatch.setattr(srv.hyprctl, "query",
-                        lambda what: [named, renamed] if what == "workspaces" else {})
+    monkeypatch.setattr(
+        srv.hyprctl, "query", lambda what: [named, renamed] if what == "workspaces" else {}
+    )
     matches = srv._event_matcher("3")
     assert not matches("workspace", {"name": "web"})
     # a renamed numbered workspace still matches its number

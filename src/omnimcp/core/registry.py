@@ -101,7 +101,7 @@ class Registry:
         model = create_model(
             name.replace(".", "_"),
             __config__=ConfigDict(extra="forbid", strict=True, hide_input_in_errors=True),
-            **params
+            **params,
         )
         action = Action(
             name, handler, model, description or inspect.getdoc(handler) or name, **metadata

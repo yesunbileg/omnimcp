@@ -37,7 +37,8 @@ MODELS = {
     op: create_model(
         "rpc_" + op,
         __config__=ConfigDict(strict=True, extra="forbid", hide_input_in_errors=True),
-        **COMMON, **spec
+        **COMMON,
+        **spec,
     )
     for op, spec in SPECS.items()
 }

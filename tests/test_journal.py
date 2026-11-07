@@ -284,16 +284,37 @@ def test_a_torn_last_line_does_not_hide_the_history(journal_file):
 def test_the_decorator_preserves_the_signature():
     # FastMCP builds each tool's JSON schema from this
     assert list(inspect.signature(srv.pointer).parameters) == [
-        "action", "x", "y", "button", "to_x", "to_y",
-        "double", "then", "allow_auth", "background",
+        "action",
+        "x",
+        "y",
+        "button",
+        "to_x",
+        "to_y",
+        "double",
+        "then",
+        "allow_auth",
+        "background",
     ]
     assert srv.pointer.__doc__ and "Mouse in global coordinates" in srv.pointer.__doc__
 
 
 def test_every_tool_is_journaled():
-    tools = (srv.pointer, srv.keyboard, srv.click_ui, srv.hypr, srv.launch,
-             srv.sequence, srv.clipboard, srv.desktop, srv.screenshot,
-             srv.zoom, srv.ui, srv.marks, srv.binds, srv.wait_for)
+    tools = (
+        srv.pointer,
+        srv.keyboard,
+        srv.click_ui,
+        srv.hypr,
+        srv.launch,
+        srv.sequence,
+        srv.clipboard,
+        srv.desktop,
+        srv.screenshot,
+        srv.zoom,
+        srv.ui,
+        srv.marks,
+        srv.binds,
+        srv.wait_for,
+    )
     assert all(hasattr(t, "__wrapped__") for t in tools)
 
 

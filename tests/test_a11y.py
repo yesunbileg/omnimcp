@@ -123,7 +123,7 @@ class FakeBus:
             pos, text = int(sig[1]), sig[2]  # sig = (signature, position, text, length)
             n = int(sig[3])
             if self.toolkits.get(svc) == "Qt":  # QString::resize: UTF-16 units, padded
-                units = text.encode("utf-16-le")[:2 * n].decode("utf-16-le", errors="ignore")
+                units = text.encode("utf-16-le")[: 2 * n].decode("utf-16-le", errors="ignore")
                 text = units + "\0" * (n - len(text.encode("utf-16-le")) // 2)
             else:  # GTK (ATK) reads the length in BYTES, as UTF-8
                 text = text.encode()[:n].decode(errors="ignore")
@@ -164,12 +164,29 @@ def _tree():
     nodes = {
         A: {"role": 75, "name": "yad", "children": [F]},
         F: {"role": 23, "name": "dialog", "children": [SAVE, CANCEL, LABEL]},
-        SAVE: {"role": 43, "role_name": "button", "name": "Save",
-               "extent": (10, 100, 80, 30), "states": ALL_STATES, "children": []},
-        CANCEL: {"role": 43, "role_name": "button", "name": "Cancel",
-                 "extent": (100, 100, 80, 30), "states": {8, 30}, "children": []},
-        LABEL: {"role": 29, "name": "Some label", "extent": (10, 10, 200, 20),
-                "states": ALL_STATES, "children": []},
+        SAVE: {
+            "role": 43,
+            "role_name": "button",
+            "name": "Save",
+            "extent": (10, 100, 80, 30),
+            "states": ALL_STATES,
+            "children": [],
+        },
+        CANCEL: {
+            "role": 43,
+            "role_name": "button",
+            "name": "Cancel",
+            "extent": (100, 100, 80, 30),
+            "states": {8, 30},
+            "children": [],
+        },
+        LABEL: {
+            "role": 29,
+            "name": "Some label",
+            "extent": (10, 10, 200, 20),
+            "states": ALL_STATES,
+            "children": [],
+        },
     }
     return FakeBus(nodes), A
 
@@ -222,8 +239,13 @@ def test_max_nodes_truncation_is_signalled():
     for i in range(10):
         child = ("app", f"/n{i + 1}") if i < 9 else ("app", "/btn")
         nodes[("app", f"/n{i}")] = {"role": 39, "name": "", "children": [child]}
-    nodes[("app", "/btn")] = {"role": 43, "name": "Deep", "extent": (0, 0, 1, 1),
-                              "states": ALL_STATES, "children": []}
+    nodes[("app", "/btn")] = {
+        "role": 43,
+        "name": "Deep",
+        "extent": (0, 0, 1, 1),
+        "states": ALL_STATES,
+        "children": [],
+    }
     bus = FakeBus(nodes)
     els, truncated = a11y.find_elements(bus, "app", "/n0", actionable=True, max_nodes=3)
     assert els == [] and truncated is True
@@ -239,10 +261,20 @@ def _shared_subtree():
         a: {"role": 39, "name": "", "children": [doc], "states": ALL_STATES},
         b: {"role": 39, "name": "", "children": [doc], "states": ALL_STATES},
         doc: {"role": 95, "name": "", "children": [ok], "states": ALL_STATES},
-        ok: {"role": 43, "name": "OK", "extent": (0, 0, 9, 9), "states": ALL_STATES,
-             "children": []},
-        last: {"role": 43, "name": "Last", "extent": (0, 20, 9, 9), "states": ALL_STATES,
-               "children": []},
+        ok: {
+            "role": 43,
+            "name": "OK",
+            "extent": (0, 0, 9, 9),
+            "states": ALL_STATES,
+            "children": [],
+        },
+        last: {
+            "role": 43,
+            "name": "Last",
+            "extent": (0, 20, 9, 9),
+            "states": ALL_STATES,
+            "children": [],
+        },
     }
     return FakeBus(nodes), root
 
@@ -253,7 +285,9 @@ def test_an_object_reached_twice_is_walked_once():
     reads = []
     call = bus.call
     bus.call = lambda svc, path, iface, method, *sig: (
-        reads.append((path, method)), call(svc, path, iface, method, *sig))[1]
+        reads.append((path, method)),
+        call(svc, path, iface, method, *sig),
+    )[1]
     els, truncated = a11y.find_elements(bus, *root, max_nodes=6)
     assert [e["name"] for e in els] == ["OK", "Last"]
     assert truncated is False
@@ -274,8 +308,7 @@ def test_the_field_walks_visit_each_object_once():
     assert a11y.focused_text(bus, *root, max_nodes=6) == ("app", "/last", 79)
 
 
-_ACTION_IFACES = ["org.a11y.atspi.Accessible", "org.a11y.atspi.Action",
-                  "org.a11y.atspi.Component"]
+_ACTION_IFACES = ["org.a11y.atspi.Accessible", "org.a11y.atspi.Action", "org.a11y.atspi.Component"]
 
 
 def _chat_list(with_button=False):
@@ -285,15 +318,36 @@ def _chat_list(with_button=False):
     btn = ("app", "/btn")
     nodes = {
         root: {"role": 23, "name": "w", "children": [btn, row] if with_button else [row]},
-        row: {"role": 90, "name": "Yasser Hajbi 19:09 hello", "children": [cell],
-              "extent": (0, 100, 400, 60), "states": ALL_STATES},
-        cell: {"role": 56, "name": "Yasser Hajbi 19:09 hello", "children": [label],
-               "extent": (0, 100, 400, 60), "states": ALL_STATES, "ifaces": _ACTION_IFACES,
-               "actions": ["SetFocus"]},
-        label: {"role": 29, "name": "Yasser Hajbi", "children": [],
-                "extent": (60, 100, 100, 20), "states": ALL_STATES},
-        btn: {"role": 43, "name": "Call Yasser", "children": [],
-              "extent": (300, 0, 40, 40), "states": ALL_STATES},
+        row: {
+            "role": 90,
+            "name": "Yasser Hajbi 19:09 hello",
+            "children": [cell],
+            "extent": (0, 100, 400, 60),
+            "states": ALL_STATES,
+        },
+        cell: {
+            "role": 56,
+            "name": "Yasser Hajbi 19:09 hello",
+            "children": [label],
+            "extent": (0, 100, 400, 60),
+            "states": ALL_STATES,
+            "ifaces": _ACTION_IFACES,
+            "actions": ["SetFocus"],
+        },
+        label: {
+            "role": 29,
+            "name": "Yasser Hajbi",
+            "children": [],
+            "extent": (60, 100, 100, 20),
+            "states": ALL_STATES,
+        },
+        btn: {
+            "role": 43,
+            "name": "Call Yasser",
+            "children": [],
+            "extent": (300, 0, 40, 40),
+            "states": ALL_STATES,
+        },
     }
     return FakeBus(nodes), root
 
@@ -335,8 +389,13 @@ def test_element_without_component_is_skipped():
     # GetExtents raising (no Component interface) drops the element quietly
     nodes = {
         ("app", "/root"): {"role": 75, "name": "app", "children": [("app", "/b")]},
-        ("app", "/b"): {"role": 43, "name": "NoComp", "extent": None,
-                        "states": ALL_STATES, "children": []},
+        ("app", "/b"): {
+            "role": 43,
+            "name": "NoComp",
+            "extent": None,
+            "states": ALL_STATES,
+            "children": [],
+        },
     }
 
     class NoCompBus(FakeBus):
@@ -400,8 +459,14 @@ def test_app_for_pid_skips_childless_same_pid_root(monkeypatch):
         qt: {"role": 75, "name": "Qml Runtime", "children": [frame]},
         portal: {"role": 75, "name": "xdg-desktop-portal-gtk", "children": []},
         frame: {"role": 23, "name": "QML Window", "children": [btn]},
-        btn: {"role": 43, "role_name": "button", "name": "Approve Alpha",
-              "extent": (10, 10, 80, 30), "states": ALL_STATES, "children": []},
+        btn: {
+            "role": 43,
+            "role_name": "button",
+            "name": "Approve Alpha",
+            "extent": (10, 10, 80, 30),
+            "states": ALL_STATES,
+            "children": [],
+        },
     }
     bus = FakeBus(nodes, pids={"gtk": 42, "qt": 42, "portal": 7})
     monkeypatch.setattr(a11y, "apps", lambda b: [portal, gtk, qt])
@@ -455,10 +520,13 @@ def test_degenerate_and_wild_extents_are_rejected():
     # (GTK notebook scroll arrows come back 8x0; offscreen tab pages report
     # origins in the millions). Neither is a real click target.
     nodes = {
-        ("a", "/ghost"): {"role": 43, "name": "Next tab", "extent": (-1, 3, 8, 0),
-                          "children": []},
-        ("a", "/wild"): {"role": 43, "name": "Offscreen", "extent": (139367382, 5, 10, 10),
-                         "children": []},
+        ("a", "/ghost"): {"role": 43, "name": "Next tab", "extent": (-1, 3, 8, 0), "children": []},
+        ("a", "/wild"): {
+            "role": 43,
+            "name": "Offscreen",
+            "extent": (139367382, 5, 10, 10),
+            "children": [],
+        },
         ("a", "/ok"): {"role": 43, "name": "Real", "extent": (1, 2, 3, 4), "children": []},
     }
     bus = FakeBus(nodes)
@@ -487,14 +555,28 @@ def test_value_of_checkable_comes_free_from_states():
 
 
 def test_value_reads_entry_text():
-    nodes = {("a", "/e"): {"role": 79, "name": "", "text": "hello",
-                           "ifaces": ["org.a11y.atspi.Text"], "children": []}}
+    nodes = {
+        ("a", "/e"): {
+            "role": 79,
+            "name": "",
+            "text": "hello",
+            "ifaces": ["org.a11y.atspi.Text"],
+            "children": [],
+        }
+    }
     assert a11y.element_value(FakeBus(nodes), "a", "/e", 79, set()) == {"value": "hello"}
 
 
 def test_value_truncates_a_long_text_area():
-    nodes = {("a", "/e"): {"role": 61, "name": "", "text": "x" * 500,
-                           "ifaces": ["org.a11y.atspi.Text"], "children": []}}
+    nodes = {
+        ("a", "/e"): {
+            "role": 61,
+            "name": "",
+            "text": "x" * 500,
+            "ifaces": ["org.a11y.atspi.Text"],
+            "children": [],
+        }
+    }
     got = a11y.element_value(FakeBus(nodes), "a", "/e", 61, set())["value"]
     assert got.endswith("...") and len(got) == a11y._MAX_TEXT + 3
 
@@ -502,16 +584,32 @@ def test_value_truncates_a_long_text_area():
 def test_password_contents_are_never_read():
     # a password field is a legitimate element to report, but its contents
     # must never leave the app
-    nodes = {("a", "/p"): {"role": 40, "name": "Password", "text": "hunter2",
-                           "ifaces": ["org.a11y.atspi.Text"], "children": []}}
+    nodes = {
+        ("a", "/p"): {
+            "role": 40,
+            "name": "Password",
+            "text": "hunter2",
+            "ifaces": ["org.a11y.atspi.Text"],
+            "children": [],
+        }
+    }
     assert a11y.element_value(FakeBus(nodes), "a", "/p", 40, set()) == {}
 
 
 def test_value_reads_slider_position_as_percent():
     # raw units are toolkit-specific (PulseAudio uses 0..99957), so a
     # position percentage is what an agent can actually reason about
-    nodes = {("a", "/s"): {"role": 51, "name": "", "cur": 65536.0, "min": 0.0, "max": 99957.0,
-                           "ifaces": ["org.a11y.atspi.Value"], "children": []}}
+    nodes = {
+        ("a", "/s"): {
+            "role": 51,
+            "name": "",
+            "cur": 65536.0,
+            "min": 0.0,
+            "max": 99957.0,
+            "ifaces": ["org.a11y.atspi.Value"],
+            "children": [],
+        }
+    }
     assert a11y.element_value(FakeBus(nodes), "a", "/s", 51, set()) == {
         "value": 65536.0,
         "percent": 66,
@@ -530,9 +628,17 @@ def test_unnamed_value_bearing_element_is_still_reported():
     # still worth returning
     nodes = {
         ("a", "/root"): {"role": 75, "name": "app", "children": [("a", "/s"), ("a", "/box")]},
-        ("a", "/s"): {"role": 51, "name": "", "cur": 5.0, "min": 0.0, "max": 10.0,
-                      "extent": (1, 2, 3, 4), "states": ALL_STATES,
-                      "ifaces": ["org.a11y.atspi.Value"], "children": []},
+        ("a", "/s"): {
+            "role": 51,
+            "name": "",
+            "cur": 5.0,
+            "min": 0.0,
+            "max": 10.0,
+            "extent": (1, 2, 3, 4),
+            "states": ALL_STATES,
+            "ifaces": ["org.a11y.atspi.Value"],
+            "children": [],
+        },
         ("a", "/box"): {"role": 39, "name": "", "extent": (0, 0, 9, 9), "children": []},
     }
     els, _ = a11y.find_elements(FakeBus(nodes), "a", "/root", actionable=False)
@@ -541,8 +647,17 @@ def test_unnamed_value_bearing_element_is_still_reported():
 
 def test_state_decoding_two_words():
     # bit 30 (visible) in low word, bit 32 in high word
-    bus = FakeBus({("a", "/n"): {"role": 43, "name": "b", "extent": (0, 0, 1, 1),
-                                 "states": {30, 32}, "children": []}})
+    bus = FakeBus(
+        {
+            ("a", "/n"): {
+                "role": 43,
+                "name": "b",
+                "extent": (0, 0, 1, 1),
+                "states": {30, 32},
+                "children": [],
+            }
+        }
+    )
     assert a11y._states(bus, "a", "/n") == {30, 32}
 
 
@@ -554,11 +669,19 @@ def test_app_for_pid_takes_the_root_that_holds_this_window(monkeypatch, order):
     gtk, qt = ("gtk", "/root"), ("qt", "/root")
     nodes = {
         gtk: {"role": 75, "name": "qml6", "children": [("gtk", "/dialog")]},
-        ("gtk", "/dialog"): {"role": 23, "name": "Open File", "extent": (0, 0, 600, 400),
-                             "children": []},
+        ("gtk", "/dialog"): {
+            "role": 23,
+            "name": "Open File",
+            "extent": (0, 0, 600, 400),
+            "children": [],
+        },
         qt: {"role": 75, "name": "Qml Runtime", "children": [("qt", "/main")]},
-        ("qt", "/main"): {"role": 23, "name": "Editor", "extent": (0, 0, 1200, 800),
-                          "children": []},
+        ("qt", "/main"): {
+            "role": 23,
+            "name": "Editor",
+            "extent": (0, 0, 1200, 800),
+            "children": [],
+        },
     }
     bus = FakeBus(nodes, pids={"gtk": 42, "qt": 42})
     roots = [gtk, qt] if order == "gtk-first" else [qt, gtk]
@@ -569,11 +692,19 @@ def test_app_for_pid_takes_the_root_that_holds_this_window(monkeypatch, order):
     assert a11y.app_for_pid(bus, 42, title="x", size=(1200, 800)) == qt
 
 
-
 def test_has_action_and_text_primitives():
     entry = ("app", "/entry")
-    nodes = {entry: {"role": 79, "name": "", "children": [], "text": "ab", "caret": 1,
-                     "n_actions": 0, "states": {a11y._STATE_FOCUSED}}}
+    nodes = {
+        entry: {
+            "role": 79,
+            "name": "",
+            "children": [],
+            "text": "ab",
+            "caret": 1,
+            "n_actions": 0,
+            "states": {a11y._STATE_FOCUSED},
+        }
+    }
     bus = FakeBus(nodes)
     assert a11y.has_action(bus, *entry) is False
     assert a11y.grab_focus(bus, *entry) is True
@@ -593,20 +724,37 @@ def test_focused_text_finds_the_focused_field_in_a_hidden_window():
     assert a11y.focused_text(FakeBus(nodes), *root) == ("app", "/entry", 79)
 
 
-
 def test_an_unnamed_editable_field_is_listed_under_its_label():
     # GTK reports an entry as role text with no name of its own; the label
     # beside it names it through a LABELLED_BY relation (type 2)
     root, field, label, ro = ("app", "/root"), ("app", "/field"), ("app", "/label"), ("app", "/ro")
     nodes = {
         root: {"role": 23, "name": "w", "children": [label, field, ro]},
-        label: {"role": 29, "name": "Name", "children": [], "relations": [(1, [field])],
-                "extent": (10, 10, 40, 20), "states": ALL_STATES},
-        field: {"role": 61, "name": "", "children": [], "relations": [(2, [label])],
-                "extent": (60, 10, 200, 20), "states": ALL_STATES | {a11y._STATE_EDITABLE},
-                "text": ""},
-        ro: {"role": 61, "name": "", "children": [], "extent": (10, 40, 200, 20),
-             "states": ALL_STATES, "text": "read only"},
+        label: {
+            "role": 29,
+            "name": "Name",
+            "children": [],
+            "relations": [(1, [field])],
+            "extent": (10, 10, 40, 20),
+            "states": ALL_STATES,
+        },
+        field: {
+            "role": 61,
+            "name": "",
+            "children": [],
+            "relations": [(2, [label])],
+            "extent": (60, 10, 200, 20),
+            "states": ALL_STATES | {a11y._STATE_EDITABLE},
+            "text": "",
+        },
+        ro: {
+            "role": 61,
+            "name": "",
+            "children": [],
+            "extent": (10, 40, 200, 20),
+            "states": ALL_STATES,
+            "text": "read only",
+        },
     }
     els, _ = a11y.find_elements(FakeBus(nodes), *root)
     assert [(e["role"], e["name"]) for e in els] == [("widget", "Name")]
@@ -614,7 +762,6 @@ def test_an_unnamed_editable_field_is_listed_under_its_label():
     # a name search finds it through the label (LABEL_FOR, type 1)
     found, _ = a11y.find_elements(FakeBus(nodes), *root, name="name")
     assert [(e["name"], e["path"]) for e in found] == [("Name", "/field")]
-
 
 
 def test_editable_fields_lists_only_editable_text():
@@ -627,7 +774,9 @@ def test_editable_fields_lists_only_editable_text():
         b: {"role": 79, "name": "", "children": [], "states": ed},
     }
     assert a11y.editable_fields(FakeBus(nodes), *root) == (
-        [("app", "/a", 61), ("app", "/b", 79)], True)
+        [("app", "/a", 61), ("app", "/b", 79)],
+        True,
+    )
 
 
 def test_editable_fields_says_when_it_stopped_short():
@@ -641,9 +790,7 @@ def test_editable_fields_says_when_it_stopped_short():
         pad: {"role": 39, "name": "", "children": [b], "states": set()},
         b: {"role": 79, "name": "", "children": [], "states": ed},
     }
-    assert a11y.editable_fields(FakeBus(nodes), *root, max_nodes=3) == (
-        [("app", "/a", 61)], False)
-
+    assert a11y.editable_fields(FakeBus(nodes), *root, max_nodes=3) == ([("app", "/a", 61)], False)
 
 
 def test_insert_text_passes_its_length_in_bytes():
@@ -657,8 +804,10 @@ def test_insert_text_counts_the_length_in_utf16_for_qt():
     # Qt resizes the text to the length in UTF-16 units: a byte count
     # would pad it with garbage characters
     entry = ("qtapp", "/entry")
-    bus = FakeBus({entry: {"role": 79, "name": "", "children": [], "text": "", "caret": 0}},
-                  toolkits={"qtapp": "Qt"})
+    bus = FakeBus(
+        {entry: {"role": 79, "name": "", "children": [], "text": "", "caret": 0}},
+        toolkits={"qtapp": "Qt"},
+    )
     assert a11y.insert_text(bus, *entry, " \u2713 \U0001f600 ok")
     assert a11y.text_of(bus, *entry) == " \u2713 \U0001f600 ok"
 
@@ -667,11 +816,17 @@ def test_insert_text_counts_the_length_in_utf16_for_qt():
 
 
 def _two_frames(name_a, name_b, size_a=(400, 300), size_b=(800, 600)):
-    return FakeBus({
-        ("app", "/root"): {"role": 75, "name": "app", "children": [("app", "/fa"), ("app", "/fb")]},
-        ("app", "/fa"): {"role": 23, "name": name_a, "extent": (0, 0, *size_a), "children": []},
-        ("app", "/fb"): {"role": 23, "name": name_b, "extent": (0, 0, *size_b), "children": []},
-    })
+    return FakeBus(
+        {
+            ("app", "/root"): {
+                "role": 75,
+                "name": "app",
+                "children": [("app", "/fa"), ("app", "/fb")],
+            },
+            ("app", "/fa"): {"role": 23, "name": name_a, "extent": (0, 0, *size_a), "children": []},
+            ("app", "/fb"): {"role": 23, "name": name_b, "extent": (0, 0, *size_b), "children": []},
+        }
+    )
 
 
 def test_a_unique_title_names_the_frame():
@@ -690,8 +845,7 @@ def test_a_peer_window_with_the_same_title_proves_nothing_by_title():
     # matches the title; only a size no peer shares can tell them apart
     bus = _two_frames("Home", "Other")
     peers = [("Home", (400, 300))]
-    assert a11y.window_frame_for(bus, "app", "/root", "Home", (800, 600), peers) == (
-        "app", "/fb")
+    assert a11y.window_frame_for(bus, "app", "/root", "Home", (800, 600), peers) == ("app", "/fb")
     bus = _two_frames("Home", "Other", size_b=(400, 300))
     assert a11y.window_frame_for(bus, "app", "/root", "Home", (400, 300), peers) is None
 
@@ -699,7 +853,9 @@ def test_a_peer_window_with_the_same_title_proves_nothing_by_title():
 def test_a_unique_size_names_the_frame_when_no_peer_shares_it():
     bus = _two_frames("x", "y")
     assert a11y.window_frame_for(bus, "app", "/root", "T", (400, 300), [("U", (800, 600))]) == (
-        "app", "/fa")
+        "app",
+        "/fa",
+    )
     # a peer of the same size: its frame could be the one that matches
     assert a11y.window_frame_for(bus, "app", "/root", "T", (400, 300), [("U", (400, 300))]) is None
 
@@ -725,15 +881,26 @@ def test_a_named_field_its_label_points_at_is_found_once():
     root, field, label = ("app", "/root"), ("app", "/field"), ("app", "/label")
     nodes = {
         root: {"role": 23, "name": "w", "children": [label, field]},
-        label: {"role": 29, "name": "Email:", "children": [], "relations": [(1, [field])],
-                "extent": (10, 10, 40, 20), "states": ALL_STATES},
-        field: {"role": 61, "name": "Email:", "children": [], "relations": [(2, [label])],
-                "extent": (60, 10, 200, 20), "states": ALL_STATES | {a11y._STATE_EDITABLE},
-                "text": ""},
+        label: {
+            "role": 29,
+            "name": "Email:",
+            "children": [],
+            "relations": [(1, [field])],
+            "extent": (10, 10, 40, 20),
+            "states": ALL_STATES,
+        },
+        field: {
+            "role": 61,
+            "name": "Email:",
+            "children": [],
+            "relations": [(2, [label])],
+            "extent": (60, 10, 200, 20),
+            "states": ALL_STATES | {a11y._STATE_EDITABLE},
+            "text": "",
+        },
     }
     for actionable in (True, False):
-        found, _ = a11y.find_elements(FakeBus(nodes), *root, name="email",
-                                      actionable=actionable)
+        found, _ = a11y.find_elements(FakeBus(nodes), *root, name="email", actionable=actionable)
         assert [e["path"] for e in found].count("/field") == 1
 
 
@@ -741,8 +908,14 @@ def test_a_field_record_says_it_is_a_field():
     root, field = ("app", "/root"), ("app", "/field")
     nodes = {
         root: {"role": 23, "name": "w", "children": [field]},
-        field: {"role": 61, "name": "Name", "children": [], "extent": (60, 10, 200, 20),
-                "states": ALL_STATES | {a11y._STATE_EDITABLE}, "text": ""},
+        field: {
+            "role": 61,
+            "name": "Name",
+            "children": [],
+            "extent": (60, 10, 200, 20),
+            "states": ALL_STATES | {a11y._STATE_EDITABLE},
+            "text": "",
+        },
     }
     els, _ = a11y.find_elements(FakeBus(nodes), *root)
     assert els[0]["field"] is True
@@ -753,9 +926,11 @@ def test_the_effect_calls_refuse_in_a_dry_run(monkeypatch):
     monkeypatch.setenv("OMNIMCP_DRYRUN", "1")
     entry = ("app", "/entry")
     bus = FakeBus({entry: {"role": 79, "name": "", "children": [], "text": "", "caret": 0}})
-    for call in (lambda: a11y.do_action(bus, *entry),
-                 lambda: a11y.grab_focus(bus, *entry),
-                 lambda: a11y.insert_text(bus, *entry, "x")):
+    for call in (
+        lambda: a11y.do_action(bus, *entry),
+        lambda: a11y.grab_focus(bus, *entry),
+        lambda: a11y.insert_text(bus, *entry, "x"),
+    ):
         with pytest.raises(Exception, match="(?i)dry"):
             call()
     assert a11y.text_of(bus, *entry) == ""

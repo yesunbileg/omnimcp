@@ -25,6 +25,7 @@ needs_hyprland = pytest.mark.skipif(
     reason="no live Hyprland session",
 )
 
+
 @pytest.fixture(autouse=True)
 def live_batch_query(monkeypatch):
     """The real batch query: conftest makes it fail for unit tests."""

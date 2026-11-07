@@ -47,7 +47,8 @@ def test_read_unicode_ids_filter_pagination_and_no_write(board):
     original = board.read_bytes()
     result = kanban.read()
     assert result["columns"] == [
-        {"name": "Хийх", "count": 2}, {"name": "Хийж байгаа", "count": 1},
+        {"name": "Хийх", "count": 2},
+        {"name": "Хийж байгаа", "count": 1},
         {"name": "Дууссан", "count": 1},
     ]
     assert result["tasks"][0]["id"].startswith("legacy-")
@@ -91,8 +92,9 @@ def test_crlf_multiline_and_checked_preserved(board):
     card = before["tasks"][-1]
     moved = kanban.update(card["id"], before["revision"], column="Хийх")
     assert moved["task"]["checked"] is True
-    added = kanban.add("Хийх", "First\n## not a column\n- [ ] not a separate card",
-                       moved["revision"])
+    added = kanban.add(
+        "Хийх", "First\n## not a column\n- [ ] not a separate card", moved["revision"]
+    )
     assert kanban.read(task_id=added["task"]["id"])["total"] == 1
     raw = board.read_bytes()
     assert b"\n" not in raw.replace(b"\r\n", b"")
@@ -134,8 +136,9 @@ def test_two_agents_cannot_claim_same_revision(board):
     def claim():
         barrier.wait()
         try:
-            results.append(kanban.update(before["tasks"][0]["id"], before["revision"],
-                                          column="Хийж байгаа"))
+            results.append(
+                kanban.update(before["tasks"][0]["id"], before["revision"], column="Хийж байгаа")
+            )
         except ValueError as error:
             results.append(error)
 
@@ -179,10 +182,12 @@ def test_wait_returns_changes_and_timeout(board):
 
 
 def test_settings_archive_comments_and_fences_not_tasks(board):
-    data = BOARD.replace("## Хийх",
-                         "```md\n## Fake\n- [ ] fake\n```\n\n%%\n## Hidden\n%%\n\n## Хийх")
-    data = data.replace("%% kanban:settings",
-                         "***\n## Archive\n- [x] old archived task\n\n%% kanban:settings")
+    data = BOARD.replace(
+        "## Хийх", "```md\n## Fake\n- [ ] fake\n```\n\n%%\n## Hidden\n%%\n\n## Хийх"
+    )
+    data = data.replace(
+        "%% kanban:settings", "***\n## Archive\n- [x] old archived task\n\n%% kanban:settings"
+    )
     board.write_text(data)
     assert len(kanban.read()["columns"]) == 3
     assert kanban.read()["total"] == 4
@@ -190,9 +195,13 @@ def test_settings_archive_comments_and_fences_not_tasks(board):
     assert board.read_text().split("***", 1)[1] == data.split("***", 1)[1]
 
 
-@pytest.mark.parametrize("replacement,match", [
-    ("## Хийх", "unique"), ("## ", "non-empty"),
-])
+@pytest.mark.parametrize(
+    "replacement,match",
+    [
+        ("## Хийх", "unique"),
+        ("## ", "non-empty"),
+    ],
+)
 def test_ambiguous_column_names_refused(board, replacement, match):
     board.write_text(BOARD.replace("## Хийж байгаа", replacement))
     with pytest.raises(ValueError, match=match):
@@ -259,10 +268,14 @@ def test_append_result_moves_and_checks_without_replacing_instructions(board, cr
         board.write_bytes(BOARD.replace("\n", "\r\n").encode())
     before = kanban.read()
     card = before["tasks"][0]
-    result = kanban.update(card["id"], before["revision"], column="Дууссан",
-                           checked=True, append_text="Үр дүн: шалгав.\nURL: https://example.org/")
-    assert result["task"]["text"] == card["text"] + (
-        "\nҮр дүн: шалгав.\nURL: https://example.org/")
+    result = kanban.update(
+        card["id"],
+        before["revision"],
+        column="Дууссан",
+        checked=True,
+        append_text="Үр дүн: шалгав.\nURL: https://example.org/",
+    )
+    assert result["task"]["text"] == card["text"] + ("\nҮр дүн: шалгав.\nURL: https://example.org/")
     assert result["task"]["checked"] is True
     assert result["task"]["column"] == "Дууссан"
     assert kanban.read(task_id=result["task"]["id"])["tasks"][0] == result["task"]
@@ -276,9 +289,12 @@ def test_append_result_moves_and_checks_without_replacing_instructions(board, cr
 def test_append_validation_conflicts_and_dry_run_cannot_lose_content(board, monkeypatch):
     before = kanban.read()
     task_id = before["tasks"][0]["id"]
-    for args in ({"text": "Replacement", "append_text": "Result"},
-                 {"append_text": ""}, {"append_text": "Result ^injected-id"},
-                 {"append_text": "x" * kanban.MAX_TEXT}):
+    for args in (
+        {"text": "Replacement", "append_text": "Result"},
+        {"append_text": ""},
+        {"append_text": "Result ^injected-id"},
+        {"append_text": "x" * kanban.MAX_TEXT},
+    ):
         with pytest.raises(ValueError):
             kanban.update(task_id, before["revision"], **args)
     assert board.read_text() == BOARD

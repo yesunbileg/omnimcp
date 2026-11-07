@@ -22,8 +22,7 @@ def no_ambient_journal(monkeypatch):
     with OMNIMCP_DRYRUN set would pass while every acting tool did
     nothing.
     """
-    for var in ("OMNIMCP_JOURNAL", "OMNIMCP_JOURNAL_TEXT", "OMNIMCP_DRYRUN",
-                "OMNIMCP_KANBAN_FILE"):
+    for var in ("OMNIMCP_JOURNAL", "OMNIMCP_JOURNAL_TEXT", "OMNIMCP_DRYRUN", "OMNIMCP_KANBAN_FILE"):
         monkeypatch.delenv(var, raising=False)
     journal._broken = False
     # replay marks its records `by: replay` and the CLI verbs stamp theirs
@@ -93,6 +92,7 @@ def no_live_batch_query(monkeypatch):
     a test that forgot to stub it would pass or fail on the developer's own
     desktop. Code that degrades without the compositor gets to degrade.
     """
+
     def unreachable(cmds):
         raise hyprctl.HyprctlError("no compositor in unit tests")
 
@@ -109,6 +109,7 @@ def no_live_accessibility(monkeypatch):
     their open apps, a chat app's messages included, and a test that
     reached it would read, or press, whatever is open there.
     """
+
     def no_bus():
         raise a11y.A11yError("no accessibility bus in unit tests")
 
@@ -132,8 +133,12 @@ def no_real_desktop(monkeypatch, no_ambient_journal, no_live_batch_query, no_liv
     def forbidden(*args, **kwargs):
         pytest.fail("real desktop or process boundary reached", pytrace=False)
 
-    for name in ("HYPRLAND_INSTANCE_SIGNATURE", "WAYLAND_DISPLAY", "DISPLAY",
-                 "DBUS_SESSION_BUS_ADDRESS"):
+    for name in (
+        "HYPRLAND_INSTANCE_SIGNATURE",
+        "WAYLAND_DISPLAY",
+        "DISPLAY",
+        "DBUS_SESSION_BUS_ADDRESS",
+    ):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("OMNIMCP_DRYRUN", "1")
     for name in ("run", "Popen", "check_output"):

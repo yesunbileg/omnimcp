@@ -34,6 +34,7 @@ def live_queries(monkeypatch):
     monkeypatch.setattr(hyprctl, "query", real_query)
     monkeypatch.setattr(hyprctl, "batch_query", real_batch_query)
 
+
 needs_hyprland = pytest.mark.skipif(
     not os.environ.get("HYPRLAND_INSTANCE_SIGNATURE"),
     reason="no live Hyprland session",

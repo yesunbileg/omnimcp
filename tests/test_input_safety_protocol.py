@@ -8,7 +8,7 @@ import sys
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-SERVER = r'''
+SERVER = r"""
 from omnimcp import server as s
 
 actions = []
@@ -43,24 +43,28 @@ def probe_disable_monitoring() -> str:
     return "disabled"
 
 app.run()
-'''
+"""
 
 
 def test_input_failures_stop_actions_over_stdio(tmp_path):
     async def exercise():
-        env = {key: value for key, value in os.environ.items()
-               if not key.startswith("OMNIMCP_")}
-        env.update(OMNIMCP_BACKGROUND="0", OMNIMCP_AUTH_GUARD="1",
-                   XDG_RUNTIME_DIR=str(tmp_path))
+        env = {key: value for key, value in os.environ.items() if not key.startswith("OMNIMCP_")}
+        env.update(OMNIMCP_BACKGROUND="0", OMNIMCP_AUTH_GUARD="1", XDG_RUNTIME_DIR=str(tmp_path))
         params = StdioServerParameters(command=sys.executable, args=["-c", SERVER], env=env)
         async with stdio_client(params) as (read, write), ClientSession(read, write) as client:
             await client.initialize()
             for monitor in (True, False):
-                result = await client.call_tool("sequence", {
-                    "steps": [{"op": "wait_for", "event": "window_open", "timeout_s": 1},
-                              {"op": "pointer", "action": "move", "x": 1, "y": 2}],
-                    "stop_on_change": monitor, "then": "none",
-                })
+                result = await client.call_tool(
+                    "sequence",
+                    {
+                        "steps": [
+                            {"op": "wait_for", "event": "window_open", "timeout_s": 1},
+                            {"op": "pointer", "action": "move", "x": 1, "y": 2},
+                        ],
+                        "stop_on_change": monitor,
+                        "then": "none",
+                    },
+                )
                 assert not result.isError, result.content
                 assert "stopped after 1/2" in result.content[0].text
                 assert "timeout" in result.content[0].text
@@ -70,10 +74,13 @@ def test_input_failures_stop_actions_over_stdio(tmp_path):
             assert "not found" in typed.content[0].text
 
             await client.call_tool("probe_disable_monitoring", {})
-            refused = await client.call_tool("sequence", {
-                "steps": [{"op": "pointer", "action": "move", "x": 1, "y": 2}],
-                "then": "none",
-            })
+            refused = await client.call_tool(
+                "sequence",
+                {
+                    "steps": [{"op": "pointer", "action": "move", "x": 1, "y": 2}],
+                    "then": "none",
+                },
+            )
             assert refused.isError
             assert "isolated socket failure" in refused.content[0].text
             actions = await client.call_tool("probe_actions", {})

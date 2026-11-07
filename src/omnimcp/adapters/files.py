@@ -166,7 +166,10 @@ def read(ctx, path: str, offset: int = 0, length: int = 8192) -> dict:
         code = "stale_revision" if exc.errno == errno.ENOENT else "verification_failed"
         raise Fault(code, "File changed or became unavailable while reading; re-read.") from exc
     if (before.st_dev, before.st_ino, before.st_mtime_ns, before.st_size) != (
-        after.st_dev, after.st_ino, after.st_mtime_ns, after.st_size
+        after.st_dev,
+        after.st_ino,
+        after.st_mtime_ns,
+        after.st_size,
     ) or (after.st_dev, after.st_ino) != (path_info.st_dev, path_info.st_ino):
         raise Fault("stale_revision", "File changed while reading; re-read.")
     return {

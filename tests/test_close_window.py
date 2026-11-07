@@ -27,12 +27,11 @@ def _wired(monkeypatch, order, hit):
     streams = []
     monkeypatch.setattr(srv.safety, "touch", lambda *a: None)
     monkeypatch.setattr(
-        srv.events, "EventStream",
+        srv.events,
+        "EventStream",
         lambda: streams.append(FakeStream(hit, order)) or streams[-1],
     )
-    monkeypatch.setattr(
-        srv.hyprctl, "dispatch", lambda *a: order.append(("dispatch", a))
-    )
+    monkeypatch.setattr(srv.hyprctl, "dispatch", lambda *a: order.append(("dispatch", a)))
     return streams
 
 
@@ -106,9 +105,7 @@ def test_close_window_degrades_when_the_socket_dies_mid_wait(monkeypatch):
             raise srv.events.EventError("event socket died")
 
     monkeypatch.setattr(srv.safety, "touch", lambda *a: None)
-    monkeypatch.setattr(
-        srv.events, "EventStream", lambda: DyingStream(None, order)
-    )
+    monkeypatch.setattr(srv.events, "EventStream", lambda: DyingStream(None, order))
     monkeypatch.setattr(srv.hyprctl, "dispatch", lambda *a: order.append(("dispatch", a)))
     out = srv.hypr("close_window", target="0xdead")
     assert "socket dropped" in out and "0xdead" in out

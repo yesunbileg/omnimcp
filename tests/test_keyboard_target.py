@@ -10,8 +10,15 @@ from omnimcp import server as srv
 def stub(monkeypatch):
     calls = {"dispatch": [], "typed": [], "keys": [], "slept": []}
     clients = [
-        {"address": "0xabc", "class": "kitty", "title": "t", "pid": 1,
-         "at": [0, 0], "size": [10, 10], "workspace": {"id": 1}},
+        {
+            "address": "0xabc",
+            "class": "kitty",
+            "title": "t",
+            "pid": 1,
+            "at": [0, 0],
+            "size": [10, 10],
+            "workspace": {"id": 1},
+        },
     ]
     monkeypatch.setattr(srv.safety, "touch", lambda *a: None)
 
@@ -23,14 +30,19 @@ def stub(monkeypatch):
         return {}
 
     monkeypatch.setattr(srv.hyprctl, "query", query)
-    monkeypatch.setattr(srv.hyprctl, "batch_query", lambda commands: [
-        query("activewindow") if command == "activewindow" else {"id": 1, "name": "1"}
-        for command in commands
-    ])
+    monkeypatch.setattr(
+        srv.hyprctl,
+        "batch_query",
+        lambda commands: [
+            query("activewindow") if command == "activewindow" else {"id": 1, "name": "1"}
+            for command in commands
+        ],
+    )
     monkeypatch.setattr(srv.hyprctl, "dispatch", lambda *a: calls["dispatch"].append(a))
     monkeypatch.setattr(srv.hinput, "type_text", lambda t: calls["typed"].append(t))
     monkeypatch.setattr(
-        srv.hyprctl, "send_shortcut",
+        srv.hyprctl,
+        "send_shortcut",
         lambda mods, key, addr: calls["keys"].append((mods, key, addr)),
     )
     monkeypatch.setattr(srv.time, "sleep", lambda s: calls["slept"].append(s))
@@ -129,8 +141,10 @@ def _track_window_seat(monkeypatch, stub, *, initial, target, return_on_key=Fals
 
     def batch_query(commands):
         active = dict(seat["window"])
-        return [active if command == "activewindow" else dict(seat["active_workspace"])
-                for command in commands]
+        return [
+            active if command == "activewindow" else dict(seat["active_workspace"])
+            for command in commands
+        ]
 
     def query(command):
         if command == "activewindow":
@@ -230,8 +244,9 @@ def test_bad_window_address_rejected(stub):
 
 def test_unresolved_active_window_refuses_typing(stub, monkeypatch):
     monkeypatch.setenv("OMNIMCP_AUTH_GUARD", "1")
-    monkeypatch.setattr(srv.hyprctl, "query", lambda cmd:
-                        {"address": "0xauth"} if cmd == "activewindow" else [])
+    monkeypatch.setattr(
+        srv.hyprctl, "query", lambda cmd: {"address": "0xauth"} if cmd == "activewindow" else []
+    )
     with pytest.raises(ValueError, match="not found"):
         srv.keyboard("type", text="sample-secret")
     assert stub["typed"] == []
@@ -267,21 +282,17 @@ def test_window_target_composes_with_then(stub, monkeypatch):
 
 
 LAUNCHER_LAYERS = {
-    "DP-1": {"levels": {"3": [{"namespace": "rofi", "x": 560, "y": 300,
-                               "w": 800, "h": 480}]}}
+    "DP-1": {"levels": {"3": [{"namespace": "rofi", "x": 560, "y": 300, "w": 800, "h": 480}]}}
 }
 
 LOCK_LAYERS = {
-    "DP-1": {"levels": {"3": [{"namespace": "hyprlock", "x": 0, "y": 0,
-                               "w": 1920, "h": 1080}]}}
+    "DP-1": {"levels": {"3": [{"namespace": "hyprlock", "x": 0, "y": 0, "w": 1920, "h": 1080}]}}
 }
 
 
 def _with_layers(monkeypatch, layers):
     prev = srv.hyprctl.query
-    monkeypatch.setattr(
-        srv.hyprctl, "query", lambda cmd: layers if cmd == "layers" else prev(cmd)
-    )
+    monkeypatch.setattr(srv.hyprctl, "query", lambda cmd: layers if cmd == "layers" else prev(cmd))
 
 
 def test_keyboard_window_target_refused_while_launcher_grabs(stub, monkeypatch):
@@ -427,11 +438,19 @@ def test_keyboard_confinement_wiring_refuses_out_of_scope_active_window(monkeypa
     # windowless type whose ACTIVE window is out of scope is refused
     monkeypatch.setenv("OMNIMCP_CONFINE", "class:kitty")
     monkeypatch.setattr(srv.safety, "touch", lambda *a: None)
-    active = {"address": "0xff", "class": "firefox", "title": "t", "pid": 9,
-              "at": [0, 0], "size": [10, 10], "workspace": {"id": 1}}
+    active = {
+        "address": "0xff",
+        "class": "firefox",
+        "title": "t",
+        "pid": 9,
+        "at": [0, 0],
+        "size": [10, 10],
+        "workspace": {"id": 1},
+    }
     typed = []
     monkeypatch.setattr(
-        srv.hyprctl, "query",
+        srv.hyprctl,
+        "query",
         lambda cmd: {"clients": [active], "layers": {}}.get(cmd, active),
     )
     monkeypatch.setattr(srv.hinput, "type_text", lambda t: typed.append(t))

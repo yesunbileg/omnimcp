@@ -12,20 +12,59 @@ from omnimcp import cli
 from omnimcp import server as srv
 
 ENTRIES = [
-    {"v": 1, "seq": 1, "ts": "2026-08-02T09:00:00.000Z", "kind": "session",
-     "event": "start", "pid": 10, "version": "0.10.0",
-     "mode": {"confine": "launched", "strict": True}},
-    {"v": 1, "seq": 2, "ts": "2026-08-02T09:00:01.000Z", "kind": "observe",
-     "tool": "screenshot", "args": {}, "outcome": "ok", "ms": 60},
-    {"v": 1, "seq": 3, "ts": "2026-08-02T09:00:02.000Z", "kind": "act",
-     "tool": "pointer", "args": {"action": "click", "x": 800, "y": 60, "then": "desktop"},
-     "outcome": "ok", "ms": 40, "result": "click ok"},
-    {"v": 1, "seq": 4, "ts": "2026-08-02T09:00:03.000Z", "kind": "act",
-     "tool": "keyboard", "args": {"action": "key", "keys": "enter"},
-     "outcome": "ok", "ms": 20, "result": "pressed enter"},
-    {"v": 1, "seq": 5, "ts": "2026-08-02T09:00:04.000Z", "kind": "act",
-     "tool": "pointer", "args": {"action": "click", "x": 1, "y": 1},
-     "outcome": "refused", "ms": 5, "error": "TrustError: outside the confinement scope"},
+    {
+        "v": 1,
+        "seq": 1,
+        "ts": "2026-08-02T09:00:00.000Z",
+        "kind": "session",
+        "event": "start",
+        "pid": 10,
+        "version": "0.10.0",
+        "mode": {"confine": "launched", "strict": True},
+    },
+    {
+        "v": 1,
+        "seq": 2,
+        "ts": "2026-08-02T09:00:01.000Z",
+        "kind": "observe",
+        "tool": "screenshot",
+        "args": {},
+        "outcome": "ok",
+        "ms": 60,
+    },
+    {
+        "v": 1,
+        "seq": 3,
+        "ts": "2026-08-02T09:00:02.000Z",
+        "kind": "act",
+        "tool": "pointer",
+        "args": {"action": "click", "x": 800, "y": 60, "then": "desktop"},
+        "outcome": "ok",
+        "ms": 40,
+        "result": "click ok",
+    },
+    {
+        "v": 1,
+        "seq": 4,
+        "ts": "2026-08-02T09:00:03.000Z",
+        "kind": "act",
+        "tool": "keyboard",
+        "args": {"action": "key", "keys": "enter"},
+        "outcome": "ok",
+        "ms": 20,
+        "result": "pressed enter",
+    },
+    {
+        "v": 1,
+        "seq": 5,
+        "ts": "2026-08-02T09:00:04.000Z",
+        "kind": "act",
+        "tool": "pointer",
+        "args": {"action": "click", "x": 1, "y": 1},
+        "outcome": "refused",
+        "ms": 5,
+        "error": "TrustError: outside the confinement scope",
+    },
 ]
 
 
@@ -54,9 +93,7 @@ def live(monkeypatch):
 def calls(monkeypatch):
     seen: list[tuple] = []
     for name in ("pointer", "keyboard", "click_ui", "hypr", "launch"):
-        monkeypatch.setattr(
-            srv, name, lambda _n=name, **kw: seen.append((_n, kw)) or f"{_n} ok"
-        )
+        monkeypatch.setattr(srv, name, lambda _n=name, **kw: seen.append((_n, kw)) or f"{_n} ok")
     return seen
 
 
@@ -100,11 +137,21 @@ def test_journal_reports_a_missing_file(tmp_path, capsys):
 
 def test_journal_never_prints_redacted_text(tmp_path, capsys):
     path = tmp_path / "j.ndjson"
-    path.write_text(json.dumps({
-        "v": 1, "seq": 1, "ts": "2026-08-02T09:00:00.000Z", "kind": "act",
-        "tool": "keyboard", "outcome": "ok", "ms": 1,
-        "args": {"action": "type", "text": {"redacted": True, "chars": 7, "sha256": "ab"}},
-    }) + "\n")
+    path.write_text(
+        json.dumps(
+            {
+                "v": 1,
+                "seq": 1,
+                "ts": "2026-08-02T09:00:00.000Z",
+                "kind": "act",
+                "tool": "keyboard",
+                "outcome": "ok",
+                "ms": 1,
+                "args": {"action": "type", "text": {"redacted": True, "chars": 7, "sha256": "ab"}},
+            }
+        )
+        + "\n"
+    )
     cli.journal_cmd([str(path)])
     assert "text=<7 chars>" in capsys.readouterr().out
 
@@ -166,13 +213,33 @@ def test_execute_refuses_a_tool_this_version_does_not_have(tmp_path, live, calls
     # running the rest would report success for a different sequence of
     # events than the one recorded, so nothing runs at all
     path = tmp_path / "j.ndjson"
-    path.write_text("".join(json.dumps(e) + "\n" for e in [
-        {"v": 1, "seq": 1, "ts": "2026-08-02T09:00:00.000Z", "kind": "act",
-         "tool": "teleport", "args": {}, "outcome": "ok", "ms": 1},
-        {"v": 1, "seq": 2, "ts": "2026-08-02T09:00:01.000Z", "kind": "act",
-         "tool": "keyboard", "args": {"action": "key", "keys": "enter"},
-         "outcome": "ok", "ms": 1},
-    ]))
+    path.write_text(
+        "".join(
+            json.dumps(e) + "\n"
+            for e in [
+                {
+                    "v": 1,
+                    "seq": 1,
+                    "ts": "2026-08-02T09:00:00.000Z",
+                    "kind": "act",
+                    "tool": "teleport",
+                    "args": {},
+                    "outcome": "ok",
+                    "ms": 1,
+                },
+                {
+                    "v": 1,
+                    "seq": 2,
+                    "ts": "2026-08-02T09:00:01.000Z",
+                    "kind": "act",
+                    "tool": "keyboard",
+                    "args": {"action": "key", "keys": "enter"},
+                    "outcome": "ok",
+                    "ms": 1,
+                },
+            ]
+        )
+    )
     assert cli.replay([str(path), "--execute", "--yes"]) == 1
     assert "teleport (recorded by a newer omnimcp)" in capsys.readouterr().out
     assert calls == []
@@ -181,15 +248,24 @@ def test_execute_refuses_a_tool_this_version_does_not_have(tmp_path, live, calls
 # --- the three things replay refuses ----------------------------------------
 
 
-def test_execute_refuses_when_a_recorded_window_is_gone(tmp_path, live, calls, monkeypatch,
-                                                        capsys):
+def test_execute_refuses_when_a_recorded_window_is_gone(tmp_path, live, calls, monkeypatch, capsys):
     monkeypatch.setattr(srv.hyprctl, "query", lambda cmd: [])  # nothing open
     path = tmp_path / "j.ndjson"
-    path.write_text(json.dumps({
-        "v": 1, "seq": 1, "ts": "2026-08-02T09:00:00.000Z", "kind": "act",
-        "tool": "hypr", "args": {"action": "close_window", "target": "0xabc"},
-        "outcome": "ok", "ms": 1,
-    }) + "\n")
+    path.write_text(
+        json.dumps(
+            {
+                "v": 1,
+                "seq": 1,
+                "ts": "2026-08-02T09:00:00.000Z",
+                "kind": "act",
+                "tool": "hypr",
+                "args": {"action": "close_window", "target": "0xabc"},
+                "outcome": "ok",
+                "ms": 1,
+            }
+        )
+        + "\n"
+    )
     assert cli.replay([str(path), "--execute", "--yes"]) == 1
     out = capsys.readouterr().out
     assert "no longer exist: 0xabc" in out
@@ -205,11 +281,21 @@ def test_skip_missing_runs_the_rest(journal_file, live, calls, monkeypatch):
 
 def test_execute_refuses_text_that_was_recorded_as_a_digest(tmp_path, live, calls, capsys):
     path = tmp_path / "j.ndjson"
-    path.write_text(json.dumps({
-        "v": 1, "seq": 9, "ts": "2026-08-02T09:00:00.000Z", "kind": "act",
-        "tool": "keyboard", "outcome": "ok", "ms": 1,
-        "args": {"action": "type", "text": {"redacted": True, "chars": 7, "sha256": "ab"}},
-    }) + "\n")
+    path.write_text(
+        json.dumps(
+            {
+                "v": 1,
+                "seq": 9,
+                "ts": "2026-08-02T09:00:00.000Z",
+                "kind": "act",
+                "tool": "keyboard",
+                "outcome": "ok",
+                "ms": 1,
+                "args": {"action": "type", "text": {"redacted": True, "chars": 7, "sha256": "ab"}},
+            }
+        )
+        + "\n"
+    )
     assert cli.replay([str(path), "--execute", "--yes"]) == 1
     assert "OMNIMCP_JOURNAL_TEXT=1" in capsys.readouterr().out
     assert calls == []
@@ -217,11 +303,21 @@ def test_execute_refuses_text_that_was_recorded_as_a_digest(tmp_path, live, call
 
 def test_a_digest_is_only_a_warning_without_execute(tmp_path, live, capsys):
     path = tmp_path / "j.ndjson"
-    path.write_text(json.dumps({
-        "v": 1, "seq": 9, "ts": "2026-08-02T09:00:00.000Z", "kind": "act",
-        "tool": "keyboard", "outcome": "ok", "ms": 1,
-        "args": {"action": "type", "text": {"redacted": True, "chars": 7, "sha256": "ab"}},
-    }) + "\n")
+    path.write_text(
+        json.dumps(
+            {
+                "v": 1,
+                "seq": 9,
+                "ts": "2026-08-02T09:00:00.000Z",
+                "kind": "act",
+                "tool": "keyboard",
+                "outcome": "ok",
+                "ms": 1,
+                "args": {"action": "type", "text": {"redacted": True, "chars": 7, "sha256": "ab"}},
+            }
+        )
+        + "\n"
+    )
     assert cli.replay([str(path)]) == 0
     assert "cannot be replayed" in capsys.readouterr().out
 
@@ -269,9 +365,16 @@ def test_long_pauses_are_capped(journal_file, live, calls, monkeypatch):
 
 
 def _one(tmp_path, **over):
-    entry = {"v": 1, "seq": 1, "ts": "2026-08-02T09:00:00.000Z", "kind": "act",
-             "tool": "pointer", "args": {"action": "click", "x": 1, "y": 1},
-             "outcome": "ok", "ms": 1}
+    entry = {
+        "v": 1,
+        "seq": 1,
+        "ts": "2026-08-02T09:00:00.000Z",
+        "kind": "act",
+        "tool": "pointer",
+        "args": {"action": "click", "x": 1, "y": 1},
+        "outcome": "ok",
+        "ms": 1,
+    }
     entry.update(over)
     path = tmp_path / "j.ndjson"
     path.write_text(json.dumps(entry) + "\n")
@@ -364,8 +467,9 @@ def test_replay_takes_the_beacon_when_the_pid_is_stale(tmp_path, monkeypatch):
     assert cli._take_beacon() is True
 
 
-def test_a_clipboard_write_needs_the_same_opt_in_the_server_needs(tmp_path, live, calls, capsys,
-                                                                  monkeypatch):
+def test_a_clipboard_write_needs_the_same_opt_in_the_server_needs(
+    tmp_path, live, calls, capsys, monkeypatch
+):
     monkeypatch.delenv("OMNIMCP_CLIPBOARD", raising=False)
     path = _one(tmp_path, tool="clipboard", args={"action": "write", "text": "x"})
     assert cli.replay([str(path), "--execute", "--yes"]) == 1

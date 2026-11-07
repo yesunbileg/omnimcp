@@ -90,8 +90,11 @@ _MOVED = "the human's seat moved (if you used the mouse or keyboard, rerun hands
 
 
 def _control(addr: str, name: str) -> dict:
-    found = [c for c in srv._ui_read(addr, actionable=False) if c.get("name") == name
-             and c.get("role") != "label"]
+    found = [
+        c
+        for c in srv._ui_read(addr, actionable=False)
+        if c.get("name") == name and c.get("role") != "label"
+    ]
     assert found, f"no control named {name!r}"
     return found[0]
 

@@ -281,6 +281,7 @@ def click(
         if has_xy:
             move(x, y)  # type: ignore[arg-type]
             time.sleep(0.02)
+
         def run(p: VirtualPointer) -> None:
             _check_requested_pointer_seat(p)
             p.click(button, double=double)

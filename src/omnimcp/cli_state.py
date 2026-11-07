@@ -122,12 +122,16 @@ def _merge(current: dict[str, Any], mine: dict[str, Any]) -> dict[str, Any]:
     cur_trust = current.get("trust") if isinstance(current.get("trust"), dict) else {}
     my_trust, old_trust = mine["trust"], _restored.get("trust", {})
     owned = set(cur_trust.get("owned") or []) | set(my_trust["owned"])
-    seat = my_trust["seat"] if my_trust["seat"] != old_trust.get("seat") else (
-        cur_trust.get("seat") or my_trust["seat"]
+    seat = (
+        my_trust["seat"]
+        if my_trust["seat"] != old_trust.get("seat")
+        else (cur_trust.get("seat") or my_trust["seat"])
     )
     notify_ts = max(float(cur_trust.get("notify_ts") or 0.0), float(my_trust["notify_ts"]))
-    marks = mine["marks"] if mine["marks"] != _restored.get("marks") else (
-        current.get("marks") or mine["marks"]
+    marks = (
+        mine["marks"]
+        if mine["marks"] != _restored.get("marks")
+        else (current.get("marks") or mine["marks"])
     )
     flags = dict(current.get("flags") or {}) if isinstance(current.get("flags"), dict) else {}
     flags.update(mine["flags"])

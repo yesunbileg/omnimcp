@@ -196,9 +196,7 @@ def _describe(scope: tuple[str, Any]) -> str:
 
 
 def _client(address: str) -> dict[str, Any] | None:
-    return next(
-        (c for c in hyprctl.query("clients") if c.get("address") == address), None
-    )
+    return next((c for c in hyprctl.query("clients") if c.get("address") == address), None)
 
 
 def guards_window_input() -> bool:
@@ -491,9 +489,7 @@ def other_window_at(x: float, y: float, active: str | None) -> dict[str, Any] | 
         return under[0] if under else None
     m = hyprctl.monitor_at(monitors, x, y)
     point_monitor = m.get("id") if m is not None else None
-    return next(
-        (c for c in under if _would_cover(c, me, monitors, True, point_monitor)), None
-    )
+    return next((c for c in under if _would_cover(c, me, monitors, True, point_monitor)), None)
 
 
 def _would_cover(
@@ -512,10 +508,9 @@ def _would_cover(
     if c.get("visible") is False:  # an inactive tab: not drawn
         return False
     ws = c.get("workspace") or {}
-    if (
-        (c.get("class") or "").lower() == _PRIORITY_DIALOG
-        and hyprctl.workspace_ref(ws) in hyprctl.visible_workspaces(monitors)
-    ):
+    if (c.get("class") or "").lower() == _PRIORITY_DIALOG and hyprctl.workspace_ref(
+        ws
+    ) in hyprctl.visible_workspaces(monitors):
         # priority focus, keyed on the dialog's process, floating or tiled:
         # it takes the pointer before even pinned windows. The app-not-
         # responding notice shares the class and has no priority, but
@@ -535,9 +530,7 @@ def _would_cover(
         # a floating window can hang across the monitor edge; a scratchpad
         # takes clicks first only on its own monitor, when that is the
         # point's
-        return bool(c.get("floating")) or (
-            _is_special(ws) and c.get("monitor") == point_monitor
-        )
+        return bool(c.get("floating")) or (_is_special(ws) and c.get("monitor") == point_monitor)
     if not _is_special(ws):
         return False  # focusing the target replaces this workspace
     if focused:
@@ -588,17 +581,10 @@ def _read_layers() -> list[dict[str, Any]] | None:
 
 def _surface_covers(s: dict[str, Any], x: float, y: float) -> bool:
     g = s.get("geometry") or []
-    return (
-        len(g) == 4
-        and None not in g
-        and g[0] <= x < g[0] + g[2]
-        and g[1] <= y < g[1] + g[3]
-    )
+    return len(g) == 4 and None not in g and g[0] <= x < g[0] + g[2] and g[1] <= y < g[1] + g[3]
 
 
-def _topmost_covering(
-    surfaces: list[dict[str, Any]], x: float, y: float
-) -> dict[str, Any] | None:
+def _topmost_covering(surfaces: list[dict[str, Any]], x: float, y: float) -> dict[str, Any] | None:
     best: dict[str, Any] | None = None
     best_rank = -1
     for s in surfaces:
@@ -870,8 +856,8 @@ def guard_covering_layer(x: float, y: float, allow_auth: bool = False) -> None:
     if s is not None:
         kind = s["kind"]
         # a credential surface is not something to click deliberately
-        tail = "" if kind in ("auth", "lock") else (
-            " To click the layer deliberately, use `pointer`."
+        tail = (
+            "" if kind in ("auth", "lock") else (" To click the layer deliberately, use `pointer`.")
         )
         raise TrustError(
             f"({x:.0f}, {y:.0f}) is covered by the {kind} layer surface "
@@ -910,17 +896,13 @@ _AUTH_CLASSES = frozenset(
 def _auth_guard_on() -> bool:
     # default on: the class check below is cheap (uses a client we already
     # hold) and blocks the highest-value case, polkit/credential dialogs
-    return os.environ.get("OMNIMCP_AUTH_GUARD", "1").lower() not in (
-        "", "0", "false", "no", "off"
-    )
+    return os.environ.get("OMNIMCP_AUTH_GUARD", "1").lower() not in ("", "0", "false", "no", "off")
 
 
 def _auth_strict() -> bool:
     # the password-field check walks the a11y tree, a call or two per
     # element, too costly for every keystroke, so it is opt-in
-    return os.environ.get("OMNIMCP_AUTH_GUARD", "1").lower() in (
-        "strict", "2", "field", "fields"
-    )
+    return os.environ.get("OMNIMCP_AUTH_GUARD", "1").lower() in ("strict", "2", "field", "fields")
 
 
 def guard_auth_client(client: dict[str, Any], allow_auth: bool) -> None:

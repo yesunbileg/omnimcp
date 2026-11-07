@@ -15,11 +15,14 @@ def test_compact_kanban_stdio_lifecycle(tmp_path):
     path.write_text(original)
 
     async def exercise():
-        env = {**os.environ, "OMNIMCP_KANBAN_FILE": str(path),
-               "OMNIMCP_READONLY": "0", "OMNIMCP_DRYRUN": "0",
-               "XDG_RUNTIME_DIR": str(tmp_path)}
-        params = StdioServerParameters(command=sys.executable, args=["-m", "omnimcp"],
-                                       env=env)
+        env = {
+            **os.environ,
+            "OMNIMCP_KANBAN_FILE": str(path),
+            "OMNIMCP_READONLY": "0",
+            "OMNIMCP_DRYRUN": "0",
+            "XDG_RUNTIME_DIR": str(tmp_path),
+        }
+        params = StdioServerParameters(command=sys.executable, args=["-m", "omnimcp"], env=env)
         async with stdio_client(params) as (read, write), ClientSession(read, write) as client:
             await client.initialize()
             tools = {t.name: t for t in (await client.list_tools()).tools}
@@ -37,23 +40,35 @@ def test_compact_kanban_stdio_lifecycle(tmp_path):
 
             before = await call("kanban_read", query="Keep")
             task_id = before["tasks"][0]["id"]
-            done = await call("kanban_update", task_id=task_id,
-                              expected_revision=before["revision"], column="Done", checked=True,
-                              append_text="Үр дүн: verified https://example.org/")
+            done = await call(
+                "kanban_update",
+                task_id=task_id,
+                expected_revision=before["revision"],
+                column="Done",
+                checked=True,
+                append_text="Үр дүн: verified https://example.org/",
+            )
             assert "text" not in done["task"]
             assert done["task"]["column"] == "Done" and done["task"]["checked"]
             current = await call("kanban_read", task_id=done["task"]["id"])
             assert current["tasks"][0]["text"] == (
-                "Keep instructions\nҮр дүн: verified https://example.org/")
+                "Keep instructions\nҮр дүн: verified https://example.org/"
+            )
             assert current["revision"] == done["revision"]
-            stale = await client.call_tool("kanban_update", {
-                "task_id": done["task"]["id"], "expected_revision": before["revision"],
-                "append_text": "Cannot overwrite"})
+            stale = await client.call_tool(
+                "kanban_update",
+                {
+                    "task_id": done["task"]["id"],
+                    "expected_revision": before["revision"],
+                    "append_text": "Cannot overwrite",
+                },
+            )
             assert stale.isError
             waited = await call("kanban_wait", revision=current["revision"], timeout_s=0)
             assert waited["changed"] is False
-            added = await call("kanban_add", column="Todo", text="New card",
-                               expected_revision=current["revision"])
+            added = await call(
+                "kanban_add", column="Todo", text="New card", expected_revision=current["revision"]
+            )
             assert "text" not in added["task"] and not added["task"]["checked"]
 
     asyncio.run(exercise())

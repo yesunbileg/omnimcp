@@ -73,8 +73,7 @@ def test_zoom_region_off_layout_falls_back_to_focused(monkeypatch):
 # HiDPI 2880x1800 @ 1.5 is logically 1920x1200; FHD sits at its logical
 # right edge. Regression cluster: bounds must be logical, not mode pixels.
 SEAM = [
-    {"name": "eDP-1", "x": 0, "y": 0, "width": 2880, "height": 1800, "scale": 1.5,
-     "focused": True},
+    {"name": "eDP-1", "x": 0, "y": 0, "width": 2880, "height": 1800, "scale": 1.5, "focused": True},
     {"name": "DP-1", "x": 1920, "y": 0, "width": 1920, "height": 1080, "scale": 1.0},
 ]
 
@@ -93,8 +92,16 @@ def test_zoom_region_across_fractional_seam(monkeypatch):
 
 def test_zoom_region_rotated_monitor(monkeypatch):
     portrait = [
-        {"name": "eDP-1", "x": 0, "y": 0, "width": 1920, "height": 1080, "scale": 1.0,
-         "transform": 1, "focused": True},
+        {
+            "name": "eDP-1",
+            "x": 0,
+            "y": 0,
+            "width": 1920,
+            "height": 1080,
+            "scale": 1.0,
+            "transform": 1,
+            "focused": True,
+        },
     ]
     monkeypatch.setattr(screenshot.hyprctl, "query", _fake_query({"monitors": portrait}))
     # transform 1 swaps the logical footprint to 1080x1920
@@ -107,9 +114,7 @@ def test_zoom_region_window_bounds(monkeypatch):
     monkeypatch.setattr(
         screenshot.hyprctl,
         "query",
-        _fake_query(
-            {"clients": clients, "activewindow": {"address": "0xa"}, "monitors": shows_it}
-        ),
+        _fake_query({"clients": clients, "activewindow": {"address": "0xa"}, "monitors": shows_it}),
     )
     assert screenshot.zoom_region(120, 60, window="0xa") == (100, 50, 480, 360)
     assert screenshot.zoom_region(120, 60, size="2000x2000", window="0xa") == (100, 50, 800, 600)

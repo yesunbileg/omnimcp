@@ -18,12 +18,26 @@ from omnimcp import server as srv
 REAL_QUERY = hyprctl.query  # bound at import: conftest stubs it for unit tests
 
 CLIENT = {
-    "address": "0xabc", "class": "kitty", "title": "shell", "pid": 7,
-    "at": [0, 0], "size": [800, 600], "mapped": True,
+    "address": "0xabc",
+    "class": "kitty",
+    "title": "shell",
+    "pid": 7,
+    "at": [0, 0],
+    "size": [800, 600],
+    "mapped": True,
     "workspace": {"id": 1, "name": "1"},
 }
-MONITORS = [{"name": "DP-1", "x": 0, "y": 0, "width": 1920, "height": 1080,
-             "scale": 1.0, "activeWorkspace": {"id": 1}}]
+MONITORS = [
+    {
+        "name": "DP-1",
+        "x": 0,
+        "y": 0,
+        "width": 1920,
+        "height": 1080,
+        "scale": 1.0,
+        "activeWorkspace": {"id": 1},
+    }
+]
 
 
 @pytest.fixture
@@ -108,7 +122,8 @@ def test_keyboard_does_not_focus_the_target_window(dry):
 
 def test_click_ui(dry, monkeypatch):
     monkeypatch.setattr(
-        srv, "_ui_read",
+        srv,
+        "_ui_read",
         lambda window="", name="", actionable=True, handles=False: [
             {"role": "push button", "name": "OK", "x": 40, "y": 50, "clickable": True}
         ],
@@ -153,8 +168,10 @@ def test_clipboard_write(dry):
 
 
 def test_sequence_says_so_in_its_summary(dry):
-    steps = [{"op": "pointer", "action": "click", "x": 1, "y": 2},
-             {"op": "keyboard", "action": "type", "text": "hi"}]
+    steps = [
+        {"op": "pointer", "action": "click", "x": 1, "y": 2},
+        {"op": "keyboard", "action": "type", "text": "hi"},
+    ]
     out = plan(srv.sequence(steps, stop_on_change=False, then="none"))
     # the per-step lines say it, but the summary line is what gets skimmed
     assert out.startswith("sequence (DRY RUN, nothing was delivered): all 2/2 steps ran")
@@ -173,7 +190,8 @@ def test_confinement_still_refuses(dry, monkeypatch):
 
 def test_the_auth_guard_still_refuses(dry, monkeypatch):
     monkeypatch.setattr(
-        hyprctl, "batch_query",
+        hyprctl,
+        "batch_query",
         lambda cmds: [MONITORS, [{**CLIENT, "class": "hyprpolkitagent"}]],
     )
     with pytest.raises(trust.TrustError, match="authentication dialog"):
@@ -239,6 +257,7 @@ def test_a_clipboard_read_still_reads(dry, monkeypatch):
 )
 def test_the_effect_boundary_refuses_under_dry_run(monkeypatch, call):
     monkeypatch.setenv("OMNIMCP_DRYRUN", "1")
+
     # If the barrier ever regresses, this test must FAIL, not dispatch
     # killactive at whatever the developer had focused. Every backend
     # below the barrier is replaced with something that says so.

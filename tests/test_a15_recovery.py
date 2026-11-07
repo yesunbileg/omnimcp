@@ -25,7 +25,7 @@ def test_orphaned_member_is_killed(tmp_path):
         "import subprocess,sys,time; "
         "subprocess.Popen([sys.executable,'-c',"
         "'import os,signal,sys,time; signal.signal(signal.SIGTERM, signal.SIG_IGN); "
-        "open(sys.argv[1],\"w\").write(str(os.getpid())); time.sleep(40)',sys.argv[1]]); "
+        'open(sys.argv[1],"w").write(str(os.getpid())); time.sleep(40)\',sys.argv[1]]); '
         "time.sleep(40)"
     )
     leader = subprocess.Popen([sys.executable, "-c", code, str(child_file)], start_new_session=True)
@@ -66,8 +66,9 @@ def test_orphaned_member_is_killed(tmp_path):
 
 @pytest.mark.parametrize("gone", [False, True])
 def test_unverified_leader_never_signals(tmp_path, monkeypatch, gone):
-    leader = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"],
-                              start_new_session=True)
+    leader = subprocess.Popen(
+        [sys.executable, "-c", "import time; time.sleep(30)"], start_new_session=True
+    )
     birth = psutil.Process(leader.pid).create_time()
     store = Store(tmp_path / "state")
     try:

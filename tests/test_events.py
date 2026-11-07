@@ -46,7 +46,8 @@ def test_existing_0x_prefix_untouched():
 def test_parse_layer_events():
     assert events.parse_event("openlayer>>wofi") == ("openlayer", {"namespace": "wofi"})
     assert events.parse_event("closelayer>>notifications") == (
-        "closelayer", {"namespace": "notifications"}
+        "closelayer",
+        {"namespace": "notifications"},
     )
 
 

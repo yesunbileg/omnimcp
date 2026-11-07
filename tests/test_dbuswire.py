@@ -43,13 +43,26 @@ def test_an_empty_array_of_structs_still_pads_to_its_element():
     assert dbuswire.unmarshal("a(so)i", data) == [[], 5]
 
 
-@pytest.mark.parametrize(("sig", "value"), [
-    ("s", "héllo ✓"), ("o", "/org/a11y/atspi/accessible/2147484444"), ("g", "a(so)"),
-    ("i", -3), ("u", 4000000000), ("b", True), ("y", 255), ("x", -(2**40)), ("d", 1.5),
-    ("as", ["a", "bc"]), ("au", [8, 0]), ("a(so)", [[":1.5", "/a"], [":1.6", "/b"]]),
-    ("(iiii)", [1, -2, 300, 40]), ("a(ua(so))", [[1, [[":1.5", "/l"]]], [2, []]]),
-    ("a{ss}", {"tag": "div", "id": "x"}),
-])
+@pytest.mark.parametrize(
+    ("sig", "value"),
+    [
+        ("s", "héllo ✓"),
+        ("o", "/org/a11y/atspi/accessible/2147484444"),
+        ("g", "a(so)"),
+        ("i", -3),
+        ("u", 4000000000),
+        ("b", True),
+        ("y", 255),
+        ("x", -(2**40)),
+        ("d", 1.5),
+        ("as", ["a", "bc"]),
+        ("au", [8, 0]),
+        ("a(so)", [[":1.5", "/a"], [":1.6", "/b"]]),
+        ("(iiii)", [1, -2, 300, 40]),
+        ("a(ua(so))", [[1, [[":1.5", "/l"]]], [2, []]]),
+        ("a{ss}", {"tag": "div", "id": "x"}),
+    ],
+)
 def test_every_type_in_use_round_trips(sig, value):
     assert dbuswire.unmarshal(sig, dbuswire.marshal(sig, [value])) == [value]
 
@@ -71,7 +84,8 @@ def test_a_truncated_message_is_an_error_not_a_short_value():
 
 def test_socket_addresses():
     assert dbuswire.socket_path("unix:path=/run/user/1000/at-spi/bus_1") == (
-        "/run/user/1000/at-spi/bus_1")
+        "/run/user/1000/at-spi/bus_1"
+    )
     assert dbuswire.socket_path("unix:abstract=/tmp/dbus-X,guid=ab") == "\0/tmp/dbus-X"
     assert dbuswire.socket_path("tcp:host=x,port=1;unix:path=/a%2cb") == "/a,b"
     with pytest.raises(dbuswire.Unreachable):
@@ -88,8 +102,11 @@ def _reply(serial, sig="", args=(), error=""):
         fields.append((4, ("s", error)))
     if sig:
         fields.append((8, ("g", sig)))
-    w = dbuswire._Writer(b"l" + bytes([3 if error else 2, 0, 1])
-                         + dbuswire.struct.pack("<II", len(body), 1000 + serial))
+    w = dbuswire._Writer(
+        b"l"
+        + bytes([3 if error else 2, 0, 1])
+        + dbuswire.struct.pack("<II", len(body), 1000 + serial)
+    )
     w.put("a(yv)", fields)
     w._pad(8)
     return bytes(w.buf) + body
@@ -184,8 +201,12 @@ def test_bus_reads_a_property_through_properties_get(monkeypatch):
     conn = _FakeConnection(reply=["Send"])
     monkeypatch.setattr(dbuswire, "connection", lambda address: conn)
     assert a11y.Bus("unix:path=/x").prop("app", "/o", "org.a11y.atspi.Accessible", "Name") == "Send"
-    assert conn.calls[0][2:] == ("org.freedesktop.DBus.Properties", "Get", "ss",
-                                 ["org.a11y.atspi.Accessible", "Name"])
+    assert conn.calls[0][2:] == (
+        "org.freedesktop.DBus.Properties",
+        "Get",
+        "ss",
+        ["org.a11y.atspi.Accessible", "Name"],
+    )
 
 
 def test_a_refusal_reads_as_absence_and_a_lost_answer_does_not(monkeypatch):
@@ -206,8 +227,13 @@ def test_a_refusal_reads_as_absence_and_a_lost_answer_does_not(monkeypatch):
 def test_bus_falls_back_to_busctl_when_the_socket_is_unreachable(monkeypatch):
     monkeypatch.setattr(a11y.shutil, "which", lambda n: "/usr/bin/busctl")
     argv = []
-    monkeypatch.setattr(a11y.subprocess, "run", lambda a, **k: argv.append(a) or
-                        subprocess.CompletedProcess(a, 0, '{"type":"s","data":"x"}', ""))
+    monkeypatch.setattr(
+        a11y.subprocess,
+        "run",
+        lambda a, **k: (
+            argv.append(a) or subprocess.CompletedProcess(a, 0, '{"type":"s","data":"x"}', "")
+        ),
+    )
     # conftest makes dbuswire.connection raise Unreachable
     assert a11y.Bus("unix:path=/x").prop("app", "/o", "i", "Name") == "x"
     assert argv[0][:2] == ["busctl", "--json=short"]
@@ -223,16 +249,20 @@ def private_bus(monkeypatch, tmp_path):
     socket_dir = tempfile.TemporaryDirectory(prefix="a7dbus-", dir="/tmp")
     config = tmp_path / "bus.conf"
     config.write_text(
-        "<!DOCTYPE busconfig PUBLIC \"-//freedesktop//DTD D-Bus Bus Configuration 1.0//EN\" "
-        "\"http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd\">"
+        '<!DOCTYPE busconfig PUBLIC "-//freedesktop//DTD D-Bus Bus Configuration 1.0//EN" '
+        '"http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">'
         f"<busconfig><type>session</type><listen>unix:dir={socket_dir.name}</listen>"
-        "<auth>EXTERNAL</auth><policy context=\"default\"><allow send_destination=\"*\"/>"
-        "<allow eavesdrop=\"true\"/><allow own=\"*\"/></policy></busconfig>")
+        '<auth>EXTERNAL</auth><policy context="default"><allow send_destination="*"/>'
+        '<allow eavesdrop="true"/><allow own="*"/></policy></busconfig>'
+    )
     stderr_path = tmp_path / "dbus-daemon.stderr"
     stderr_file = stderr_path.open("w+")
-    proc = subprocess.Popen(["dbus-daemon", "--nofork", "--print-address=1",
-                             f"--config-file={config}"],
-                            stdout=subprocess.PIPE, stderr=stderr_file, text=True)
+    proc = subprocess.Popen(
+        ["dbus-daemon", "--nofork", "--print-address=1", f"--config-file={config}"],
+        stdout=subprocess.PIPE,
+        stderr=stderr_file,
+        text=True,
+    )
     try:
         ready, _, _ = select.select([proc.stdout], [], [], 5)
         address = proc.stdout.readline().strip() if ready else ""
@@ -267,8 +297,9 @@ def test_a_real_bus_authenticates_and_answers(private_bus):
     assert conn.call(_BUS, _BUS_PATH, _BUS, "NameHasOwner", "s", [_BUS]) == [True]
     with pytest.raises(dbuswire.CallError, match="NameHasNoOwner"):
         conn.call(_BUS, _BUS_PATH, _BUS, "GetNameOwner", "s", ["org.example.Nobody"])
-    assert conn.call(_BUS, _BUS_PATH, _BUS, "GetConnectionUnixProcessID", "s",
-                     [conn.unique_name]) == [os.getpid()]
+    assert conn.call(
+        _BUS, _BUS_PATH, _BUS, "GetConnectionUnixProcessID", "s", [conn.unique_name]
+    ) == [os.getpid()]
     conn.close()
 
 

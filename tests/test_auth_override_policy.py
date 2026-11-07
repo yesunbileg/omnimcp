@@ -5,11 +5,14 @@ import pytest
 from omnimcp import server, trust
 
 
-@pytest.mark.parametrize("handler,args", [
-    (server.pointer, {"action": "bad", "allow_auth": True}),
-    (server.keyboard, {"action": "bad", "allow_auth": True}),
-    (server.click_ui, {"allow_auth": True}),
-])
+@pytest.mark.parametrize(
+    "handler,args",
+    [
+        (server.pointer, {"action": "bad", "allow_auth": True}),
+        (server.keyboard, {"action": "bad", "allow_auth": True}),
+        (server.click_ui, {"allow_auth": True}),
+    ],
+)
 def test_handler_rejects_override_before_other_validation(
     no_real_desktop, monkeypatch, handler, args
 ):
@@ -23,10 +26,13 @@ def test_sequence_preflights_override_before_running_any_step(no_real_desktop, m
     ran = []
     monkeypatch.setattr(server, "_dispatch_step", lambda step: ran.append(step))
     with pytest.raises(trust.TrustError, match="OMNIMCP_ALLOW_AUTH_OVERRIDE"):
-        server.sequence([
-            {"op": "wait_for", "event": "never"},
-            {"op": "pointer", "action": "click", "allow_auth": True},
-        ], then="none")
+        server.sequence(
+            [
+                {"op": "wait_for", "event": "never"},
+                {"op": "pointer", "action": "click", "allow_auth": True},
+            ],
+            then="none",
+        )
     assert ran == []
 
 

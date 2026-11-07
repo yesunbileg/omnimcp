@@ -7,7 +7,15 @@ import pytest
 from omnimcp import server as srv
 
 OBSERVE = {
-    "desktop", "screenshot", "zoom", "ui", "marks", "binds", "wait_for", "canvas", "codex_usage"
+    "desktop",
+    "screenshot",
+    "zoom",
+    "ui",
+    "marks",
+    "binds",
+    "wait_for",
+    "canvas",
+    "codex_usage",
 }
 ACT = {"pointer", "keyboard", "click_ui", "hypr", "launch", "sequence", "opencode"}
 
@@ -74,9 +82,7 @@ def test_clipboard_is_double_gated(reloaded, monkeypatch):
 
 # every acting tool name, as a word (so "omnimcp"/"Hyprland" do not match
 # "hypr", and "launchers" does not match "launch")
-_ACT_REF = re.compile(
-    r"\b(pointer|keyboard|click_ui|hypr|launch|sequence|clipboard|opencode)\b"
-)
+_ACT_REF = re.compile(r"\b(pointer|keyboard|click_ui|hypr|launch|sequence|clipboard|opencode)\b")
 
 
 def test_readonly_surface_advertises_no_acting_tools(reloaded):
@@ -94,19 +100,24 @@ def test_readonly_marks_hint_does_not_advertise_click_ui(reloaded, monkeypatch):
     module = reloaded("1")
     monkeypatch.setattr(module.safety, "touch", lambda *a: None)
     monkeypatch.setattr(
-        module, "_resolve_window",
+        module,
+        "_resolve_window",
         lambda w="": {"address": "0xa", "at": [0, 0], "size": [10, 10], "class": "x"},
     )
     monkeypatch.setattr(
-        module, "_ui_read",
+        module,
+        "_ui_read",
         lambda w="", name="", actionable=True, handles=False: [
             {"role": "button", "name": "Ok", "x": 5, "y": 5, "clickable": True}
         ],
     )
     monkeypatch.setattr(
-        module, "_grab_env",
-        lambda **kw: (b"IMG", {"geometry": [0, 0, 10, 10], "scale": 1.0,
-                               "image": [10, 10], "format": "jpeg"}),
+        module,
+        "_grab_env",
+        lambda **kw: (
+            b"IMG",
+            {"geometry": [0, 0, 10, 10], "scale": 1.0, "image": [10, 10], "format": "jpeg"},
+        ),
     )
     out = module.marks(window="0xa")
     legend_json = out[-1].text

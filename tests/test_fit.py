@@ -120,8 +120,15 @@ def test_capture_folds_applied_scale_into_meta(monkeypatch):
         "query",
         lambda cmd: {
             "monitors": [
-                {"name": "eDP-1", "x": 0, "y": 0, "width": 1920, "height": 1080,
-                 "scale": 1.25, "focused": True}
+                {
+                    "name": "eDP-1",
+                    "x": 0,
+                    "y": 0,
+                    "width": 1920,
+                    "height": 1080,
+                    "scale": 1.25,
+                    "focused": True,
+                }
             ]
         }[cmd],
     )
@@ -157,8 +164,15 @@ def test_hidpi_max_edge_cap_passes_absolute_scale_to_grim(monkeypatch):
         "query",
         lambda cmd: {
             "monitors": [
-                {"name": "DP-1", "x": 0, "y": 0, "width": 3840, "height": 2160,
-                 "scale": 2.0, "focused": True}
+                {
+                    "name": "DP-1",
+                    "x": 0,
+                    "y": 0,
+                    "width": 3840,
+                    "height": 2160,
+                    "scale": 2.0,
+                    "focused": True,
+                }
             ]
         }[cmd],
     )

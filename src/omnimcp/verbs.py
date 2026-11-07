@@ -39,11 +39,22 @@ OWNER = ("doctor", "stop", "journal", "replay", "skill")
 ALIASES = {"click-ui": "click_ui", "wait-for": "wait_for"}
 THEN = ("none", "desktop", "ui", "screenshot")
 HYPR_ACTIONS = (
-    "workspace", "focus_window", "move_window", "close_window", "fullscreen", "toggle_floating",
+    "workspace",
+    "focus_window",
+    "move_window",
+    "close_window",
+    "fullscreen",
+    "toggle_floating",
 )
 WAIT_EVENTS = (
-    "window_open", "window_close", "workspace", "title_change",
-    "layer_open", "layer_close", "urgent", "screencast",
+    "window_open",
+    "window_close",
+    "workspace",
+    "title_change",
+    "layer_open",
+    "layer_close",
+    "urgent",
+    "screencast",
 )
 
 EXIT_OK, EXIT_ERROR, EXIT_USAGE, EXIT_REFUSED, EXIT_NORESULT = 0, 1, 2, 3, 4
@@ -70,8 +81,9 @@ def build_parser() -> argparse.ArgumentParser:
     sub.required = True
 
     def json_flag(v: argparse.ArgumentParser) -> None:
-        v.add_argument("--json", action="store_true", default=_S,
-                       help="print the raw result as one JSON line")
+        v.add_argument(
+            "--json", action="store_true", default=_S, help="print the raw result as one JSON line"
+        )
 
     def verb(name: str, help_: str, aliases: tuple[str, ...] = ()) -> argparse.ArgumentParser:
         v = sub.add_parser(name, aliases=list(aliases), help=help_, description=help_)
@@ -80,27 +92,52 @@ def build_parser() -> argparse.ArgumentParser:
 
     def placement(v: argparse.ArgumentParser) -> None:
         g = v.add_mutually_exclusive_group()
-        g.add_argument("--background", dest="background", action="store_true", default=_S,
-                       help="do it without the human's cursor, focus or screen, or refuse")
-        g.add_argument("--foreground", dest="background", action="store_false", default=_S,
-                       help="do it on the human's screen, as before background mode")
+        g.add_argument(
+            "--background",
+            dest="background",
+            action="store_true",
+            default=_S,
+            help="do it without the human's cursor, focus or screen, or refuse",
+        )
+        g.add_argument(
+            "--foreground",
+            dest="background",
+            action="store_false",
+            default=_S,
+            help="do it on the human's screen, as before background mode",
+        )
 
     def acting(v: argparse.ArgumentParser, auth: bool = False) -> None:
         # argparse hands everything after an action word to that action's
         # parser, so the flags an agent writes at the end must live there too
         if not any(a.dest == "json" for a in v._actions):
             json_flag(v)
-        v.add_argument("--then", choices=THEN, default=_S,
-                       help="append a fresh view of the effect to this call")
-        v.add_argument("--dry-run", dest="dry_run", action="store_true", default=_S,
-                       help="run every check, deliver nothing, report the plan")
+        v.add_argument(
+            "--then",
+            choices=THEN,
+            default=_S,
+            help="append a fresh view of the effect to this call",
+        )
+        v.add_argument(
+            "--dry-run",
+            dest="dry_run",
+            action="store_true",
+            default=_S,
+            help="run every check, deliver nothing, report the plan",
+        )
         if auth:
-            v.add_argument("--allow-auth", dest="allow_auth", action="store_true", default=_S,
-                           help="override the refusal to drive an authentication prompt")
+            v.add_argument(
+                "--allow-auth",
+                dest="allow_auth",
+                action="store_true",
+                default=_S,
+                help="override the refusal to drive an authentication prompt",
+            )
 
     def capture(v: argparse.ArgumentParser) -> None:
-        v.add_argument("--stable", action="store_true", default=_S,
-                       help="wait for the frame to settle first")
+        v.add_argument(
+            "--stable", action="store_true", default=_S, help="wait for the frame to settle first"
+        )
         v.add_argument("--lossless", action="store_true", default=_S, help="PNG instead of JPEG")
         v.add_argument("--out", default=_S, metavar="PATH", help="move the capture to PATH")
 
@@ -113,8 +150,12 @@ def build_parser() -> argparse.ArgumentParser:
     v.add_argument("--offset", type=int, default=_S)
     v.add_argument("--limit", type=int, default=_S)
     v.add_argument("--revision", default=_S, metavar="HASH")
-    v.add_argument("--changes", default=_S, metavar="JSON|@file|-",
-                   help="change list for --action edit; same operations as the MCP tool")
+    v.add_argument(
+        "--changes",
+        default=_S,
+        metavar="JSON|@file|-",
+        help="change list for --action edit; same operations as the MCP tool",
+    )
     v.add_argument("--dry-run", dest="dry_run", action="store_true", default=_S)
 
     v = verb("screenshot", "capture the focused monitor, a window, or a region")
@@ -133,8 +174,12 @@ def build_parser() -> argparse.ArgumentParser:
     v = verb("ui", "a window's controls by name with exact click points and values")
     v.add_argument("--window", default=_S, metavar="ADDR")
     v.add_argument("--name", default=_S, metavar="TEXT", help="filter by accessible name")
-    v.add_argument("--all", action="store_true", default=_S,
-                   help="include controls that are not actionable (labels, panels)")
+    v.add_argument(
+        "--all",
+        action="store_true",
+        default=_S,
+        help="include controls that are not actionable (labels, panels)",
+    )
 
     v = verb("marks", "number the window's accessible controls")
     v.add_argument("--window", default=_S, metavar="ADDR")
@@ -183,8 +228,13 @@ def build_parser() -> argparse.ArgumentParser:
     v.add_argument("name", nargs="?", default=_S, metavar="NAME")
     v.add_argument("--mark", type=int, default=_S, metavar="N", help="from the last marks call")
     v.add_argument("--window", default=_S, metavar="ADDR")
-    v.add_argument("--index", type=int, default=_S, metavar="I",
-                   help="pick among ambiguous candidates (0-based)")
+    v.add_argument(
+        "--index",
+        type=int,
+        default=_S,
+        metavar="I",
+        help="pick among ambiguous candidates (0-based)",
+    )
     v.add_argument("--button", choices=("left", "right", "middle"), default=_S)
     v.add_argument("--double", action="store_true", default=_S)
     acting(v, auth=True)
@@ -217,8 +267,9 @@ def build_parser() -> argparse.ArgumentParser:
     placement(v)
 
     v = verb("sequence", "run steps in one call; stops when the desktop changes unexpectedly")
-    v.add_argument("steps", metavar="STEPS",
-                   help="a JSON array of {op, ...} steps, @file.json, or - for stdin")
+    v.add_argument(
+        "steps", metavar="STEPS", help="a JSON array of {op, ...} steps, @file.json, or - for stdin"
+    )
     v.add_argument("--no-stop-on-change", dest="no_stop", action="store_true", default=_S)
     acting(v)
     placement(v)
@@ -265,7 +316,7 @@ def _steps(arg: str) -> list[dict[str, Any]]:
     except ValueError as exc:
         raise Usage(f"STEPS is not valid JSON ({exc})") from exc
     if not isinstance(steps, list) or not all(isinstance(s, dict) for s in steps):
-        raise Usage("STEPS must be a JSON array of {\"op\": ..., ...} objects")
+        raise Usage('STEPS must be a JSON array of {"op": ..., ...} objects')
     if not steps:
         raise Usage("STEPS must contain at least one step")
     return steps
@@ -350,8 +401,14 @@ def _lock() -> Any:
     return fh
 
 
-def run(tool: str, kwargs: dict[str, Any], *, json_out: bool = False,
-        out_path: str | None = None, dry_run: bool = False) -> int:
+def run(
+    tool: str,
+    kwargs: dict[str, Any],
+    *,
+    json_out: bool = False,
+    out_path: str | None = None,
+    dry_run: bool = False,
+) -> int:
     """Call one tool the way the MCP server would, then speak the shell contract."""
     canvas_edit = tool == "canvas" and kwargs.get("action") == "edit"
     if _flag("OMNIMCP_READONLY") and (tool in ACT or tool == "clipboard" or canvas_edit):
@@ -378,8 +435,7 @@ def run(tool: str, kwargs: dict[str, Any], *, json_out: bool = False,
 
     session.ensure_session_env()
     server.use_plain_blocks()  # a shell prints text and paths; no MCP types, no MCP import
-    acting = (tool in ACT or canvas_edit
-              or (tool == "clipboard" and kwargs.get("action") == "write"))
+    acting = tool in ACT or canvas_edit or (tool == "clipboard" and kwargs.get("action") == "write")
     lock = None
     if acting:
         try:
@@ -447,8 +503,9 @@ def _plain(result: Any) -> Any:
             if getattr(b, "type", "") == "text":
                 out.append({"type": "text", "text": b.text})
             else:
-                out.append({"type": getattr(b, "type", "?"),
-                            "mimeType": getattr(b, "mimeType", "")})
+                out.append(
+                    {"type": getattr(b, "type", "?"), "mimeType": getattr(b, "mimeType", "")}
+                )
         return out
     return result
 
@@ -514,8 +571,12 @@ def emit(tool: str, result: Any, *, json_out: bool = False, out_path: str | None
             print(render(tool, result))
             return _fail("error", f"cannot move the capture to {out_path}: {exc}", EXIT_ERROR)
     if json_out:
-        print(json.dumps({"ok": code == EXIT_OK, "tool": tool, "result": _plain(result)},
-                         separators=(",", ":")))
+        print(
+            json.dumps(
+                {"ok": code == EXIT_OK, "tool": tool, "result": _plain(result)},
+                separators=(",", ":"),
+            )
+        )
     else:
         text = render(tool, result)
         if text:
@@ -575,8 +636,10 @@ def _render_dict(tool: str, d: dict[str, Any]) -> str:
         pairs = " ".join(f"{k}={_scalar(v)}" for k, v in rest.items())
         return ("already: " if already else "") + f"{head} {pairs}".rstrip()
     if tool == "launch" and "address" in d:
-        line = (f"{d['address']} {_safe(d.get('class', ''))} {_q(d.get('title', ''))} "
-                f"workspace {_ws(d.get('workspace'))}")
+        line = (
+            f"{d['address']} {_safe(d.get('class', ''))} {_q(d.get('title', ''))} "
+            f"workspace {_ws(d.get('workspace'))}"
+        )
         if d.get("note"):
             line += f"\nnote {_safe(d['note'])}"
         if d.get("warning"):
@@ -636,23 +699,29 @@ def _render_desktop(snap: dict[str, Any]) -> str:
     lines = []
     for m in snap.get("monitors", []):
         g = m.get("geometry") or [None] * 4
-        line = (f"monitor {_safe(m.get('name'))} at {g[0]},{g[1]} {g[2]}x{g[3]} "
-                f"scale {m.get('scale')} ws {_ws(m.get('active_workspace'))}")
+        line = (
+            f"monitor {_safe(m.get('name'))} at {g[0]},{g[1]} {g[2]}x{g[3]} "
+            f"scale {m.get('scale')} ws {_ws(m.get('active_workspace'))}"
+        )
         if m.get("focused"):
             line += " focused"
         if m.get("transform"):
             line += f" transform {m['transform']}"
         lines.append(line)
     for w in snap.get("workspaces", []):
-        line = (f"ws {_ws(w.get('id'))} {_q(w.get('name', ''))} on {_safe(w.get('monitor'))} "
-                f"windows {w.get('windows')}")
+        line = (
+            f"ws {_ws(w.get('id'))} {_q(w.get('name', ''))} on {_safe(w.get('monitor'))} "
+            f"windows {w.get('windows')}"
+        )
         if w.get("visible"):
             line += " visible"
         lines.append(line)
     for c in snap.get("windows", []):
         at, size = c.get("at") or [None, None], c.get("size") or [None, None]
-        line = (f"win {c.get('address')} ws {_ws(c.get('workspace'))} {_safe(c.get('class', ''))} "
-                f"{_q(c.get('title', ''))} at {at[0]},{at[1]} {size[0]}x{size[1]}")
+        line = (
+            f"win {c.get('address')} ws {_ws(c.get('workspace'))} {_safe(c.get('class', ''))} "
+            f"{_q(c.get('title', ''))} at {at[0]},{at[1]} {size[0]}x{size[1]}"
+        )
         for flag in ("floating", "fullscreen", "hidden"):
             if c.get(flag):
                 line += f" {flag}"
@@ -662,8 +731,10 @@ def _render_desktop(snap: dict[str, Any]) -> str:
     lines.append(f"cursor {cur[0]},{cur[1]}" if cur else "cursor unknown")
     for s in snap.get("layers", []):
         g = s.get("geometry") or [None] * 4
-        lines.append(f"layer {_safe(s.get('level'))} {_safe(s.get('namespace'))} at {g[0]},{g[1]} "
-                     f"{g[2]}x{g[3]} kind {_safe(s.get('kind'))} on {_safe(s.get('monitor'))}")
+        lines.append(
+            f"layer {_safe(s.get('level'))} {_safe(s.get('namespace'))} at {g[0]},{g[1]} "
+            f"{g[2]}x{g[3]} kind {_safe(s.get('kind'))} on {_safe(s.get('monitor'))}"
+        )
     return "\n".join(lines)
 
 

@@ -39,11 +39,7 @@ def discover_hyprland_instance(runtime: Path) -> str | None:
 
 
 def discover_wayland_display(runtime: Path) -> str | None:
-    socks = [
-        p.name
-        for p in runtime.glob("wayland-*")
-        if not p.name.endswith(".lock")
-    ]
+    socks = [p.name for p in runtime.glob("wayland-*") if not p.name.endswith(".lock")]
     if len(socks) > 1:
         raise RuntimeError("Multiple Wayland displays: set WAYLAND_DISPLAY explicitly.")
     return socks[0] if socks else None

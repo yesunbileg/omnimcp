@@ -16,8 +16,14 @@ import functools
 # level 0 plain, 1 Shift, 2 AltGr (ISO_Level3_Shift, Mod5 in Hyprland's
 # names), 3 Shift+AltGr
 _LEVEL_MODS = ("", "SHIFT", "MOD5", "SHIFT MOD5")
-_CONTROL = {"\n": "Return", "\r": "Return", "\t": "Tab", "\b": "BackSpace",
-            "\x1b": "Escape", "\x7f": "Delete"}
+_CONTROL = {
+    "\n": "Return",
+    "\r": "Return",
+    "\t": "Tab",
+    "\b": "BackSpace",
+    "\x1b": "Escape",
+    "\x7f": "Delete",
+}
 CONTROL_CHARS = frozenset(_CONTROL)  # typed as keys, never inserted as text
 
 
@@ -35,13 +41,20 @@ def _lib() -> ctypes.CDLL | None:
     lib.xkb_context_new.argtypes = [ctypes.c_int]
     lib.xkb_keymap_new_from_names.restype = ctypes.c_void_p
     lib.xkb_keymap_new_from_names.argtypes = [
-        ctypes.c_void_p, ctypes.POINTER(_RuleNames), ctypes.c_int]
+        ctypes.c_void_p,
+        ctypes.POINTER(_RuleNames),
+        ctypes.c_int,
+    ]
     lib.xkb_keymap_min_keycode.argtypes = [ctypes.c_void_p]
     lib.xkb_keymap_max_keycode.argtypes = [ctypes.c_void_p]
     lib.xkb_keymap_num_levels_for_key.argtypes = [ctypes.c_void_p, ctypes.c_uint32, ctypes.c_uint32]
     lib.xkb_keymap_key_get_syms_by_level.argtypes = [
-        ctypes.c_void_p, ctypes.c_uint32, ctypes.c_uint32, ctypes.c_uint32,
-        ctypes.POINTER(ctypes.POINTER(ctypes.c_uint32))]
+        ctypes.c_void_p,
+        ctypes.c_uint32,
+        ctypes.c_uint32,
+        ctypes.c_uint32,
+        ctypes.POINTER(ctypes.POINTER(ctypes.c_uint32)),
+    ]
     lib.xkb_keysym_to_utf32.restype = ctypes.c_uint32
     lib.xkb_keysym_to_utf32.argtypes = [ctypes.c_uint32]
     lib.xkb_keysym_get_name.argtypes = [ctypes.c_uint32, ctypes.c_char_p, ctypes.c_size_t]
@@ -58,8 +71,9 @@ class Keymap:
         if lib is None:
             return
         ctx = lib.xkb_context_new(0)
-        names = _RuleNames(b"evdev", b"pc105", layout.encode(), variant.encode(),
-                           options.encode() or None)
+        names = _RuleNames(
+            b"evdev", b"pc105", layout.encode(), variant.encode(), options.encode() or None
+        )
         km = lib.xkb_keymap_new_from_names(ctx, ctypes.byref(names), 0)
         if not km:
             return

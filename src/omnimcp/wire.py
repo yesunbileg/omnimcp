@@ -35,14 +35,14 @@ PTR_MOTION, PTR_MOTION_ABSOLUTE, PTR_BUTTON, PTR_FRAME = 0, 1, 2, 4
 PTR_DESTROY = 8
 
 MANAGER_INTERFACE = "zwlr_virtual_pointer_manager_v1"
-SEAT_INTERFACE    = "wl_seat"
-SEAT_EV_NAME      = 1
+SEAT_INTERFACE = "wl_seat"
+SEAT_EV_NAME = 1
 
 # Multi-seat: when OMNIMCP_SEAT names a seat, the virtual pointer is created ON
 # that seat instead of the compositor default. Requires a compositor that
 # advertises more than one wl_seat; on stock Hyprland this finds nothing and we
 # fall back to the default seat, so the variable is safe to leave set.
-SEAT_ENV          = "OMNIMCP_SEAT"
+SEAT_ENV = "OMNIMCP_SEAT"
 
 BUTTONS = {
     "left": 0x110,
@@ -297,7 +297,6 @@ class VirtualPointer:
             time.sleep(0.02)
             self.button(name, RELEASED)
 
-
     def close(self) -> None:
         try:
             self._send(self._pointer, PTR_DESTROY)
@@ -313,6 +312,7 @@ class VirtualPointer:
 
     def __exit__(self, *exc) -> None:
         self.close()
+
 
 # --- virtual keyboard -------------------------------------------------------
 # wtype cannot target a seat, so multi-seat text needs our own keyboard. The
@@ -338,14 +338,10 @@ def _keymap_for(chars: list[str]) -> bytes:
         "xkb_keymap {\n"
         "  xkb_keycodes {\n"
         f"    minimum = {KEYCODE_BASE};\n"
-        f"    maximum = {KEYCODE_BASE + len(chars) + 1};\n"
-        + "\n".join(keycodes)
-        + "\n  };\n"
+        f"    maximum = {KEYCODE_BASE + len(chars) + 1};\n" + "\n".join(keycodes) + "\n  };\n"
         '  xkb_types { include "complete" };\n'
         '  xkb_compat { include "complete" };\n'
-        '  xkb_symbols "(unnamed)" {\n'
-        + "\n".join(symbols)
-        + "\n  };\n"
+        '  xkb_symbols "(unnamed)" {\n' + "\n".join(symbols) + "\n  };\n"
         "};\n"
     ).encode()
 

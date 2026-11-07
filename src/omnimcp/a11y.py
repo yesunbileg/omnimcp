@@ -260,8 +260,12 @@ def same_app(conn_pid: int | None, window_pid: int | None) -> bool:
         return True
     ca, cb = _cgroup(conn_pid), _cgroup(window_pid)
     leaf = (ca or "").rsplit("/", 1)[-1]
-    return ca is not None and ca == cb and leaf.startswith("app-") and (
-        leaf.endswith(".scope") or leaf.endswith(".service"))
+    return (
+        ca is not None
+        and ca == cb
+        and leaf.startswith("app-")
+        and (leaf.endswith(".scope") or leaf.endswith(".service"))
+    )
 
 
 def app_for_pid(
@@ -379,8 +383,11 @@ def window_frame_for(
         if len(named) > 1:
             return None
     if size and all(tuple(z) != tuple(size) for _, z in peers):
-        sized = [f for f in frames
-                 if (ext := _window_extents(bus, *f)) and (ext[2], ext[3]) == tuple(size)]
+        sized = [
+            f
+            for f in frames
+            if (ext := _window_extents(bus, *f)) and (ext[2], ext[3]) == tuple(size)
+        ]
         if len(sized) == 1:
             return sized[0]
     return None
@@ -593,8 +600,9 @@ def find_elements(
                     fallback.append(item)
             continue
         if editable and not nm:
-            nm = next((_name(bus, ls, lp) for ls, lp in
-                       _related(bus, svc, path, _REL_LABELLED_BY)), "")
+            nm = next(
+                (_name(bus, ls, lp) for ls, lp in _related(bus, svc, path, _REL_LABELLED_BY)), ""
+            )
         if not nm and not needle and role_num not in _VALUE_BEARING_ROLES:
             # unnamed and valueless: nothing to target or report. An unnamed
             # slider or checkbox still carries a reading worth returning.
@@ -647,9 +655,7 @@ def _element(
     }
 
 
-def focused_role(
-    bus: Bus, app_svc: str, app_path: str, max_nodes: int = WALK_BUDGET
-) -> int | None:
+def focused_role(bus: Bus, app_svc: str, app_path: str, max_nodes: int = WALK_BUDGET) -> int | None:
     """The AtspiRole number of the element that currently holds keyboard
     focus in this window, or None if none is found within the node budget.
     Bounded because it runs before typing: a fast, best-effort check for the
@@ -747,8 +753,9 @@ def insert_text(bus: Bus, svc: str, path: str, text: str) -> bool:
         qt = toolkit(bus, svc)[0].lower() == "qt"
         length = len(text.encode("utf-16-le")) // 2 if qt else len(text.encode())
         return bool(
-            bus.call(svc, path, _EDITABLE, "InsertText", "isi",
-                     str(max(caret, 0)), text, str(length))[0]
+            bus.call(
+                svc, path, _EDITABLE, "InsertText", "isi", str(max(caret, 0)), text, str(length)
+            )[0]
         )
     except (CallRefused, IndexError, ValueError):
         return False

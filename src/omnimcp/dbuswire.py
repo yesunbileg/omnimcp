@@ -51,10 +51,37 @@ _PATH, _INTERFACE, _MEMBER, _ERROR_NAME, _REPLY_SERIAL, _DESTINATION = 1, 2, 3, 
 _SIGNATURE = 8
 _MAX_MESSAGE = 1 << 27  # the specification's limit
 
-_ALIGN = {"y": 1, "b": 4, "n": 2, "q": 2, "i": 4, "u": 4, "x": 8, "t": 8, "d": 8,
-          "h": 4, "s": 4, "o": 4, "g": 1, "a": 4, "(": 8, "{": 8, "v": 1}
-_FIXED = {"y": "B", "b": "I", "n": "h", "q": "H", "i": "i", "u": "I", "x": "q",
-          "t": "Q", "d": "d", "h": "I"}
+_ALIGN = {
+    "y": 1,
+    "b": 4,
+    "n": 2,
+    "q": 2,
+    "i": 4,
+    "u": 4,
+    "x": 8,
+    "t": 8,
+    "d": 8,
+    "h": 4,
+    "s": 4,
+    "o": 4,
+    "g": 1,
+    "a": 4,
+    "(": 8,
+    "{": 8,
+    "v": 1,
+}
+_FIXED = {
+    "y": "B",
+    "b": "I",
+    "n": "h",
+    "q": "H",
+    "i": "i",
+    "u": "I",
+    "x": "q",
+    "t": "Q",
+    "d": "d",
+    "h": "I",
+}
 
 
 def split_signature(sig: str) -> list[str]:
@@ -114,7 +141,7 @@ class _Writer:
             self.buf += b"\0\0\0\0"
             self._pad(_ALIGN[item[0]])  # even for an empty array
             start = len(self.buf)
-            for x in (v.items() if item[0] == "{" else v):
+            for x in v.items() if item[0] == "{" else v:
                 self.put(item, x)
             struct.pack_into("<I", self.buf, at, len(self.buf) - start)
         elif c in "({":
@@ -147,14 +174,14 @@ class _Reader:
             self._need(4)
             (n,) = struct.unpack_from("<I", self.data, self.off)
             self._need(4 + n + 1)
-            v = self.data[self.off + 4:self.off + 4 + n].decode("utf-8", "replace")
+            v = self.data[self.off + 4 : self.off + 4 + n].decode("utf-8", "replace")
             self.off += 4 + n + 1
             return v
         if c == "g":
             self._need(1)
             n = self.data[self.off]
             self._need(1 + n + 1)
-            v = self.data[self.off + 1:self.off + 1 + n].decode("ascii", "replace")
+            v = self.data[self.off + 1 : self.off + 1 + n].decode("ascii", "replace")
             self.off += 1 + n + 1
             return v
         if c == "v":
@@ -226,8 +253,9 @@ class Connection:
         try:
             self._sock.connect(path)
             self._authenticate()
-            self.unique_name = self.call(_BUS, "/org/freedesktop/DBus", _BUS, "Hello",
-                                         timeout=timeout)[0]
+            self.unique_name = self.call(
+                _BUS, "/org/freedesktop/DBus", _BUS, "Hello", timeout=timeout
+            )[0]
         except (OSError, DBusError) as exc:
             self.close()
             raise Unreachable(f"cannot connect to the bus at {address!r}: {exc}") from None
@@ -257,8 +285,16 @@ class Connection:
         with contextlib.suppress(OSError):
             self._sock.close()
 
-    def call(self, dest: str, path: str, iface: str, member: str, sig: str = "",
-             args: list[Any] | tuple[Any, ...] = (), timeout: float = 10.0) -> list[Any]:
+    def call(
+        self,
+        dest: str,
+        path: str,
+        iface: str,
+        member: str,
+        sig: str = "",
+        args: list[Any] | tuple[Any, ...] = (),
+        timeout: float = 10.0,
+    ) -> list[Any]:
         """The reply's arguments as a list. Raises CallError for an error
         reply (the connection stays usable), DBusError when no reply came
         (the connection is closed)."""
@@ -269,12 +305,16 @@ class Connection:
             self._serial += 1
             serial = self._serial
             fields: list[tuple[int, tuple[str, str]]] = [
-                (_PATH, ("o", path)), (_INTERFACE, ("s", iface)), (_MEMBER, ("s", member)),
-                (_DESTINATION, ("s", dest))]
+                (_PATH, ("o", path)),
+                (_INTERFACE, ("s", iface)),
+                (_MEMBER, ("s", member)),
+                (_DESTINATION, ("s", dest)),
+            ]
             if sig:
                 fields.append((_SIGNATURE, ("g", sig)))
-            head = _Writer(b"l" + bytes([_METHOD_CALL, 0, 1])
-                           + struct.pack("<II", len(body), serial))
+            head = _Writer(
+                b"l" + bytes([_METHOD_CALL, 0, 1]) + struct.pack("<II", len(body), serial)
+            )
             head.put("a(yv)", fields)
             head._pad(8)
             try:
@@ -286,8 +326,9 @@ class Connection:
                     raise
                 self.close()
                 if isinstance(exc, TimeoutError):
-                    raise DBusError(f"no answer to {member} within {timeout:g} s (the app "
-                                    "may still act on it)") from None
+                    raise DBusError(
+                        f"no answer to {member} within {timeout:g} s (the app may still act on it)"
+                    ) from None
                 raise DBusError(f"{member}: {exc}") from None
 
     def _reply(self, serial: int, deadline: float) -> list[Any]:

@@ -23,6 +23,10 @@ def stub(monkeypatch):
         return {}
 
     monkeypatch.setattr(srv.hyprctl, "query", query)
+    monkeypatch.setattr(srv.hyprctl, "batch_query", lambda commands: [
+        query("activewindow") if command == "activewindow" else {"id": 1, "name": "1"}
+        for command in commands
+    ])
     monkeypatch.setattr(srv.hyprctl, "dispatch", lambda *a: calls["dispatch"].append(a))
     monkeypatch.setattr(srv.hinput, "type_text", lambda t: calls["typed"].append(t))
     monkeypatch.setattr(
@@ -38,7 +42,7 @@ def test_type_focuses_window_first(stub):
     assert stub["dispatch"] == [("focuswindow", "address:0xabc")]
     assert stub["typed"] == ["hi"]
     assert stub["slept"]  # settled before typing
-    assert out == "typed 2 characters into 0xabc"
+    assert "typed 2 characters into 0xabc; foreground focus requested" in out
 
 
 def test_key_focuses_window_first(stub):
@@ -48,15 +52,168 @@ def test_key_focuses_window_first(stub):
     assert "with sendshortcut" in out
 
 
-def test_foreground_key_receipt_includes_the_focus_takeover(stub, monkeypatch):
-    seats = iter([("0xhuman", 1), ("0xabc", 2)])
-    monkeypatch.setattr(srv, "_seat_now", lambda: next(seats))
+def _track_seat(monkeypatch, stub, *, before_address, before_workspace, after_workspace):
+    """Model compositor state: focuswindow changes the real seat snapshot."""
+    previous_query = srv.hyprctl.query
+    seat = {
+        "address": before_address,
+        "workspace": before_workspace,
+    }
+
+    def query(command):
+        if command == "activewindow":
+            return {"address": seat["address"], "workspace": seat["workspace"]}
+        return previous_query(command)
+
+    def batch_query(commands):
+        window = {"address": seat["address"], "workspace": seat["workspace"]}
+        workspace = dict(seat["workspace"])
+        return [window if cmd == "activewindow" else workspace for cmd in commands]
+
+    def dispatch(command, argument):
+        stub["dispatch"].append((command, argument))
+        if command == "focuswindow":
+            seat["address"] = "0xabc"
+            seat["workspace"] = after_workspace
+
+    monkeypatch.setattr(srv.hyprctl, "query", query)
+    monkeypatch.setattr(srv.hyprctl, "batch_query", batch_query)
+    monkeypatch.setattr(srv.hyprctl, "dispatch", dispatch)
+
+
+def test_foreground_key_receipt_reports_whole_call_focus_takeover(stub, monkeypatch):
+    _track_seat(
+        monkeypatch,
+        stub,
+        before_address="0xhuman",
+        before_workspace={"id": -1337, "name": "special:notes"},
+        after_workspace={"id": 2, "name": "2"},
+    )
 
     out = srv.keyboard("key", keys="ctrl+t", window="0xabc", background=False)
 
     assert "with sendshortcut" in out
+    assert "after focus dispatch" in out
+    assert "after keyboard delivery" in out
+    assert "0xhuman" in out and "special:notes" in out
+    assert "0xabc" in out and "workspace 2" in out
     assert "focus untouched" not in out
-    assert "foreground" in out or "focus changed" in out
+    assert stub["keys"] == [("CTRL", "t", "0xabc")]
+
+
+def test_foreground_type_receipt_reports_whole_call_focus_takeover(stub, monkeypatch):
+    _track_seat(
+        monkeypatch,
+        stub,
+        before_address="0xhuman",
+        before_workspace={"id": 1, "name": "1"},
+        after_workspace={"id": 2, "name": "2"},
+    )
+
+    out = srv.keyboard("type", text="hi", window="0xabc", background=False)
+
+    assert "after focus dispatch" in out
+    assert "0xhuman" in out and "workspace 1" in out
+    assert "0xabc" in out and "workspace 2" in out
+    assert stub["typed"] == ["hi"]
+
+
+def _track_window_seat(monkeypatch, stub, *, initial, target, return_on_key=False):
+    """Model activewindow.workspace independently from activeworkspace.
+
+    Hyprland can show a special workspace window as the active window while
+    activeworkspace still reports the ordinary workspace underneath it.
+    """
+    seat = {"window": dict(initial), "active_workspace": {"id": 2, "name": "2"}}
+    previous_query = srv.hyprctl.query
+
+    def batch_query(commands):
+        active = dict(seat["window"])
+        return [active if command == "activewindow" else dict(seat["active_workspace"])
+                for command in commands]
+
+    def query(command):
+        if command == "activewindow":
+            return dict(seat["window"])
+        return previous_query(command)
+
+    monkeypatch.setattr(srv.hyprctl, "query", query)
+
+    def dispatch(command, argument):
+        stub["dispatch"].append((command, argument))
+        if command == "focuswindow":
+            seat["window"] = dict(target)
+
+    def send_shortcut(mods, key, address):
+        stub["keys"].append((mods, key, address))
+        if return_on_key:
+            seat["window"] = dict(initial)
+
+    monkeypatch.setattr(srv.hyprctl, "batch_query", batch_query)
+    monkeypatch.setattr(srv.hyprctl, "dispatch", dispatch)
+    monkeypatch.setattr(srv.hyprctl, "send_shortcut", send_shortcut)
+    return seat
+
+
+def test_foreground_key_receipt_reports_focus_that_returns_during_call(stub, monkeypatch):
+    seat = _track_window_seat(
+        monkeypatch,
+        stub,
+        initial={"address": "0xhuman", "workspace": {"id": -1337, "name": "special:notes"}},
+        target={"address": "0xabc", "workspace": {"id": 2, "name": "2"}},
+        return_on_key=True,
+    )
+    monkeypatch.setattr(srv.hyprctl, "snapshot", lambda: {"desktop": "after-key"})
+
+    out = srv.keyboard("key", keys="Escape", window="0xabc", background=False, then="desktop")
+
+    assert seat["window"]["address"] == "0xhuman"
+    assert isinstance(out, list)
+    assert out[1].text == '{"desktop": "after-key"}'
+    assert "focus unchanged" not in out[0].text
+    assert "0xhuman" in out[0].text and "special:notes" in out[0].text
+    assert "0xabc" in out[0].text and "workspace 2" in out[0].text
+    assert "foreground focus" in out[0].text
+
+
+def test_foreground_focus_uses_active_window_workspace_for_special_overlay(stub, monkeypatch):
+    _track_window_seat(
+        monkeypatch,
+        stub,
+        initial={"address": "0xhuman", "workspace": {"id": -1337, "name": "special:notes"}},
+        target={"address": "0xabc", "workspace": {"id": 2, "name": "2"}},
+    )
+
+    out = srv.keyboard("key", keys="Escape", window="0xabc", background=False)
+
+    assert "0xhuman" in out and "special:notes" in out
+    assert "0xabc" in out and "workspace 2" in out
+
+
+def test_background_keyboard_keeps_background_focus_receipt(stub, monkeypatch):
+    seats = iter([("0xhuman", 1), ("0xhuman", 1)])
+    monkeypatch.setattr(srv, "_seat_now", lambda: next(seats))
+
+    out = srv.keyboard("key", keys="Escape", window="0xabc", background=True)
+
+    assert "the human's focus untouched" in out
+    assert "foreground focus" not in out
+
+
+def test_foreground_dry_run_does_not_focus_or_take_seat_snapshot(stub, monkeypatch):
+    monkeypatch.setattr(srv.journal, "dry_run", lambda: True)
+    monkeypatch.setattr(
+        srv, "_foreground_seat_now", lambda: pytest.fail("dry run must not inspect seat")
+    )
+    monkeypatch.setattr(srv.hyprctl, "snapshot", lambda: {"ok": 1})
+
+    out = srv.keyboard("type", text="hi", window="0xabc", then="desktop")
+
+    assert isinstance(out, list)
+    assert out[0].text == "DRY RUN, nothing was delivered: would type 2 characters into 0xabc"
+    assert out[1].text == '{"ok": 1}'
+    assert stub["dispatch"] == []
+    assert stub["typed"] == []
 
 
 def test_no_window_does_not_focus(stub):
@@ -102,7 +259,11 @@ def test_window_target_composes_with_then(stub, monkeypatch):
     monkeypatch.setattr(srv.hyprctl, "snapshot", lambda: {"ok": 1})
     out = srv.keyboard("type", text="hi", window="0xabc", then="desktop")
     assert isinstance(out, list)
-    assert out[0].text == "typed 2 characters into 0xabc"
+    assert out[1].text == '{"ok": 1}'
+    assert out[0].text == (
+        "typed 2 characters into 0xabc; foreground focus requested from 0xabc on workspace 1; "
+        "after focus dispatch: 0xabc on workspace 1; after keyboard delivery: 0xabc on workspace 1"
+    )
 
 
 LAUNCHER_LAYERS = {

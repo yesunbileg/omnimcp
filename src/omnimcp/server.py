@@ -905,17 +905,25 @@ def keyboard(
     if journal.dry_run():
         plan = f"type {len(text)} characters" if action == "type" else f"press {keys}"
         return _acted(f"{_DRY} {plan}{into}{note}", then)
+    seat_before = _foreground_seat_now() if window else None
+    seat_after_focus = None
     if window:
         hyprctl.dispatch("focuswindow", addr_str)
         time.sleep(0.05)  # let keyboard focus settle before typing into it
+        seat_after_focus = _foreground_seat_now()
     if action == "type":
         hinput.type_text(text)
         trust.remember_seat()
-        return _acted(f"typed {len(text)} characters{into}{note}", then)
+        seat_note = _foreground_seat_report(seat_before, seat_after_focus) if window else ""
+        return _acted(f"typed {len(text)} characters{into}{note}{seat_note}", then)
     client = _resolve_window(window) if window else _guarded_active_client()
     if client is None:
         raise ValueError("no focused window for keyboard input")
-    return _keyboard_in_background(client, action, text, keys, then, allow_auth)
+    return _keyboard_in_background(
+        client, action, text, keys, then, allow_auth,
+        whole_call_seat=seat_before, seat_after_focus=seat_after_focus,
+        foreground=bool(window),
+    )
 
 
 @journal.journaled("act")
@@ -1067,11 +1075,13 @@ _HYPR_MODS = {"ctrl": "CTRL", "shift": "SHIFT", "alt": "ALT", "logo": "SUPER", "
 
 
 def _keyboard_in_background(
-    client: dict[str, Any], action: str, text: str, keys: str, then: str, allow_auth: bool
+    client: dict[str, Any], action: str, text: str, keys: str, then: str, allow_auth: bool,
+    whole_call_seat: tuple[Any, Any] | None = None,
+    seat_after_focus: tuple[Any, Any] | None = None, foreground: bool = False,
 ) -> list[Any] | str:
-    """keyboard with no focus change: text through the app's accessibility
-    interface when its focused element is a text field, else key by key
-    with sendshortcut, mapped through the active keyboard layout."""
+    """Deliver to a window: text through its accessibility text field when
+    possible, else key by key with sendshortcut through the active layout.
+    Foreground callers supply the seat snapshot from before focus dispatch."""
     trust.guard_client(client)
     trust.guard_auth_client(client, allow_auth)
     trust.guard_session_lock(True, allow_auth)
@@ -1176,7 +1186,7 @@ def _keyboard_in_background(
     what = f"{len(chords)} keys" if action == "type" else f"{keys}"
     if journal.dry_run():
         return _acted(f"{_DRY} send {what} to {addr} with sendshortcut", then, window=addr)
-    seat = _seat_now()
+    seat = whole_call_seat if foreground else _seat_now()
     for sent, (mods_, key_) in enumerate(chords):
         try:
             hyprctl.send_shortcut(mods_, key_, addr)
@@ -1185,12 +1195,15 @@ def _keyboard_in_background(
             raise hyprctl.HyprctlError(
                 f"sent {sent} of {len(chords)} keys to {addr}, then Hyprland refused a key "
                 "(the window may have closed)") from None
-    untouched, warning = _seat_report(seat)
-    paren = " (the human's focus untouched)" if untouched else ""
+    if foreground:
+        seat_note = _foreground_seat_report(seat, seat_after_focus)
+    else:
+        untouched, warning = _seat_report(seat)
+        seat_note = (" (the human's focus untouched)" if untouched else "") + warning
     # keys land on whatever control the app has focused, which in a hidden
     # window is not the field text went into through accessibility
     return _acted(f"sent {what} to {addr} ({cls}) with sendshortcut, to the control the app "
-                  f"has focused{paren}{warning}", then, window=addr, fallback=False)
+                  f"has focused{seat_note}", then, window=addr, fallback=False)
 
 
 def _read_back(before: str, after: str, text: str) -> str:
@@ -1314,6 +1327,35 @@ def _seat_report(before: tuple[Any, Any] | None) -> tuple[bool, str]:
     return False, (f"; WARNING: the human's focused window changed during this action (now "
                    f"{after[0]} on workspace {after[1]}), so it may have opened or activated "
                    "a window")
+
+
+def _foreground_seat_now() -> tuple[Any, Any] | None:
+    """Read the active window and its workspace, including special overlays."""
+    try:
+        active = (hyprctl.batch_query(["activewindow"]) or [None])[0] or {}
+        workspace = active.get("workspace") or {}
+        name = workspace.get("name")
+        if isinstance(name, str) and name.startswith("special:"):
+            workspace_name = name
+        else:
+            workspace_name = workspace.get("id", name)
+        return active.get("address"), workspace_name
+    except Exception:
+        return None
+
+
+def _foreground_seat_report(
+    before: tuple[Any, Any] | None,
+    after_focus: tuple[Any, Any] | None,
+) -> str:
+    """Report observed focus around focus dispatch and after keyboard delivery."""
+    time.sleep(_SEAT_SETTLE)
+    after_delivery = _foreground_seat_now()
+    if before is None or after_focus is None or after_delivery is None:
+        return "; foreground focus requested; full focus change could not be checked"
+    return (f"; foreground focus requested from {before[0]} on workspace {before[1]}; "
+            f"after focus dispatch: {after_focus[0]} on workspace {after_focus[1]}; "
+            f"after keyboard delivery: {after_delivery[0]} on workspace {after_delivery[1]}")
 
 
 def _focus_on_activate(address: str = "") -> int | None:

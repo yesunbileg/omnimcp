@@ -3,6 +3,7 @@
 import asyncio
 import base64
 import json
+import os
 import socket
 import threading
 import time
@@ -241,6 +242,7 @@ def test_rpc_read_timeout_is_client_timeout_and_does_not_claim_worker_absent(tmp
     path = tmp_path / "worker.sock"
     listener = socket.socket(socket.AF_UNIX)
     listener.bind(str(path))
+    os.chmod(path, 0o600)  # Match the real worker; the client rejects looser modes.
     listener.listen(1)
     accepted = threading.Event()
 
@@ -268,6 +270,7 @@ def test_rpc_disconnect_after_request_send_is_unknown_outcome(tmp_path, monkeypa
     path = tmp_path / "worker.sock"
     listener = socket.socket(socket.AF_UNIX)
     listener.bind(str(path))
+    os.chmod(path, 0o600)  # Match the real worker; the client rejects looser modes.
     listener.listen(1)
     received = threading.Event()
 

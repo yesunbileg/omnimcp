@@ -1,5 +1,5 @@
 [project]
-name = "OmniMCP"
+name = "OmniMCP-linux"
 version = "0.2.0"
 description = "Extensible Linux MCP control with durable jobs and Hyprland desktop automation"
 readme = "README.md"
@@ -36,6 +36,7 @@ packages = ["src/omnimcp"]
 "skills/omnimcp" = "omnimcp/skill"
 
 [tool.hatch.build.targets.sdist]
+exclude = ["/docs/evidence"]
 include = [
     "/src/omnimcp", "/skills/omnimcp", "/tests",
     "/README.md", "/LICENSE", "/CHANGELOG.md", "/ARCHITECTURE.md",
@@ -66,7 +67,7 @@ patch = ["subprocess"]
 parallel = true
 
 [tool.coverage.report]
-# Audited commit measured 82.65% with subprocess coverage; keep the integer floor.
-fail_under = 82
+# Full suite measures over 84% with worker/CLI subprocess coverage enabled.
+fail_under = 84
 show_missing = true
 skip_covered = true

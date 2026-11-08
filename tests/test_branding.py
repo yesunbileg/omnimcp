@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def test_distribution_and_both_command_entrypoints_use_the_canonical_brand():
     project = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]
-    assert project["name"] == "OmniMCP"
+    assert project["name"] == "OmniMCP-linux"
     assert project["scripts"]["OmniMCP"] == project["scripts"]["omnimcp"]
 
 

@@ -5,15 +5,20 @@ OmniMCP нь одоогоор PyPI-д нийтлэгдээгүй. GitHub-ийн
 Linux, Python 3.11 буюу түүнээс шинэ хувилбар, `uv`, Hyprland
 Wayland session хэрэгтэй. Desktop-ийн screenshot/input-д `grim`, `wtype`,
 `busctl`; UI tree-д AT-SPI bus болон accessibility мэдээлэл гаргадаг апп хэрэгтэй.
+Өмнө нь энэ төслийн `omnimcp` багцыг суулгасан бол хоёр executable давхцахаас
+сэргийлж [шилжих зааврыг](MIGRATION.md) эхлээд дага.
 
 ```sh
-uv tool install --from 'git+https://github.com/yesunbileg/omnimcp.git@main' OmniMCP
+uv tool install --from 'git+https://github.com/yesunbileg/omnimcp.git@main' OmniMCP-linux
 OmniMCP --version
 OmniMCP doctor
 ```
 
 Үндсэн команд нь `OmniMCP`; хуучин `omnimcp` команд мөн ажиллана.
 Python import, plugin ID, `OMNIMCP_*` тохиргоо болон өгөгдлийн зам өөрчлөгдөхгүй.
+Багцын техникийн нэр нь `OmniMCP-linux`. PyPI дээрх `omnimcp` нь өөр төсөл;
+`uvx omnimcp` эсвэл `pip install omnimcp` нь энэ төслийг суулгахгүй.
+Одоогоор энэ төслийг дээрх GitHub эх сурвалжаас суулгана.
 
 Энэ нь branch-ийн одоогийн commit-ийг хэрэглэгчийн `uv` tool орчинд суулгана.
 Шалгахдаа `git ls-remote https://github.com/yesunbileg/omnimcp.git refs/heads/main`

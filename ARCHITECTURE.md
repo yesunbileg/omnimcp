@@ -60,7 +60,13 @@ input. Prefer semantic UI actions where possible.
 - `root_helper.py`: separately installed, root-owned, standalone Python helper for
   revision-checked admin config updates; never imports user-writable application code.
 
-MCP stdio clients and CLI use the worker socket; persistent jobs/PTYs belong to the
-worker. The legacy transport remains direct for compatibility. New adapters register
+The default legacy MCP transport and desktop CLI verbs call desktop functions
+directly. Opt-in compact MCP clients and the seven core CLI operations use the
+worker socket; persistent compact jobs/PTYs belong to the worker. New adapters register
 through Python entry points without growing the compact MCP tool schema. See
 `docs/CORE.md` for protocols, privileges, preservation limits and backend configuration.
+
+`core/retention.py` provides offline artifact maintenance through `worker prune`.
+It shares the worker's state lock, previews by default, and preserves database
+metadata and expired references. See [the testing guide](docs/TESTING.md) for
+unit/integration and isolated live-desktop validation.

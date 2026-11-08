@@ -14,21 +14,32 @@ import socket
 import struct
 import threading
 
+from omnimcp import private_paths
 from omnimcp.adapters import build_registry
 
 from .client import MAX_REQUEST, socket_path
 from .engine import Engine
-from .state import Store, encode
+from .execution import flag
+from .retention import record_policy
+from .state import Store, encode, state_dir
 
 
 async def serve():
     os.umask(0o077)
-    store = Store()
-    worker_lock = (store.root / "worker.lock").open("a")
+    root = state_dir()
+    root.mkdir(mode=0o700, parents=True, exist_ok=True)
+    root = private_paths.private_dir(root)
+    worker_lock = os.fdopen(
+        private_paths.open_private_file(root / "worker.lock", os.O_RDWR | os.O_CREAT), "a"
+    )
     try:
         fcntl.flock(worker_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except BlockingIOError:
+        worker_lock.close()
         raise SystemExit("Another worker owns this state directory.") from None
+    # Hold the state lock before migrations/backfill, policy writes or recovery.
+    record_policy(root, readonly=flag("OMNIMCP_READONLY"), dry_run=flag("OMNIMCP_DRYRUN"))
+    store = Store(root)
     registry = build_registry()
     for plugin in importlib.metadata.entry_points(group="omnimcp.adapters"):
         plugin.load()(registry)

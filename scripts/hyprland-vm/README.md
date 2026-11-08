@@ -25,7 +25,7 @@ cp scripts/hyprland-vm/* "$vm_dir/"
 uv export --frozen --no-dev --no-emit-project --format requirements-txt \
   --output-file "$vm_dir/runtime-requirements.txt"
 uv build --out-dir "$vm_dir/wheels"
-cp "$vm_dir/wheels/omnimcp-0.2.0-py3-none-any.whl" "$vm_dir/"
+cp "$vm_dir/wheels/omnimcp_linux-0.2.0-py3-none-any.whl" "$vm_dir/"
 env -u DOCKER_HOST -u DOCKER_CONTEXT -u DOCKER_TLS -u DOCKER_TLS_VERIFY \
   -u DOCKER_CERT_PATH docker --host=unix:///var/run/docker.sock build \
   --secret id=proxy_ca,src=/etc/ssl/certs/ca-certificates.crt \
@@ -58,6 +58,8 @@ The desktop operations pass, while the complete runner currently returns 2.
 Do not suppress that status or describe teardown as successful.
 
 The 16 live pytest cases from the native suite were not executed in this guest.
+To run them separately in a disposable guest with a live session and development
+dependencies, follow [the testing guide](../../docs/TESTING.md#амьд-hyprland-тест--зөвхөн-тусгаарласан-vm-дотор).
 This manual acceptance does not establish accessibility, polkit, multi-monitor,
 or physical GPU behavior. See the committed
 [runtime evidence](../../docs/evidence/hyprland-vm-2026-11-07/README.md).

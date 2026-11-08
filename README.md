@@ -26,3 +26,4 @@ Linux компьютерээ AI туслахаараа удирдаарай.
 - [Core техникийн баримт](docs/CORE.md)
 - [Хувилбарын мэдээлэл](docs/PROVENANCE.md)
 - [Тестийн үр дүн](docs/audits/2026-11-08-remediation-validation.md)
+- [Тест ажиллуулах](docs/TESTING.md)

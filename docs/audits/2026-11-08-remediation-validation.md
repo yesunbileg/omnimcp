@@ -1,5 +1,10 @@
 # Verified external-audit fixes — 2026-11-08
 
+Integration update: the audited commit `4b277c0` is an ancestor of `main`.
+The branch was integrated before `2fcf129`, followed by branding and the
+umask-independent test correction. The results below describe the original
+2026-11-08 run; raw evidence and its tested commit remain unchanged.
+
 Verified external-audit defects were remediated on `wip/audit-fixes-20261107`.
 The tested code is `4b277c0`. Earlier independent Terra review identified additional
 gaps that were addressed with regressions. The final revised code was implemented
@@ -74,7 +79,8 @@ response JSON.
 No real polkit approval, helper installation or privileged host mutation was run.
 Root-controlled policy/ownership/race behaviors were exercised in unprivileged
 fixtures. No OS sandbox, named-seat isolation, crash-proof launch handshake,
-physical-GPU or multi-monitor certification is claimed. Main remains unchanged.
+physical-GPU or multi-monitor certification is claimed. At the time of this
+validation run, main remained unchanged; see the integration update above.
 
 Static type checking, py.typed publication, forced plugin/runtime version equality,
 removal of compatibility manifests and rewriting historical evidence were not

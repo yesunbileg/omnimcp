@@ -10,7 +10,7 @@ done
 uv export --project "$repo_dir" --frozen --no-dev --no-emit-project \
     --format requirements-txt --output-file "$OMNIMCP_VM_DIR/runtime-requirements.txt"
 uv build --project "$repo_dir" --out-dir "$OMNIMCP_VM_DIR/wheels"
-cp "$OMNIMCP_VM_DIR/wheels/omnimcp-0.2.0-py3-none-any.whl" "$OMNIMCP_VM_DIR/"
+cp "$OMNIMCP_VM_DIR/wheels/omnimcp_linux-0.2.0-py3-none-any.whl" "$OMNIMCP_VM_DIR/"
 git -C "$repo_dir" rev-parse HEAD > "$OMNIMCP_VM_DIR/source-commit.txt"
 env -u DOCKER_HOST -u DOCKER_CONTEXT -u DOCKER_TLS -u DOCKER_TLS_VERIFY \
     -u DOCKER_CERT_PATH docker --host=unix:///var/run/docker.sock build \

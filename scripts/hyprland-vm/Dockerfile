@@ -15,9 +15,9 @@ RUN if getent passwd 1000 >/dev/null; then \
         usermod -l tester -d /home/tester -m "$old_user"; \
     else useradd -m -u 1000 tester; fi \
     && groupadd -f tester && usermod -g tester -aG video,input tester
-COPY runtime-requirements.txt omnimcp-0.2.0-py3-none-any.whl /tmp/
+COPY runtime-requirements.txt omnimcp_linux-0.2.0-py3-none-any.whl /tmp/
 RUN --mount=type=secret,id=proxy_ca,required=true \
     python3 -m venv /opt/omnimcp-venv \
     && /opt/omnimcp-venv/bin/pip --cert /run/secrets/proxy_ca install --require-hashes \
        --index-url https://pypi.org/simple -r /tmp/runtime-requirements.txt \
-    && /opt/omnimcp-venv/bin/pip install --no-deps /tmp/omnimcp-0.2.0-py3-none-any.whl
+    && /opt/omnimcp-venv/bin/pip install --no-deps /tmp/omnimcp_linux-0.2.0-py3-none-any.whl

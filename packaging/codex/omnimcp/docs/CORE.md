@@ -73,10 +73,48 @@ Only text content is returned, without a duplicate MCP structured result. The
 serialized result budget is 16 KiB. Oversized results return an artifact reference,
 preview and `complete=false`; the complete original result is retained. Commands
 stream output to artifact files rather than collecting unbounded output in RAM.
-`job.progress.output` makes running command output readable. Artifacts currently
-remain until explicitly removed from the private state directory; there is no
-automatic retention policy or disk quota. State/backups can contain sensitive
-application data, so retain the same care as the source files.
+`job.progress.output` makes running command output readable. State/backups can
+contain sensitive application data, so retain the same care as the source files.
+
+### Artifact retention
+
+Stop the compact worker before maintenance. `stop-all` alone is insufficient:
+it keeps the worker running. Preview first, then add `--apply` to delete:
+
+```sh
+OmniMCP worker stop
+OmniMCP worker prune --older-than-days 30 --max-bytes 1073741824
+OmniMCP worker prune --older-than-days 30 --max-bytes 1073741824 --apply
+OmniMCP worker start
+```
+
+Defaults are 30 days and 1 GiB. Registered regular artifacts older than the
+retention period (using the later of creation and modification time) are selected;
+oldest remaining files are also selected until the retained-byte budget is met.
+Preview reports `selected`, `would_free_bytes` and `planned_remaining_bytes`;
+apply reports actual `removed`, `freed_bytes`, `remaining_bytes` and `skipped`.
+The selected set can change between preview and apply. Skipped/unsafe files are
+not included in the budget, so inspect `skipped` rather than assuming total disk
+usage is below the requested limit.
+
+Cleanup acquires the same state lock as the worker and refuses unresolved jobs
+or saved processes. Recover interrupted work through the worker before stopping
+it for maintenance. It only unlinks registered, private regular files beneath the
+artifact directory; symlinks, hardlinks, outside paths and changed files are
+skipped or refused. SQLite metadata is preserved: reading a deleted reference
+returns `expired_artifact`. Unregistered files, jobs/events/auth state, backups
+and journals are untouched. Read-only/dry-run policy blocks `--apply` both from
+the invoking shell and from the last worker installation/start. These two worker
+flags are saved privately in `retention-policy.json`, so a later shell cannot
+accidentally omit them. Missing/malformed policy blocks deletion while allowing
+preview. On older state, first start or reinstall the updated worker with the
+intended policy, inspect it, then stop the worker before applying retention.
+Do not remove the policy file to bypass a restriction. This is an owner control,
+not an authorization boundary against another process with the same user ID.
+
+This is explicit retention maintenance, with no automatic deletion. It is not
+a hard write quota on live command/PTY output, SQLite or backups, and it does not
+securely erase storage blocks. Those data can still grow between maintenance runs.
 
 `OMNIMCP_READONLY=1` on the worker blocks changes for every client. On a compact
 bridge it also filters discovery, removes act/workflow and disallows cancellation.
@@ -189,7 +227,8 @@ Use `discover` for the current catalog and each parameter schema. Included domai
 - Optional Playwright browser backend with explicit tab selection and semantic controls.
 - Optional `opencode.run` subagent tasks: explicit project directory, model/agent overrides,
   session continuation, retained answers/events, deadlines and cooperative cancellation.
-  Runs use a private OpenCode server; same-directory jobs are serialized. See README.
+  Runs use a private OpenCode server; same-directory jobs are serialized. See the
+  [OpenCode guide](https://github.com/yesunbileg/omnimcp/blob/main/docs/features.md#opencode).
 
 Not every backend has a specialized semantic wrapper. AUR build/privilege orchestration,
 advanced routing/firewall edits, disk formatting/partitioning, health tools, VM lifecycle,
@@ -266,7 +305,9 @@ views is responsible for restoring the user's view promptly.
 
 ## Verification and benchmark gate
 
-Run `uv run pytest` and the focused lint command documented in `VALIDATION.md`.
+Run the umask-independent suite, lint and build commands in [TESTING.md](https://github.com/yesunbileg/omnimcp/blob/main/docs/TESTING.md).
+The coverage floor is 84% with worker/CLI subprocess coverage. Historical host
+results are recorded in [VALIDATION.md](https://github.com/yesunbileg/omnimcp/blob/main/docs/VALIDATION.md).
 The installed host smoke record includes ext4/NTFS3 preservation, service restart,
 desktop/screenshot and real browser form interactions.
 The new suite includes real worker processes and MCP round trips without modifying

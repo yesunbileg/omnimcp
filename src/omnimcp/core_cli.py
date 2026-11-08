@@ -18,10 +18,30 @@ OPS = {"discover", "observe", "act", "workflow", "job", "events", "artifact"}
 
 def worker(argv):
     parser = argparse.ArgumentParser(prog="OmniMCP worker")
-    parser.add_argument(
-        "operation", choices=["run", "install", "status", "start", "stop", "stop-all", "auth-reset"]
-    )
+    operations = parser.add_subparsers(dest="operation", required=True)
+    for name in ("run", "install", "status", "start", "stop", "stop-all", "auth-reset"):
+        operations.add_parser(name)
+    prune = operations.add_parser("prune", help="preview offline artifact cleanup")
+    prune.add_argument("--older-than-days", type=float, default=30)
+    prune.add_argument("--max-bytes", type=int, default=1024**3)
+    prune.add_argument("--apply", action="store_true", help="delete selected artifact bytes")
     args = parser.parse_args(argv)
+    if args.operation == "prune":
+        from omnimcp.core.registry import Fault
+        from omnimcp.core.retention import prune_artifacts
+
+        try:
+            if args.apply and (flag("OMNIMCP_READONLY") or flag("OMNIMCP_DRYRUN")):
+                raise Fault(
+                    "permission_required", "Read-only/dry-run policy blocks artifact deletion."
+                )
+            result = prune_artifacts(
+                older_than_days=args.older_than_days, max_bytes=args.max_bytes, apply=args.apply
+            )
+        except Fault as exc:
+            result = exc.result()
+        print(encode(result))
+        return 0 if result["status"] == "ok" else 1
     if args.operation == "auth-reset":
         from omnimcp.core.state import Store
 
@@ -74,6 +94,9 @@ def worker(argv):
             + "Restart=on-failure\nRestartSec=2\nUMask=0077\nKillMode=control-group\n"
             "TimeoutStopSec=15\n\n[Install]\nWantedBy=default.target\n"
         )
+        from omnimcp.core.retention import record_policy
+
+        record_policy(readonly=flag("OMNIMCP_READONLY"), dry_run=flag("OMNIMCP_DRYRUN"))
         result = subprocess.run(["systemctl", "--user", "daemon-reload"])
         if result.returncode:
             return result.returncode

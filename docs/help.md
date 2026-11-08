@@ -1,18 +1,18 @@
 # Тусламж ба жишээ
 
-Эхлээд `omnimcp --help`, `omnimcp doctor`, мөн MCP-ээр `desktop` дуудаж орчноо
+Эхлээд `OmniMCP --help`, `OmniMCP doctor`, мөн MCP-ээр `desktop` дуудаж орчноо
 шалгана. Tool-ийн боломж, parameter-ийн яг schema-г MCP discovery эсвэл
-`omnimcp --help`-ээс хар. Compact profile-ийн CLI болон job-ийн дэлгэрэнгүй
+`OmniMCP --help`-ээс хар. Compact profile-ийн CLI болон job-ийн дэлгэрэнгүй
 жишээ [CORE.md](CORE.md)-д бий.
 
 ## Энгийн жишээ
 
 ```sh
-omnimcp desktop
-omnimcp screenshot
-omnimcp canvas /absolute/path/Plan.canvas
-omnimcp canvas /absolute/path/Plan.canvas --card n2
-omnimcp canvas /absolute/path/Plan.canvas --action edit --revision HASH --changes @changes.json
+OmniMCP desktop
+OmniMCP screenshot
+OmniMCP canvas /absolute/path/Plan.canvas
+OmniMCP canvas /absolute/path/Plan.canvas --card n2
+OmniMCP canvas /absolute/path/Plan.canvas --action edit --revision HASH --changes @changes.json
 ```
 
 `desktop`-оор эхлэн цонхны төлөвийг унш. Боломжтой бол accessibility-н `ui`,
@@ -67,7 +67,7 @@ revision бүрийг дамжуулж, шинэ revision-ийг дарааги�
 нууц үг болон clipboard-ийн текст файлд бичигдэж болзошгүй. Журнал бичихэд
 алдаа гарвал үйлдэл үргэлжилж, server stderr-д нэг удаа анхааруулна.
 
-`omnimcp journal`-аар түүх унш. `omnimcp replay FILE` default-аар зөвхөн plan
+`OmniMCP journal`-аар түүх унш. `OmniMCP replay FILE` default-аар зөвхөн plan
 харуулна; жинхэнэ input явуулахдаа л `--execute` сонго. Read-only эсвэл dry-run
 идэвхтэй бол гүйцэтгэхийг хориглоно. `--yes` нь countdown-ийг алгасаж seat-ийг
 эзэлнэ. Давтан ажиллуулахаас өмнө тухайн desktop-ийн бодит төлөвийг шалга:
@@ -76,13 +76,13 @@ replay нь гаднах үр дагаврыг буцаахгүй бөгөөд �
 
 ## Зогсоох ба сэргээх
 
-Compact worker-ийн бүх ажлыг, child process-тэй нь зогсооход `omnimcp worker stop`
-ашиглана. Зөвхөн ажлыг цуцлахдаа `omnimcp worker stop-all`; тодорхой ажлыг `job`
+Compact worker-ийн бүх ажлыг, child process-тэй нь зогсооход `OmniMCP worker stop`
+ашиглана. Зөвхөн ажлыг цуцлахдаа `OmniMCP worker stop-all`; тодорхой ажлыг `job`
 tool-оор cancel хийж status дахин унш. Worker унтарсан эсвэл restart болсон үед
 ажиллаж байсан job `interrupted` болно; автоматаар дахин эхлүүлэхгүй. Цуцлалт
 хамтын ажиллагааны дохио бөгөөд дууссан өөрчлөлтийг буцаахгүй. Төлөвийг шалгаж
 байж гараар үргэлжлүүл.
 
-`omnimcp stop` нь хуучин desktop beacon-ийг зогсоодог; compact worker-ийг
+`OmniMCP stop` нь хуучин desktop beacon-ийг зогсоодог; compact worker-ийг
 зогсоох командтай андуурч болохгүй. Beacon-ийн process identity баттай биш бол
 зогсоохгүй.

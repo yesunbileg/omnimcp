@@ -1,5 +1,5 @@
 [project]
-name = "omnimcp"
+name = "OmniMCP"
 version = "0.2.0"
 description = "Extensible Linux MCP control with durable jobs and Hyprland desktop automation"
 readme = "README.md"
@@ -21,6 +21,7 @@ classifiers = [
 dependencies = ["mcp==1.30.0", "psutil>=7.0,<8", "typing-extensions>=4.12"]
 
 [project.scripts]
+"OmniMCP" = "omnimcp.cli:main"
 "omnimcp" = "omnimcp.cli:main"
 
 [build-system]

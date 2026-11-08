@@ -1,12 +1,12 @@
 # Live Hyprland VM acceptance
 
-Run the installed omnimcp wheel against Hyprland in a CPU-emulated QEMU guest.
+Run the installed OmniMCP wheel against Hyprland in a CPU-emulated QEMU guest.
 The guest has a virtio DRM device and Mesa software rendering. The host needs
 Docker, Python, uv, about 6 GB free disk, and 3 GB available RAM; a physical GPU
 and KVM are unnecessary for this harness.
 
 Verified versions: Ubuntu 26.04, Linux 7.0.0-43, Hyprland 0.53.3,
-Aquamarine 0.10.0, QEMU 10.2.1, Python 3.14, omnimcp 0.2.0.
+Aquamarine 0.10.0, QEMU 10.2.1, Python 3.14, OmniMCP 0.2.0.
 
 ## Prepare and run
 

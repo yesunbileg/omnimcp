@@ -1,12 +1,12 @@
 {
   "name": "omnimcp",
   "version": "0.2.1",
-  "description": "Local omnimcp tools and desktop workflow for Codex.",
+  "description": "Local OmniMCP tools and desktop workflow for Codex.",
   "license": "MIT",
   "interface": {
-    "displayName": "omnimcp",
+    "displayName": "OmniMCP",
     "shortDescription": "Control your Linux desktop",
-    "longDescription": "Use the existing omnimcp server and its workflow skill to inspect and operate the local Hyprland desktop, Canvas files, and the configured Kanban board.",
+    "longDescription": "Use the existing OmniMCP server and its workflow skill to inspect and operate the local Hyprland desktop, Canvas files, and the configured Kanban board.",
     "category": "Developer Tools",
     "capabilities": [
       "Read",
@@ -14,7 +14,7 @@
       "Interactive"
     ],
     "defaultPrompt": [
-      "Inspect my desktop with omnimcp."
+      "Inspect my desktop with OmniMCP."
     ],
     "logo": "./assets/icon.svg",
     "composerIcon": "./assets/icon.svg"

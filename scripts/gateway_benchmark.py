@@ -17,7 +17,7 @@ from omnimcp.core.client import rpc
 async def measure():
     values = []
     params = StdioServerParameters(
-        command=str(Path.home() / ".local/bin/omnimcp"), args=["--profile", "compact"]
+        command=str(Path.home() / ".local/bin/OmniMCP"), args=["--profile", "compact"]
     )
     with tempfile.TemporaryDirectory(prefix="aos-gateway-") as temp:
         path = Path(temp) / "fixture"

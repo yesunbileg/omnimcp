@@ -2,7 +2,7 @@
   "mcpServers": {
     "omnimcp": {
       "type": "stdio",
-      "command": "./bin/omnimcp",
+      "command": "./bin/OmniMCP",
       "env": {},
       "env_vars": [
         "WAYLAND_DISPLAY",

@@ -1,4 +1,4 @@
-"""`omnimcp skill`: the packaged Agent Skill and where it gets linked."""
+"""`OmniMCP skill`: the packaged Agent Skill and where it gets linked."""
 
 from pathlib import Path
 
@@ -79,7 +79,7 @@ def test_someone_elses_skill_is_never_replaced(home, capsys):
     other.mkdir(parents=True)
     (other / "SKILL.md").write_text("---\nname: omnimcp-fork\n---\n")
     assert skill.install([], copy=False) == 1
-    assert "not omnimcp's skill" in capsys.readouterr().err
+    assert "not OmniMCP's skill" in capsys.readouterr().err
     assert (other / "SKILL.md").read_text().startswith("---\nname: omnimcp-fork")
 
     # same at an agent's directory: linked elsewhere, that one left alone

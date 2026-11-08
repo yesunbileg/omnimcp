@@ -3,7 +3,7 @@
 AT-SPI reads used to run one busctl process per call: about 10 ms each,
 and nearly 20 through Flatpak's D-Bus proxy, so walking a large web app's
 tree (ZapZap's 904 objects) took 41 seconds. One connection held open
-answers the same call in about 1.5 ms. This is only what omnimcp needs: a
+answers the same call in about 1.5 ms. This is only what OmniMCP needs: a
 unix socket, EXTERNAL authentication, method calls one at a time and their
 replies, little-endian messages. An address it cannot use raises
 Unreachable, and the caller falls back to busctl.

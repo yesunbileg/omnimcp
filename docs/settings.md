@@ -16,7 +16,7 @@ MCP bridge-д өгсөн утга ажиллаж буй worker-ийн орчны
 | `OMNIMCP_CLIPBOARD` | Унтраалттай. `1`, `true`, `yes`, `on` үед clipboard tool-ийг зөвшөөрнө. Clipboard-д нууц үг байж болдог. |
 | `OMNIMCP_AUTH_GUARD` | `1` буюу асаалттай. Танигдсан polkit/auth цонхыг удирдахыг хориглоно. `strict`, `2`, `field`, `fields` нь accessibility tree шалгаж ердийн цонхны password талбарт бичихийг мөн хориглоно. |
 | `OMNIMCP_ALLOW_AUTH_OVERRIDE` | Унтраалттай. `1`, `true`, `yes`, `on` үед tool-ийн `allow_auth=true` параметрийг зөвшөөрнө. Зөвхөн desktop эзэмшигч тохируул. |
-| `OMNIMCP_STRICT` | Унтраалттай. `1`, `true`, `yes`, `on` үед omniMCP-ийн сүүлийн үйлдлээс хойш seat шилжсэн бол дараагийн үйлдлийг хориглоно. |
+| `OMNIMCP_STRICT` | Унтраалттай. `1`, `true`, `yes`, `on` үед OmniMCP-ийн сүүлийн үйлдлээс хойш seat шилжсэн бол дараагийн үйлдлийг хориглоно. |
 | `OMNIMCP_CONFINE` | Хязгаарлалтгүй. `launched`, `class:foo,bar`, `workspace:3,special:notes` хэлбэрээр оролтын цонхны хамрах хүрээг хязгаарлана. Буруу утга үйлдлийг хориглоно. |
 | `OMNIMCP_MARK` | Унтраалттай. `1`, `true`, `yes`, `on` үед өөрийн нээсэн цонхыг `omnimcp-owned` tag хийж, нээх/screenshot хийхэд мэдэгдэл харуулна; border rule зөвхөн best-effort. |
 | `OMNIMCP_BACKGROUND` | Default нь automatic: идэвхтэй цонхонд foreground, бусдад background. `1`, `on`, `true`, `yes`, `always` нь background guarantee; `0`, `off`, `false`, `no` нь foreground default. `auto`, `automatic` нь automatic; бусад утга үйлдлийг хориглоно. |
@@ -34,7 +34,7 @@ MCP bridge-д өгсөн утга ажиллаж буй worker-ийн орчны
 | `OMNIMCP_BROWSER_COMMAND` | Тодорхойгүй. Browser MCP server-ийн command-ийг JSON string list (`argv`) хэлбэрээр заана. Заагаагүй бол `~/.config/omnimcp/browser.json`, дараа нь PATH дахь `playwright-mcp` ашиглана. |
 | `OMNIMCP_STATE_DIR` | `$XDG_STATE_HOME/omnimcp` (эсвэл `~/.local/state/omnimcp`). Worker SQLite DB, artifact хадгалдаг хувийн хавтас. |
 | `OMNIMCP_SOCKET` | `$XDG_RUNTIME_DIR/omnimcp-core/worker.sock` (байхгүй үед `/run/user/<uid>/...`). Compact worker-ийн Unix socket зам. |
-| `OMNIMCP_BIN` | Codex plugin shim-д л хэрэглэнэ. Бүрэн замаар runtime `omnimcp` executable заана; өгөөгүй бол shim `PATH`-аас олно. Өөрийг нь заасан эсвэл executable биш бол ажиллахгүй. |
+| `OMNIMCP_BIN` | Codex plugin shim-д л хэрэглэнэ. Бүрэн замаар runtime `OmniMCP` executable заана; өгөөгүй бол shim `PATH`-аас олно. Өөрийг нь заасан эсвэл executable биш бол ажиллахгүй. |
 
 `OMNIMCP_DRYRUN`, `OMNIMCP_READONLY` нь аюулгүй ажиллагааны нэмэлт хязгаар юм.
 Эдгээр нь OS sandbox биш: ажиллах үед tool нь нэвтэрсэн хэрэглэгчийн эрхтэй.
@@ -48,7 +48,7 @@ MCP bridge-д өгсөн утга ажиллаж буй worker-ийн орчны
 MCP parameter, stdin эсвэл AI-д өгөхгүй. Auth prompt cancel/timeout болбол дахин
 prompt нээхийг worker төлөвөөр хориглоно; хуучин `auth_retry` параметр энэ
 хоригийг тайлахгүй. Нэвтэрсэн хэрэглэгч өөрөө шалгасны дараа local owner CLI-аас
-`omnimcp worker auth-reset` ажиллуулж хадгалсан блокийг цэвэрлэнэ. Энэ CLI болон
+`OmniMCP worker auth-reset` ажиллуулж хадгалсан блокийг цэвэрлэнэ. Энэ CLI болон
 `pkexec` нь ижил UID-тэй agent shell-ээс дуудагдаж болох тул тусдаа human-consent
 эсвэл OS security boundary болохгүй. Нэг worker дотор зэрэгцсэн admin хүсэлтүүд олон prompt
 үүсгэхгүй.

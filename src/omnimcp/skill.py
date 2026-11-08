@@ -1,4 +1,4 @@
-"""`omnimcp skill`: the Agent Skill that teaches a shell-driven agent the verbs.
+"""`OmniMCP skill`: the Agent Skill that teaches a shell-driven agent the verbs.
 
 The skill ships inside the package (built from `skills/omnimcp/` in the
 repository), so the copy an agent reads always describes the verbs the
@@ -50,7 +50,7 @@ def packaged_dir() -> Path | None:
 
 
 def _ours(target: Path) -> bool:
-    """Only a directory holding omnimcp's own SKILL.md may be replaced or
+    """Only a directory holding OmniMCP's own SKILL.md may be replaced or
     removed; anything else at that path belongs to the user."""
     try:
         head = (target / "SKILL.md").read_text(errors="replace")[:4000]
@@ -78,12 +78,12 @@ def _dirs_for(agent: str) -> list[Path]:
 def install(agents: list[str], copy: bool) -> int:
     src = packaged_dir()
     if src is None:
-        print("omnimcp: error: this build carries no skill directory", file=sys.stderr)
+        print("OmniMCP: error: this build carries no skill directory", file=sys.stderr)
         return 1
     unknown = sorted(set(agents) - set(AGENT_DIRS))
     if unknown:
         print(
-            f"omnimcp: usage: unknown agent {', '.join(unknown)} "
+            f"OmniMCP: usage: unknown agent {', '.join(unknown)} "
             f"(known: {', '.join(sorted(AGENT_DIRS))})",
             file=sys.stderr,
         )
@@ -92,7 +92,7 @@ def install(agents: list[str], copy: bool) -> int:
     if canonical.exists() or canonical.is_symlink():
         if not _ours(canonical):
             print(
-                f"omnimcp: error: {canonical} exists and is not omnimcp's skill; "
+                f"OmniMCP: error: {canonical} exists and is not OmniMCP's skill; "
                 "move it aside first",
                 file=sys.stderr,
             )
@@ -116,7 +116,7 @@ def install(agents: list[str], copy: bool) -> int:
                     linked += 1
                     continue
                 if not _ours(target):
-                    print(f"  {agent}: {target} exists and is not omnimcp's, left alone")
+                    print(f"  {agent}: {target} exists and is not OmniMCP's, left alone")
                     continue
                 _remove(target)
             if copy:
@@ -128,7 +128,7 @@ def install(agents: list[str], copy: bool) -> int:
     if not linked:
         print(
             "  no agent skill directories found; name one to create it: "
-            "omnimcp skill install --agent claude-code"
+            "OmniMCP skill install --agent claude-code"
         )
     return 0
 
@@ -157,8 +157,8 @@ def uninstall() -> int:
 
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(
-        prog="omnimcp skill",
-        description="The Agent Skill that teaches shell-driven agents the omnimcp verbs.",
+        prog="OmniMCP skill",
+        description="The Agent Skill that teaches shell-driven agents the OmniMCP verbs.",
     )
     sub = parser.add_subparsers(dest="cmd", metavar="COMMAND")
     sub.required = True
@@ -180,7 +180,7 @@ def main(argv: list[str]) -> int:
     if args.cmd == "path":
         src = packaged_dir()
         if src is None:
-            print("omnimcp: error: this build carries no skill directory", file=sys.stderr)
+            print("OmniMCP: error: this build carries no skill directory", file=sys.stderr)
             return 1
         print(src)
         return 0

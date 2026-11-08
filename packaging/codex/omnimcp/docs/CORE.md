@@ -1,4 +1,4 @@
-# omnimcp core
+# OmniMCP core
 
 The local Arch/Hyprland implementation adds a transport-independent registry,
 SQLite state, owner-only Unix socket worker, jobs, events, artifacts, explicit
@@ -8,13 +8,13 @@ using its existing model and credentials. Core OS actions do not require an LLM.
 
 ## Profiles and installation
 
-`omnimcp` and all existing desktop/Canvas/Kanban verbs keep their previous
+`OmniMCP` and all existing desktop/Canvas/Kanban verbs keep their previous
 behavior. `--profile legacy` explicitly selects that surface. Compact is opt-in:
 
 ```sh
 uv sync
-uv run omnimcp worker install
-uv run omnimcp --profile compact
+uv run OmniMCP worker install
+uv run OmniMCP --profile compact
 ```
 
 The worker installer writes and enables `~/.config/systemd/user/omnimcp.service`
@@ -23,14 +23,14 @@ installed package's CLI when installing the permanent unit; an interpreter in a
 removed checkout/virtualenv cannot start it. A user systemd manager must be
 available. `worker run` serves in the foreground for isolated development.
 
-Stop all compact work, including child processes: `omnimcp worker stop`.
+Stop all compact work, including child processes: `OmniMCP worker stop`.
 The old `stop` command controls the legacy desktop beacon. Inspect individual
 jobs with `job`; cancellation is cooperative and does not undo completed changes.
 User services normally stop at logout; configuring systemd linger is a separate
 user choice. Jobs survive MCP/CLI disconnects while the worker remains running.
 
 To cancel current jobs while keeping the worker available, run
-`omnimcp worker stop-all`. This owner control uses the local authenticated Unix
+`OmniMCP worker stop-all`. This owner control uses the local authenticated Unix
 socket; it is not an MCP tool or an action/workflow capability. It reports
 `cancelled`, `groups_terminated`, `killed`, and `threads_still_busy`. Pending jobs
 are cancelled immediately. Recorded process groups are stopped after verifying
@@ -40,7 +40,7 @@ busy after the bounded response. Cancellation does not undo completed changes.
 An agent with local shell access can invoke the CLI too; this interface is not
 an authorization boundary against that agent.
 
-The legacy `omnimcp stop` also checks beacon ownership and the recorded process
+The legacy `OmniMCP stop` also checks beacon ownership and the recorded process
 birth time before signaling. A live older beacon without a birth time is
 refused; restart that server through its owning client or service so it writes
 a new beacon. The stop command does not guess an identity from an old PID.
@@ -86,11 +86,11 @@ signed-in user's authority, including arbitrary user commands and custom adapter
 A CLI/bridge variable cannot reduce or expand the daemon's environment retroactively.
 
 ```sh
-omnimcp discover --action file.patch
-omnimcp observe system.snapshot --fields '["memory","load"]'
-omnimcp act command.exec --params '{"argv":["uname","-r"]}'
-omnimcp job jCOPY_RETURNED_ID
-omnimcp artifact aCOPY_RETURNED_ID --offset 0
+OmniMCP discover --action file.patch
+OmniMCP observe system.snapshot --fields '["memory","load"]'
+OmniMCP act command.exec --params '{"argv":["uname","-r"]}'
+OmniMCP job jCOPY_RETURNED_ID
+OmniMCP artifact aCOPY_RETURNED_ID --offset 0
 ```
 
 Action status must be checked. `queued` means accepted, not completed.
@@ -170,7 +170,7 @@ on older Hyprland; that fallback cannot prove same-process window-address reuse.
 ## Native capabilities and extension contract
 
 Codex native account quotas: [`codex.usage` / `codex_usage`](CODEX-USAGE.md),
-with direct `omnimcp codex-usage` access, requires no model invocation.
+with direct `OmniMCP codex-usage` access, requires no model invocation.
 
 Use `discover` for the current catalog and each parameter schema. Included domains:
 
@@ -215,7 +215,7 @@ password channel or sudo retry is implemented. Within one worker, concurrent adm
 fan out into concurrent GUI prompts. A cancelled or timed-out authentication
 blocks later admin prompts in persistent worker state. The compatibility
 `auth_retry` parameter does not clear that block. After the local owner has checked
-the situation, `omnimcp worker auth-reset` clears it. This command shares the local
+the situation, `OmniMCP worker auth-reset` clears it. This command shares the local
 user account's authority: a same-UID agent with shell access can invoke it and
 `pkexec`, so it is not a separate consent boundary or OS sandbox. Installing/enabling
 the user worker itself needs no elevated privileges.

@@ -80,7 +80,7 @@ def test_clipboard_is_double_gated(reloaded, monkeypatch):
     assert "clipboard" not in _tool_names(reloaded(None))
 
 
-# every acting tool name, as a word (so "omnimcp"/"Hyprland" do not match
+# every acting tool name, as a word (so "OmniMCP"/"Hyprland" do not match
 # "hypr", and "launchers" does not match "launch")
 _ACT_REF = re.compile(r"\b(pointer|keyboard|click_ui|hypr|launch|sequence|clipboard|opencode)\b")
 

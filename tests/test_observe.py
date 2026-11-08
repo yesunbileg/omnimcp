@@ -105,7 +105,7 @@ def test_hypr_fuses_observation(monkeypatch):
 
 def test_hypr_targetless_fullscreen_honors_seat_guard(monkeypatch):
     # target-less fullscreen/toggle_floating act on the ACTIVE window; under
-    # OMNIMCP_STRICT, if the human refocused since omnimcp last acted, they
+    # OMNIMCP_STRICT, if the human refocused since OmniMCP last acted, they
     # would hit the wrong window, so the seat guard must refuse
     monkeypatch.setenv("OMNIMCP_STRICT", "1")
     monkeypatch.setattr(srv.hyprctl, "dispatch", lambda *a: None)

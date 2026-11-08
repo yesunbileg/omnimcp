@@ -1,16 +1,16 @@
-"""omnimcp command line.
+"""OmniMCP command line.
 
-`omnimcp` with no arguments runs the MCP stdio server (what clients
+`OmniMCP` with no arguments runs the MCP stdio server (what clients
 spawn). The human-facing subcommands wrap the first-run experience and
 the record an agent leaves behind:
 
-    omnimcp doctor   diagnose the environment, exit 0 only if all green
-    omnimcp stop     emergency stop, releasing anything a drag holds
-    omnimcp journal  read back what an agent did (OMNIMCP_JOURNAL)
-    omnimcp replay   re-issue a journal's actions, dry by default
-    omnimcp skill    install the Agent Skill that teaches the verbs
+    OmniMCP doctor   diagnose the environment, exit 0 only if all green
+    OmniMCP stop     emergency stop, releasing anything a drag holds
+    OmniMCP journal  read back what an agent did (OMNIMCP_JOURNAL)
+    OmniMCP replay   re-issue a journal's actions, dry by default
+    OmniMCP skill    install the Agent Skill that teaches the verbs
 
-The tools themselves are verbs too (`omnimcp desktop`, `omnimcp click_ui
+The tools themselves are verbs too (`OmniMCP desktop`, `OmniMCP click_ui
 Save`), for agents that run shell commands instead of MCP: see verbs.py.
 
 """
@@ -136,7 +136,7 @@ def _skill_note() -> tuple[bool, str]:
     canonical = Path(skill.CANONICAL).expanduser() / skill.NAME
     if (canonical / "SKILL.md").is_file():
         return True, f"agent skill installed at {canonical}"
-    return True, "agent skill not installed (omnimcp skill install, for shell-driven agents)"
+    return True, "agent skill not installed (OmniMCP skill install, for shell-driven agents)"
 
 
 CHECKS = (
@@ -164,7 +164,7 @@ def doctor() -> int:
     if failures:
         print(f"\n{failures} check(s) failed. See README troubleshooting.")
         return 1
-    print("\nAll checks passed. omnimcp is ready.")
+    print("\nAll checks passed. OmniMCP is ready.")
     return 0
 
 
@@ -172,12 +172,12 @@ def doctor() -> int:
 
 
 def stop() -> int:
-    """Emergency stop: signal a running omnimcp server to shut down, which
+    """Emergency stop: signal a running OmniMCP server to shut down, which
     releases any held pointer button and clears the beacon on the way out.
-    Cleaner than `pkill -f omnimcp` (it targets the beacon's own pid and
+    Cleaner than `pkill -f OmniMCP` (it targets the beacon's own pid and
     triggers the graceful SIGTERM path), and safe to bind to a key:
 
-        bind = SUPER SHIFT, BackSpace, exec, omnimcp stop
+        bind = SUPER SHIFT, BackSpace, exec, OmniMCP stop
     """
     from omnimcp import safety
 
@@ -188,7 +188,7 @@ def stop() -> int:
     if verb_pid and verb_pid != os.getpid():
         try:
             os.kill(verb_pid, signal.SIGTERM)
-            print(f"stopped a running omnimcp verb (pid {verb_pid})")
+            print(f"stopped a running OmniMCP verb (pid {verb_pid})")
             stopped += 1
         except ProcessLookupError:
             pass
@@ -198,7 +198,7 @@ def stop() -> int:
     path = safety.state_path()
     if not path.exists():
         if not stopped:
-            print("no active omnimcp session (no beacon found)")
+            print("no active OmniMCP session (no beacon found)")
         return 0
     try:
         for item in (path.parent, path):
@@ -226,12 +226,12 @@ def stop() -> int:
     except (ProcessLookupError, psutil.NoSuchProcess):
         with contextlib.suppress(OSError):
             path.unlink()
-        print(f"omnimcp pid {pid} was already gone; cleared the stale beacon")
+        print(f"OmniMCP pid {pid} was already gone; cleared the stale beacon")
         return 0
     except (PermissionError, psutil.AccessDenied):
         print(f"not permitted to signal pid {pid}")
         return 1
-    print(f"stopped omnimcp (pid {pid})")
+    print(f"stopped OmniMCP (pid {pid})")
     return 0
 
 
@@ -355,7 +355,7 @@ def _fmt_entry(entry: dict[str, Any], verbose: bool = False) -> str:
 
 def journal_cmd(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(
-        prog="omnimcp journal", description="Read back what an agent did."
+        prog="OmniMCP journal", description="Read back what an agent did."
     )
     parser.add_argument("path", nargs="?", default="", help="journal file (default: env)")
     parser.add_argument("-n", "--tail", type=int, default=40, help="last N entries (0 = all)")
@@ -453,7 +453,7 @@ def _unreplayable(entries: list[dict[str, Any]]) -> list[str]:
     for entry in entries:
         tool, args, seq = entry.get("tool"), _args_of(entry), entry.get("seq", "?")
         if tool not in journal_module().REPLAYABLE:
-            reasons.append(f"seq {seq}: {_safe(tool)} (recorded by a newer omnimcp)")
+            reasons.append(f"seq {seq}: {_safe(tool)} (recorded by a newer OmniMCP)")
         elif not args:
             reasons.append(f"seq {seq}: {_safe(tool)} has no recorded arguments")
         elif tool == "click_ui" and args.get("mark"):
@@ -481,9 +481,9 @@ def _flag_on(name: str) -> bool:
 
 
 def _take_beacon() -> bool:
-    """Raise the activity beacon for this replay, unless a live omnimcp
+    """Raise the activity beacon for this replay, unless a live OmniMCP
     already owns it. Overwriting a running server's beacon would point
-    `omnimcp stop` and the activity beacon at the replay's pid, and
+    `OmniMCP stop` and the activity beacon at the replay's pid, and
     clearing it on the way out would leave the still-running server
     invisible and un-stoppable."""
     from omnimcp import safety
@@ -530,7 +530,7 @@ def _gap_before(entry: dict[str, Any], previous: dict[str, Any] | None) -> float
 
 def replay(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(
-        prog="omnimcp replay",
+        prog="OmniMCP replay",
         description="Re-issue the actions in a journal. Prints the plan and stops "
         "unless --execute is given.",
     )
@@ -575,7 +575,7 @@ def replay(argv: list[str]) -> int:
         # Dropping these and running the rest would produce a run that
         # reports success for a different sequence of events than the one
         # recorded, so the whole run stops rather than part of it.
-        print("\nthis omnimcp cannot replay:")
+        print("\nthis OmniMCP cannot replay:")
         for reason in blocked:
             print(f"  {reason}")
         if args.execute:
@@ -630,7 +630,7 @@ def replay(argv: list[str]) -> int:
     if _take_beacon():
         safety.on_shutdown(hinput.release_held)
     else:
-        print("an omnimcp server already holds the activity beacon; leaving it alone")
+        print("an OmniMCP server already holds the activity beacon; leaving it alone")
     if not args.yes and not _countdown(3):
         return 1
 
@@ -668,7 +668,7 @@ def replay(argv: list[str]) -> int:
 # --- entry ------------------------------------------------------------------
 
 _USAGE = """\
-usage: omnimcp [VERB ...]        omnimcp VERB --help for a verb's flags
+usage: OmniMCP [VERB ...]        OmniMCP VERB --help for a verb's flags
 
 no arguments   run the MCP stdio server (this is what MCP clients spawn)
 
@@ -698,13 +698,13 @@ which appends the effect; pointer, keyboard and click_ui take --allow-auth):
   clipboard read | write TEXT|-          needs OMNIMCP_CLIPBOARD=1
 Every tool verb takes --json (raw result, one line). click-ui and
 wait-for are accepted spellings. Exit: 0 ok, 1 error, 2 usage, 3 refused,
-4 no result. omnimcp VERB [ACTION] --help shows the flags.
+4 no result. OmniMCP VERB [ACTION] --help shows the flags.
 
 For the owner:
   codex-usage    native account quota %, reset times; --timezone IANA --timeout-s N
   doctor         diagnose dependencies, session, protocols; exit 0 if green
   stop           emergency stop: signal a running server to shut down safely
-                 (bind it: bind = SUPER SHIFT, BackSpace, exec, omnimcp stop)
+                 (bind it: bind = SUPER SHIFT, BackSpace, exec, OmniMCP stop)
   journal        read back what an agent did (needs OMNIMCP_JOURNAL);
                  --acts, --refused, -n N
   replay         re-issue a journal's actions through the same guards;
@@ -726,7 +726,7 @@ def main() -> None:
     if argv and argv[0] in core_cli.OPS | {"worker"}:
         sys.exit(core_cli.main(argv))
     if "--profile" in argv:
-        profile_parser = argparse.ArgumentParser(prog="omnimcp")
+        profile_parser = argparse.ArgumentParser(prog="OmniMCP")
         profile_parser.add_argument("serve", nargs="?", choices=["serve"])
         profile_parser.add_argument("--profile", choices=["legacy", "compact"], required=True)
         profile = profile_parser.parse_args(argv).profile
@@ -746,9 +746,9 @@ def main() -> None:
         print(_USAGE, end="")
         sys.exit(0)
     if argv[0] == "--version":
-        from omnimcp import __version__
+        from omnimcp import __app_name__, __version__
 
-        print(f"omnimcp {__version__}")
+        print(f"{__app_name__} {__version__}")
         sys.exit(0)
     from omnimcp import verbs
 
@@ -757,7 +757,7 @@ def main() -> None:
         if not sys.stdout.closed:  # `serve` hands stdout to the MCP session, which closes it
             sys.stdout.flush()
     except BrokenPipeError:
-        # `omnimcp desktop | head` closed the pipe early: that is the
+        # `OmniMCP desktop | head` closed the pipe early: that is the
         # reader's choice, not a failure, and the interpreter must not
         # trip over it again while flushing at exit
         os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())

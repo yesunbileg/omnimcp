@@ -389,7 +389,7 @@ def test_one_field_in_a_walk_cut_short_is_not_the_only_field(wired_bg):
     wired_bg["fields_complete"] = False
     srv.keyboard("type", text="hi", window="0xa")
     assert wired_bg["inserted"] == [] and len(wired_bg["shortcuts"]) == 2
-    with pytest.raises(srv.trust.TrustError, match="more elements than omnimcp reads"):
+    with pytest.raises(srv.trust.TrustError, match="more elements than OmniMCP reads"):
         srv.keyboard("type", text="上", window="0xa")
 
 

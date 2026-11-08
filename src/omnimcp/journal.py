@@ -1,4 +1,4 @@
-"""Action journal, dry run, and the substrate `omnimcp replay` runs on.
+"""Action journal, dry run, and the substrate `OmniMCP replay` runs on.
 
 The trust layers in `trust.py` decide what an agent may do in the moment
 and then forget it happened. This module is the memory: an append-only
@@ -41,7 +41,7 @@ a `sequence` carry `parent`, the sequence's own `seq`, which is how
 replay avoids running both the sequence and its steps.
 
 The journal is a recorder, not a guard: if the file cannot be written the
-action still happens, and omnimcp warns once on stderr. Failing an
+action still happens, and OmniMCP warns once on stderr. Failing an
 action because an audit trail is unavailable would trade a working
 desktop for a log line.
 """
@@ -98,7 +98,7 @@ def refuse_if_dry(what: str) -> None:
     if dry_run():
         raise DryRunError(
             f"dry-run barrier: {what} reached the real input path while "
-            "OMNIMCP_DRYRUN is set. Nothing was delivered; this is an omnimcp "
+            "OMNIMCP_DRYRUN is set. Nothing was delivered; this is an OmniMCP "
             "bug, please report the tool call that produced it."
         )
 
@@ -155,7 +155,7 @@ _source = ""  # which surface the agent used (the CLI verbs set "cli")
 
 def set_origin(name: str) -> None:
     """Mark subsequent records as written by something other than the
-    agent. `omnimcp replay` sets it, so that replaying a journal into the
+    agent. `OmniMCP replay` sets it, so that replaying a journal into the
     same file cannot make the next replay run everything twice."""
     global _origin
     _origin = name
@@ -178,7 +178,7 @@ def _warn_once(message: str) -> None:
     if _broken:
         return
     _broken = True
-    print(f"omnimcp: {message}", file=sys.stderr)
+    print(f"OmniMCP: {message}", file=sys.stderr)
 
 
 def _counter_path(target: Path) -> Path:
@@ -624,7 +624,7 @@ def read(source: Path) -> Iterator[dict[str, Any]]:
 
 
 # Tools this version knows how to re-issue. An act entry naming anything
-# else (a journal written by a NEWER omnimcp) is deliberately not filtered
+# else (a journal written by a NEWER OmniMCP) is deliberately not filtered
 # out by `replayable`: replay refuses the whole run instead, because
 # silently dropping an action and then reporting success would be the
 # worst of the three outcomes.

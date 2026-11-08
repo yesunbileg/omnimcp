@@ -1,0 +1,33 @@
+#!/bin/sh
+# OmniMCP plugin launcher; old command names remain valid compatibility aliases.
+set -eu
+
+plugin_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
+self=$(readlink -f -- "$0" 2>/dev/null || printf '%s/%s' "$plugin_dir" "$(basename -- "$0")")
+runtime=
+
+choose_runtime() {
+    [ -n "$1" ] && [ -x "$1" ] || return 1
+    resolved=$(readlink -f -- "$1" 2>/dev/null || printf '%s' "$1")
+    [ "$resolved" != "$self" ] || return 1
+    runtime=$1
+}
+
+if [ -n "${OMNIMCP_BIN:-}" ]; then
+    if ! choose_runtime "$OMNIMCP_BIN"; then
+        echo 'OmniMCP plugin: OMNIMCP_BIN must name a runtime executable, not this launcher' >&2
+        exit 127
+    fi
+else
+    for command_name in OmniMCP omnimcp; do
+        candidate=$(command -v "$command_name" || true)
+        if choose_runtime "$candidate"; then break; fi
+    done
+    if [ -z "$runtime" ]; then
+        echo 'OmniMCP plugin: install OmniMCP or set OMNIMCP_BIN to its executable' >&2
+        exit 127
+    fi
+fi
+
+export WAYLAND_DISPLAY HYPRLAND_INSTANCE_SIGNATURE XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS
+exec "$runtime" "$@"

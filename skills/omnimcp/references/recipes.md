@@ -1,9 +1,9 @@
-# omnimcp recipes
+# OmniMCP recipes
 
 Worked flows as shell sequences, with the lines each step prints (`#` lines
 are expected output). Addresses, paths and coordinates are examples: take
-yours from `omnimcp desktop` and from the capture metadata. Every flow starts
-from `omnimcp desktop` and ends with a verification that would fail if the
+yours from `OmniMCP desktop` and from the capture metadata. Every flow starts
+from `OmniMCP desktop` and ends with a verification that would fail if the
 action had not worked. Recipes 1 to 8 work in the window the human is in, on
 their screen; on any other window the same verbs run in the background and
 print how they did it (recipe 9).
@@ -27,34 +27,34 @@ in, so everything happens on their screen. Everything is by name; no pixel
 is estimated.
 
 ```bash
-omnimcp desktop
+OmniMCP desktop
 # ...
 # win 0x55a4479a1200 ws 2 org.gnome.TextEditor "New Document" at 7,7 1906x1066
 # active 0x55a4479a1200
 W=0x55a4479a1200
 
-omnimcp keyboard type "notes for tomorrow" --window $W
+OmniMCP keyboard type "notes for tomorrow" --window $W
 # typed 18 characters into 0x55a4479a1200
 
-omnimcp keyboard key ctrl+s --window $W
+OmniMCP keyboard key ctrl+s --window $W
 # pressed ctrl+s into 0x55a4479a1200
 
-omnimcp wait_for window_open --match "Save As" --timeout 5
+OmniMCP wait_for window_open --match "Save As" --timeout 5
 # openwindow address=0x55a44a0b3c00 workspace=2 class=org.gnome.TextEditor title="Save As"
 D=0x55a44a0b3c00
 
-omnimcp ui --window $D
+OmniMCP ui --window $D
 # [0] text "Name" @700,140 value="Untitled Document.txt"
 # [1] push button "Cancel" @620,88
 # [2] push button "Save" @1204,88
 
-omnimcp click_ui Name --window $D
+OmniMCP click_ui Name --window $D
 # clicked text 'Name' at (700, 140) in org.gnome.TextEditor
 
-omnimcp keyboard key ctrl+a --window $D
+OmniMCP keyboard key ctrl+a --window $D
 # pressed ctrl+a into 0x55a44a0b3c00
 
-omnimcp keyboard type "tomorrow.md" --window $D --then ui
+OmniMCP keyboard type "tomorrow.md" --window $D --then ui
 # typed 11 characters into 0x55a44a0b3c00
 # [0] text "Name" @700,140 value="tomorrow.md"
 # [1] push button "Cancel" @620,88
@@ -66,7 +66,7 @@ stop here and confirm with the user unless their instruction already named
 this exact file. Then:
 
 ```bash
-omnimcp click_ui Save --window $D --then desktop
+OmniMCP click_ui Save --window $D --then desktop
 # clicked push button 'Save' at (1204, 88) in org.gnome.TextEditor
 # monitor eDP-1 at 0,0 1920x1080 scale 1.0 ws 2 focused
 # ...
@@ -81,17 +81,17 @@ changed: the save happened.
 Goal: press a small gear icon in an app that exposes no accessibility tree.
 
 ```bash
-omnimcp desktop
+OmniMCP desktop
 # ...
 # win 0x55a44b1d2e00 ws 7 electron-notes "Notes" at 7,7 950x1066
 # ...
 W=0x55a44b1d2e00
 
-omnimcp ui --window $W
+OmniMCP ui --window $W
 # electron-notes exposes no accessibility tree; use screenshot + zoom instead
 # (exit 4)
 
-omnimcp screenshot --window $W
+OmniMCP screenshot --window $W
 # /run/user/1000/omnimcp/shot-1757770000000.jpg
 # {"geometry":[7,7,950,1066],"scale":1.0,"image":[950,1066],"format":"jpeg","path":"/run/user/1000/omnimcp/shot-1757770000000.jpg"}
 ```
@@ -102,7 +102,7 @@ and 4% down a 950x1066 image, so image pixel (874, 43), and
 That is a full-window estimate, good to tens of pixels: zoom, do not click.
 
 ```bash
-omnimcp zoom 881 50 --window $W
+OmniMCP zoom 881 50 --window $W
 # /run/user/1000/omnimcp/shot-1757770000210.jpg
 # {"geometry":[477,7,480,360],"scale":1.0,"image":[480,360],"format":"jpeg","path":"/run/user/1000/omnimcp/shot-1757770000210.jpg","target":"zoom","point":[881,50]}
 ```
@@ -112,7 +112,7 @@ always compute from `geometry`. On the zoomed image the gear's center is at
 pixel (408, 44), so `global = (477 + 408, 7 + 44) = (885, 51)`.
 
 ```bash
-omnimcp pointer click 885 51 --then screenshot
+OmniMCP pointer click 885 51 --then screenshot
 # click ok; cursor now at (885, 51)
 # /run/user/1000/omnimcp/shot-1757770000640.jpg
 # {"geometry":[0,0,1920,1080],"scale":1.0,"image":[1920,1080],"format":"jpeg","path":"/run/user/1000/omnimcp/shot-1757770000640.jpg","stable":true}
@@ -132,7 +132,7 @@ belongs in its own step after the user confirms.
 
 ```bash
 W=0x55a4479a1200   # org.gnome.Nautilus, from omnimcp desktop
-omnimcp sequence '[
+OmniMCP sequence '[
   {"op":"click_ui","name":"Search","window":"'$W'"},
   {"op":"keyboard","action":"type","text":"invoice","window":"'$W'"},
   {"op":"keyboard","action":"key","keys":"enter","window":"'$W'"},
@@ -158,10 +158,10 @@ the run stops:
 # (exit 4)
 ```
 
-Step 0 already happened. Run `omnimcp desktop`, find what opened, deal with
+Step 0 already happened. Run `OmniMCP desktop`, find what opened, deal with
 it, and resume from step 1 with a new sequence; never re-run the whole plan.
 For a plan longer than one line, write it to a file and pass `@plan.json`,
-or pipe it in with `omnimcp sequence -`.
+or pipe it in with `OmniMCP sequence -`.
 
 ## 5. Read a form's state after typing with --then ui
 
@@ -170,19 +170,19 @@ the new name before pressing the button.
 
 ```bash
 D=0x55a44d2f0000   # the "New Folder" dialog, from omnimcp desktop
-omnimcp ui --window $D
+OmniMCP ui --window $D
 # [0] text "Folder name" @700,140 value="Untitled Folder"
 # [1] check box "Create as hidden" @640,190 checked=false
 # [2] push button "Cancel" @620,240
 # [3] push button "Create" @1204,240
 
-omnimcp click_ui "Folder name" --window $D
+OmniMCP click_ui "Folder name" --window $D
 # clicked text 'Folder name' at (700, 140) in org.gnome.Nautilus
 
-omnimcp keyboard key ctrl+a --window $D
+OmniMCP keyboard key ctrl+a --window $D
 # pressed ctrl+a into 0x55a44d2f0000
 
-omnimcp keyboard type "receipts-2026" --window $D --then ui
+OmniMCP keyboard type "receipts-2026" --window $D --then ui
 # typed 13 characters into 0x55a44d2f0000
 # [0] text "Folder name" @700,140 value="receipts-2026"
 # [1] check box "Create as hidden" @640,190 checked=false
@@ -195,7 +195,7 @@ omnimcp keyboard type "receipts-2026" --window $D --then ui
 field before touching `Create`. A toggle is verified the same way:
 
 ```bash
-omnimcp click_ui "Create as hidden" --window $D --then ui
+OmniMCP click_ui "Create as hidden" --window $D --then ui
 # clicked check box 'Create as hidden' at (640, 190) in org.gnome.Nautilus
 # ...
 # [1] check box "Create as hidden" @640,190 checked=true
@@ -212,8 +212,8 @@ The owner set `OMNIMCP_CONFINE=class:firefox,kitty`. The task drifts toward
 a Signal window:
 
 ```bash
-omnimcp keyboard type "on my way" --window 0x55a44e000000
-# omnimcp: refused: 0x55a44e000000 (Signal) is outside the agent's confinement scope (class:firefox,kitty)
+OmniMCP keyboard type "on my way" --window 0x55a44e000000
+# OmniMCP: refused: 0x55a44e000000 (Signal) is outside the agent's confinement scope (class:firefox,kitty)
 # (exit 3)
 ```
 
@@ -224,7 +224,7 @@ Correct handling, in order:
    `keyboard type` without `--window`, not `--allow-auth`.
    Every one of those is a different guard saying the same thing, or a
    guard the owner deliberately set.
-3. Report the reason verbatim to the user and what you did not do: "omnimcp
+3. Report the reason verbatim to the user and what you did not do: "OmniMCP
    refused to type into the Signal window because it is outside the
    confinement scope (class:firefox,kitty). I sent nothing. Widen
    OMNIMCP_CONFINE if you want me working there."
@@ -239,11 +239,11 @@ Troubleshooting). When branching in a script, branch on the exit code, not on
 the text:
 
 ```bash
-omnimcp click_ui Send --window $W --then ui
+OmniMCP click_ui Send --window $W --then ui
 case $? in
   0) ;;                                   # read the ui lines and verify
   3) exit 3 ;;                            # report; the reason is on stderr
-  4) omnimcp marks --window $W ;;         # ambiguous or no tree: look, then choose
+  4) OmniMCP marks --window $W ;;         # ambiguous or no tree: look, then choose
 esac
 ```
 
@@ -265,7 +265,7 @@ under OMNIMCP_BACKGROUND=1 `focus_window` is refused. To work in that window
 without showing it, skip the focus and use recipe 9.
 
 ```bash
-omnimcp desktop
+OmniMCP desktop
 # monitor eDP-1 at 0,0 1920x1080 scale 1.0 ws 7 focused
 # ws 3 "3" on eDP-1 windows 1
 # ws 7 "7" on eDP-1 windows 2 visible
@@ -279,7 +279,7 @@ omnimcp desktop
 The `win` line says Firefox lives on workspace 3. No screenshot was needed.
 
 ```bash
-omnimcp hypr focus_window 0x55a4479a1200 --then desktop
+OmniMCP hypr focus_window 0x55a4479a1200 --then desktop
 # focused 0x55a4479a1200
 # monitor eDP-1 at 0,0 1920x1080 scale 1.0 ws 3 focused
 # ...
@@ -291,13 +291,13 @@ window on another workspace switches the whole desktop there, and the human
 sees the switch. To bring the window here instead, silently:
 
 ```bash
-omnimcp hypr move_window 0x55a4479a1200 7 --then desktop
+OmniMCP hypr move_window 0x55a4479a1200 7 --then desktop
 # moved 0x55a4479a1200 to workspace 7
 # ...
 # win 0x55a4479a1200 ws 7 firefox "Inbox" at 7,7 950x1066
 ```
 
-With many windows, `omnimcp desktop | grep -i firefox` is fine: the output
+With many windows, `OmniMCP desktop | grep -i firefox` is fine: the output
 is plain text on purpose. Do not act on a stale address; if a `hypr` call
 says `not found, call desktop() for current addresses` (exit 1), re-read.
 
@@ -324,7 +324,7 @@ refuses with `the launcher layer 'wofi' holds the keyboard grab, so keys
 cannot reach the requested window. Drive the launcher itself (call keyboard
 without window=), or close it first (usually esc).` Do one of those two
 things: type into the launcher deliberately with no `--window` (recipe 3),
-or `omnimcp keyboard key esc`, `omnimcp wait_for layer_close --match wofi`,
+or `OmniMCP keyboard key esc`, `OmniMCP wait_for layer_close --match wofi`,
 then retry with `--window`. `click_ui` refuses the same way when a layer
 covers the target point; `pointer click` on the layer is the deliberate way
 to click a launcher.
@@ -335,10 +335,10 @@ invisible to `desktop`'s window and layer lists, so the refusal is the only
 signal. Report it and stop; `--allow-auth` exists so a human can ask the
 agent to drive the unlock prompt, and nothing else justifies it.
 
-**Strict-mode seat refusal (exit 3).** `the seat moved since omnimcp last
+**Strict-mode seat refusal (exit 3).** `the seat moved since OmniMCP last
 acted (cursor or focus changed without the agent): re-read
 desktop()/screenshot() and retry.` The human, or a popup, took the seat.
-This is the one refusal with a built-in retry: run `omnimcp desktop` (or
+This is the one refusal with a built-in retry: run `OmniMCP desktop` (or
 `screenshot`), which re-arms the guard, then retry the action once. If it
 refuses again, the human is using the desktop: stop and ask.
 
@@ -349,7 +349,7 @@ check `desktop`: the thing may already have happened before the wait
 subscribed (`already:` covers only filtered `window_close`, `workspace` and
 `layer_open`), or the app may have opened on its own workspace. Then raise
 `--timeout` (max 60) or `--wait` (max 30). Every verb returns inside 60 s,
-under the shell's 120 s limit, so never wrap omnimcp in a sleep loop, and
+under the shell's 120 s limit, so never wrap OmniMCP in a sleep loop, and
 never re-run an acting verb "because it timed out" without checking whether
 it acted.
 
@@ -368,21 +368,21 @@ Goal: fill in a sign-up form while the human keeps working. Nothing below
 moves their cursor, takes their keyboard focus or switches their workspace.
 
 ```bash
-omnimcp launch -- yad --form --title=Signup --field=Agree:CHK --field=Name --button=OK:0
+OmniMCP launch -- yad --form --title=Signup --field=Agree:CHK --field=Name --button=OK:0
 # 0x564859226b80 yad "Signup" workspace 99
 # note opened on workspace 99, one of the agent's (OMNIMCP_AGENT_WORKSPACES), out of the human's sight; pass background=false to open it on the human's workspace
 W=0x564859226b80
 
-omnimcp ui --window $W
+OmniMCP ui --window $W
 # [0] text "Name" @981,538 value=""
 # [1] check box "Agree" @960,501 checked=false
 # [2] button "OK" @1019,578
 # note 0x564859226b80 is not on screen (no monitor is showing its workspace 99): these points are inside it, not on what the human sees, so press its controls with click_ui; a pointer click at these points would land on whatever is on screen there
 
-omnimcp click_ui Agree --window $W
+OmniMCP click_ui Agree --window $W
 # pressed check box 'Agree' through its accessibility action (no pointer, the human's focus untouched) in yad; now: checked=true
 
-omnimcp keyboard type "Ada Lovelace" --window $W --then ui
+OmniMCP keyboard type "Ada Lovelace" --window $W --then ui
 # typed 12 characters into the text field in yad through the accessibility interface (the human's focus untouched); the field now holds the typed text (12 characters)
 # [0] text "Name" @981,538 value="Ada Lovelace"
 # [1] check box "Agree" @960,501 checked=true

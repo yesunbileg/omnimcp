@@ -1,6 +1,6 @@
 # Architecture
 
-omnimcp is a Python MCP server for the local Linux desktop. The MCP
+OmniMCP is a Python MCP server for the local Linux desktop. The MCP
 server, CLI verbs, and Python modules call the same validated tool functions.
 
 ## Main modules

@@ -3,13 +3,13 @@
 One vocabulary: the verbs are the MCP tool names, a tool's `action` is a
 positional sub-verb, and the calls go through the same module-level
 functions the MCP server registers, so every trust guard, the journal and
-the activity beacon apply unchanged (`omnimcp replay` already drives the
+the activity beacon apply unchanged (`OmniMCP replay` already drives the
 tools this way). What this module adds is the shell contract:
 
     stdout   the result, compact plain text by default, `--json` for the
              raw result as one line; a capture prints its file path and its
              coordinate metadata, never bytes
-    stderr   one line on failure: `omnimcp: error|refused|usage: <message>`
+    stderr   one line on failure: `OmniMCP: error|refused|usage: <message>`
     exit     0 delivered, 1 error, 2 usage, 3 refused by a trust layer or a
              mode gate, 4 ran but produced no result (a timeout, no
              accessibility tree, an ambiguous name, a sequence that stopped)
@@ -68,7 +68,7 @@ class Usage(Exception):
 
 class _Parser(argparse.ArgumentParser):
     def error(self, message: str) -> Any:  # one line on stderr; --help is the next step
-        sys.stderr.write(f"omnimcp: usage: {message}\n")
+        sys.stderr.write(f"OmniMCP: usage: {message}\n")
         sys.exit(EXIT_USAGE)
 
 
@@ -76,7 +76,7 @@ class _Parser(argparse.ArgumentParser):
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = _Parser(prog="omnimcp", add_help=False)
+    p = _Parser(prog="OmniMCP", add_help=False)
     sub = p.add_subparsers(dest="verb", metavar="VERB")
     sub.required = True
 
@@ -376,7 +376,7 @@ def _flag(name: str) -> bool:
 
 def _fail(kind: str, message: str, code: int) -> int:
     text = _CONTROL.sub(".", str(message)).strip()
-    print(f"omnimcp: {kind}: {text}", file=sys.stderr)
+    print(f"OmniMCP: {kind}: {text}", file=sys.stderr)
     return code
 
 
@@ -390,7 +390,7 @@ def _lock() -> Any:
     pointer, which the server avoids with an in-process lock. The holder's
     pid goes into the file once the lock is held (never before: opening
     for truncation would wipe the pid of the verb we are waiting on), which
-    is how `omnimcp stop` reaches a verb when a server owns the beacon."""
+    is how `OmniMCP stop` reaches a verb when a server owns the beacon."""
     fd = private_paths.open_private_file(lock_path(), os.O_CREAT | os.O_RDWR, 0o600)
     fh = os.fdopen(fd, "r+")  # noqa: SIM115 (held until the process exits)
     fcntl.flock(fh, fcntl.LOCK_EX)

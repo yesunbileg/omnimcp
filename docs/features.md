@@ -1,6 +1,6 @@
 # Боломжууд
 
-omniMCP нь Hyprland desktop болон Linux системийн боломжуудыг MCP-ээр ашиглуулна.
+OmniMCP нь Hyprland desktop болон Linux системийн боломжуудыг MCP-ээр ашиглуулна.
 Хуучин desktop MCP tool/CLI surface default хэвээр; compact profile нь сонголтоор
 асна. Compact profile нь `discover`, `observe`, `act`, `workflow`, `job`,
 `events`, `artifact` гэсэн долоон тогтвортой tool ашиглаж, capability-г хэрэгцээтэй
@@ -80,7 +80,7 @@ desktop session шаардахгүй.
 `opencode` tool нь суусан OpenCode CLI-д тодорхой өгсөн даалгаврыг шилжүүлж,
 хэрэглэгчийн одоогийн model болон credentials-ийг ашиглана. Энэ нь хэрэглэгчийн
 эрхээр ажилладаг процесс бөгөөд эрхийн sandbox биш. Authenticated OpenCode CLI,
-ажиллаж буй хэрэглэгчийн worker (`omnimcp worker install`) шаардлагатай.
+ажиллаж буй хэрэглэгчийн worker (`OmniMCP worker install`) шаардлагатай.
 
 ```json
 {"action":"run","prompt":"Төслийн entry point-ийг тайлбарла.","cwd":"/absolute/project"}
@@ -103,7 +103,7 @@ OpenCode процессын бүлгийг зогсоох боломж өгнө.
 болон job/artifact tool-оор ашиглагдана:
 
 ```sh
-omnimcp discover --action opencode.run
-omnimcp act opencode.run --params '{"prompt":"Төслийг тайлбарла.","cwd":"/absolute/project"}'
-omnimcp job jRETURNED_ID
+OmniMCP discover --action opencode.run
+OmniMCP act opencode.run --params '{"prompt":"Төслийг тайлбарла.","cwd":"/absolute/project"}'
+OmniMCP job jRETURNED_ID
 ```

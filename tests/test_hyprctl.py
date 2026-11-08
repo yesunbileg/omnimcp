@@ -260,7 +260,7 @@ def test_snapshot_surfaces_layers_only_when_present():
 
 # --- config manager: hyprlang vs the Lua manager Hyprland 0.56 added --------
 #
-# Regression source: issue #1, omnimcp 0.9.4 on Hyprland 0.56.2 with a
+# Regression source: issue #1, OmniMCP 0.9.4 on Hyprland 0.56.2 with a
 # hyprland.lua, where every `hyprctl dispatch <name> <args>` came back as a
 # Lua syntax error. These pin the WIRE FORM, not the Python call, because
 # the two ways to get this wrong (a move that is not silent, a string that
@@ -314,7 +314,7 @@ def test_dispatch_on_hyprlang_sends_the_legacy_strings(monkeypatch):
     assert seen == [("dispatch", "movecursor", "100", "200"), ("dispatch", "togglefloating")]
 
 
-# every dispatcher omnimcp emits, and the exact Lua it must become
+# every dispatcher OmniMCP emits, and the exact Lua it must become
 LUA_FORMS = [
     (("exec", "[workspace 2 silent] foot"), 'hl.dsp.exec_cmd("[workspace 2 silent] foot")'),
     (("movecursor", "694", "438"), "hl.dsp.cursor.move({ x = 694, y = 438 })"),

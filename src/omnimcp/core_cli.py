@@ -17,7 +17,7 @@ OPS = {"discover", "observe", "act", "workflow", "job", "events", "artifact"}
 
 
 def worker(argv):
-    parser = argparse.ArgumentParser(prog="omnimcp worker")
+    parser = argparse.ArgumentParser(prog="OmniMCP worker")
     parser.add_argument(
         "operation", choices=["run", "install", "status", "start", "stop", "stop-all", "auth-reset"]
     )
@@ -66,7 +66,7 @@ def worker(argv):
                 value = (key + "=" + os.environ[key]).replace("%", "%%")
                 persisted += "Environment=" + json.dumps(value, ensure_ascii=False) + "\n"
         unit.write_text(
-            "[Unit]\nDescription=omnimcp user worker\nAfter=graphical-session.target\n\n"
+            "[Unit]\nDescription=OmniMCP user worker\nAfter=graphical-session.target\n\n"
             '[Service]\nType=simple\nExecStart="'
             + executable
             + '" -m omnimcp.core.worker\n'
@@ -89,7 +89,7 @@ def main(argv):
     if argv[0] == "worker":
         return worker(argv[1:])
     op = argv[0]
-    parser = argparse.ArgumentParser(prog="omnimcp " + op)
+    parser = argparse.ArgumentParser(prog="OmniMCP " + op)
     parser.add_argument("target", nargs="?", default="")
     parser.add_argument("--params", type=json.loads, default={})
     parser.add_argument("--query", default="")

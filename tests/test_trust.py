@@ -375,7 +375,7 @@ def test_note_launched_tags_and_notifies_when_marking(monkeypatch):
     trust.note_launched("0xnew", "firefox")
     assert "0xnew" in trust.owned()
     assert ("tagwindow", "+omnimcp-owned", "address:0xnew") in dispatched
-    assert notes == ["omnimcp opened firefox"]  # visible presence toast
+    assert notes == ["OmniMCP opened firefox"]  # visible presence toast
 
 
 def test_note_launched_no_tag_or_notify_without_marking(monkeypatch):

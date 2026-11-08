@@ -99,7 +99,7 @@ class Context:
                 raise Fault(
                     "auth_cancelled",
                     "Previous authentication stopped. An operator reset is required with "
-                    "omnimcp worker auth-reset before retrying.",
+                    "OmniMCP worker auth-reset before retrying.",
                 )
             if not shutil.which("pkexec"):
                 raise Fault(

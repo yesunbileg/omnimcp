@@ -8,11 +8,11 @@ Implementation: `src/omnimcp/codex_usage.py`; compact registration:
 
 ```bash
 # Direct CLI, no worker required:
-omnimcp codex-usage --timezone Asia/Ulaanbaatar
+OmniMCP codex-usage --timezone Asia/Ulaanbaatar
 
 # Compact profile, after the worker has loaded the updated package:
-omnimcp discover --action codex.usage
-omnimcp observe codex.usage --params '{"timezone":"Asia/Ulaanbaatar"}'
+OmniMCP discover --action codex.usage
+OmniMCP observe codex.usage --params '{"timezone":"Asia/Ulaanbaatar"}'
 ```
 
 MCP call: `codex_usage({"timezone":"Asia/Ulaanbaatar"})`.

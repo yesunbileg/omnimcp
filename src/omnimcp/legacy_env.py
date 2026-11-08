@@ -9,4 +9,4 @@ def migrate_legacy_env() -> None:
         if old.startswith("AGENTIC_OS_"):
             new = "OMNIMCP_" + old[len("AGENTIC_OS_") :]
             os.environ.setdefault(new, value)
-            print(f"omnimcp: {old!a} is deprecated; use {new!a}", file=sys.stderr)
+            print(f"OmniMCP: {old!a} is deprecated; use {new!a}", file=sys.stderr)

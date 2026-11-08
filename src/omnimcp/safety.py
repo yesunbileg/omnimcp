@@ -1,14 +1,14 @@
 """Activity beacon and kill-switch support.
 
 The seat, cursor, keyboard focus, is shared between the agent and the
-human at the desk. omnimcp therefore keeps a runtime beacon at
+human at the desk. OmniMCP therefore keeps a runtime beacon at
 $XDG_RUNTIME_DIR/omnimcp/state.json:
 
     {"pid": 1234, "started": 1789...,
      "last_action": "pointer:click", "last_ts": 1789...}
 
 written at startup, updated on every acting tool call, removed on clean
-shutdown. Anything can watch it, A Hyprland keybind can run `omnimcp stop`: the
+shutdown. Anything can watch it, A Hyprland keybind can run `OmniMCP stop`: the
 process dies mid-action at worst, never holding a button down, because
 button press/release pairs are sent inside one tool call and the SIGTERM
 path runs registered cleanups (on_shutdown) that release anything a
@@ -71,7 +71,7 @@ _armed = False
 def arm() -> None:
     """Install the shutdown path (atexit + SIGTERM) without raising the
     beacon. A CLI verb running beside a live server must leave the server's
-    beacon alone, but `pkill -f omnimcp` matches the verb too, and a verb
+    beacon alone, but `pkill -f OmniMCP` matches the verb too, and a verb
     killed mid-drag must still release the button it holds: the cleanups
     are what make the kill switch safe, the beacon is only what makes the
     agent visible."""

@@ -1,10 +1,10 @@
 [Unit]
-Description=omnimcp user worker
+Description=OmniMCP user worker
 After=graphical-session.target
 
 [Service]
 Type=simple
-ExecStart=%h/.local/bin/omnimcp worker run
+ExecStart=%h/.local/bin/OmniMCP worker run
 Restart=on-failure
 RestartSec=2
 UMask=0077

@@ -6,7 +6,7 @@ approval and beacon layers; none persists anything, and every one fails
 toward LESS action, never more.
 
   OMNIMCP_CONFINE     restrict input to a scope of windows:
-                      `launched` (only windows omnimcp itself opened),
+                      `launched` (only windows OmniMCP itself opened),
                       `class:foo,bar`, or `workspace:3,special:notes`
   OMNIMCP_AUTH_GUARD  refuse to drive polkit/authentication dialogs
                       (default on; per-call allow_auth overrides). Set it
@@ -15,7 +15,7 @@ toward LESS action, never more.
                       a11y tree walk and is therefore opt-in
   OMNIMCP_ALLOW_AUTH_OVERRIDE  allow callers to use allow_auth=true
                       (default off; only the desktop owner should enable it)
-  OMNIMCP_STRICT      refuse to act when the seat moved without omnimcp
+  OMNIMCP_STRICT      refuse to act when the seat moved without OmniMCP
                       since its last action (human or app took over)
   OMNIMCP_MARK        tag every agent-owned window `omnimcp-owned` and flash
                       an on-screen notice when the agent opens a window or
@@ -74,13 +74,13 @@ def guard_allow_auth_override(allow_auth: bool) -> None:
 
 # --- confinement ------------------------------------------------------------
 
-_owned: set[str] = set()  # window addresses omnimcp launched this session
+_owned: set[str] = set()  # window addresses OmniMCP launched this session
 
 _OWNED_TAG = "omnimcp-owned"
 
 
 def note_launched(address: str, label: str = "") -> None:
-    """Record a window omnimcp opened (for `launched` confinement), and when
+    """Record a window OmniMCP opened (for `launched` confinement), and when
     OMNIMCP_MARK is on, make it legible: tag it `omnimcp-owned` (which the
     border rule from init_marking colors) and flash an on-screen notice."""
     if not address:
@@ -89,7 +89,7 @@ def note_launched(address: str, label: str = "") -> None:
     if _flag("OMNIMCP_MARK"):
         with contextlib.suppress(hyprctl.HyprctlError):
             hyprctl.dispatch("tagwindow", f"+{_OWNED_TAG}", f"address:{address}")
-        hyprctl.notify(f"omnimcp opened {label}".rstrip(), ms=2500, color="rgb(ff5555)")
+        hyprctl.notify(f"OmniMCP opened {label}".rstrip(), ms=2500, color="rgb(ff5555)")
 
 
 def owned() -> set[str]:
@@ -192,7 +192,7 @@ def _describe(scope: tuple[str, Any]) -> str:
     kind, vals = scope
     if kind == "agent":
         return "the agent's workspaces" + (f" and {_describe(vals)}" if vals else "")
-    return "windows omnimcp launched" if kind == "launched" else f"{kind} in {list(vals)}"
+    return "windows OmniMCP launched" if kind == "launched" else f"{kind} in {list(vals)}"
 
 
 def _client(address: str) -> dict[str, Any] | None:
@@ -974,7 +974,7 @@ def _strict_on() -> bool:
 
 
 def remember_seat() -> None:
-    """Stash the cursor and focused window omnimcp just left the seat in, so
+    """Stash the cursor and focused window OmniMCP just left the seat in, so
     the next action can tell whether anything moved it in between."""
     if not _strict_on():
         return
@@ -985,7 +985,7 @@ def remember_seat() -> None:
 
 def guard_seat() -> None:
     """In strict mode, refuse to act when the cursor or focused window moved
-    since omnimcp's last action: something other than the agent (the human,
+    since OmniMCP's last action: something other than the agent (the human,
     or a popup) took the seat, and acting now could land in the wrong place.
     Cannot attribute the change; it only reports that the world moved.
     Fails closed: a seat that cannot be read cannot be proven still ours."""
@@ -1002,7 +1002,7 @@ def guard_seat() -> None:
         ) from exc
     if cursor != _seat["cursor"] or active != _seat["active"]:
         raise TrustError(
-            "the seat moved since omnimcp last acted (cursor or focus changed "
+            "the seat moved since OmniMCP last acted (cursor or focus changed "
             "without the agent): re-read desktop()/screenshot() and retry. "
             "Set OMNIMCP_STRICT=0 to disable this guard."
         )
@@ -1015,7 +1015,7 @@ def marking_on() -> bool:
     return _flag("OMNIMCP_MARK")
 
 
-# Border color for agent-owned windows. The rule matches the tag omnimcp
+# Border color for agent-owned windows. The rule matches the tag OmniMCP
 # applies in note_launched, and Hyprland re-evaluates it when the tag is
 # set, so windows tagged after they open still get the border. Installing it
 # is hyprctl's problem: which IPC call carries a runtime rule depends on the
@@ -1026,7 +1026,7 @@ _MARK_COLOR = "rgb(ff5555)"
 def init_marking() -> None:
     """Install the agent-owned border rule once at startup (no-op unless
     OMNIMCP_MARK is set). Left in place on exit: it only colors windows
-    carrying omnimcp's own tag, and a config reload clears it.
+    carrying OmniMCP's own tag, and a config reload clears it.
 
     A failure here does not stop the server: marking makes the agent's
     presence legible, it is not a containment boundary the way confinement
@@ -1041,7 +1041,7 @@ def init_marking() -> None:
         hyprctl.border_rule(_OWNED_TAG, _MARK_COLOR)
     except hyprctl.HyprctlError as exc:
         print(
-            f"omnimcp: OMNIMCP_MARK is set but the border rule did not install ({exc}); "
+            f"OmniMCP: OMNIMCP_MARK is set but the border rule did not install ({exc}); "
             f"agent windows are still tagged {_OWNED_TAG}, so a rule in your own "
             "Hyprland config will still color them",
             file=sys.stderr,
@@ -1063,4 +1063,4 @@ def notify_capture() -> None:
     if now - _last_notify["ts"] < 3.0:
         return
     _last_notify["ts"] = now
-    hyprctl.notify("omnimcp: agent captured the screen", ms=1500, color="rgb(ff5555)")
+    hyprctl.notify("OmniMCP: agent captured the screen", ms=1500, color="rgb(ff5555)")

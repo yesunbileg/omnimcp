@@ -1,4 +1,4 @@
-"""omnimcp MCP server, computer use for Hyprland.
+"""OmniMCP MCP server, computer use for Hyprland.
 
 Design: semantic-first. An agent should read `desktop` and act through
 `hypr`/`launch` (IPC, milliseconds, deterministic) and reach for
@@ -188,7 +188,7 @@ def desktop() -> dict[str, Any]:
     can see: it may be transparent or dormant, so screenshot when
     visibility matters. Call first; act on the addresses it returns."""
     snap = hyprctl.snapshot()
-    # under OMNIMCP_STRICT a seat that moved without omnimcp blocks every
+    # under OMNIMCP_STRICT a seat that moved without OmniMCP blocks every
     # acting tool until the agent re-observes; this read IS that
     # re-observation, so it re-arms the guard (as its error advises)
     trust.remember_seat()
@@ -1237,7 +1237,7 @@ def _keyboard_in_background(
             why = _UNSURE.format(addr=addr, cls=cls)
         elif not complete:
             why = (
-                f"{cls} has more elements than omnimcp reads ({a11y.WALK_BUDGET}), and its "
+                f"{cls} has more elements than OmniMCP reads ({a11y.WALK_BUDGET}), and its "
                 "focused text field was not among them"
             )
         elif fields:
@@ -2199,17 +2199,17 @@ def _confine_allows() -> Callable[[str], bool] | None:
 
 
 _INTERACTIVE_HELP = """\
-omnimcp {version}, an MCP server, not an interactive program.
+OmniMCP {version}, an MCP server, not an interactive program.
 
 It speaks the MCP protocol over stdin/stdout and is meant to be launched by
 an MCP client, so running it directly in a terminal just waits silently for
 a client that never connects (Ctrl+C to quit).
 
 Register the installed command as a stdio server in your MCP client's config:
-  command: omnimcp
+  command: OmniMCP
   args: []
-Check the install with:  omnimcp --version
-The same tools as shell verbs (for agents that run commands): omnimcp --help
+Check the install with:  OmniMCP --version
+The same tools as shell verbs (for agents that run commands): OmniMCP --help
 """
 
 
@@ -2974,7 +2974,7 @@ def main() -> None:
         compact_main()
         return
     if "--version" in sys.argv:
-        print(f"omnimcp {__version__}")
+        print(f"OmniMCP {__version__}")
         return
     # A human ran it by hand (stdin is a terminal, not a client pipe), an
     # MCP stdio client always connects stdin to a pipe, so a TTY here means

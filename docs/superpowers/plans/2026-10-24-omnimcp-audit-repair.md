@@ -1,4 +1,4 @@
-# omnimcp Audit Repair Implementation Plan
+# OmniMCP Audit Repair Implementation Plan
 
 > **For autonomous workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development or superpowers:executing-plans to implement this plan task-by-task. User explicitly selected GPT-6 Luna implementations and leader follow-up repairs.
 

@@ -238,7 +238,7 @@ def codex_usage(timeout_s: float = 25, timezone: str = "") -> str:
 
 
 def main(argv=None) -> int:
-    parser = argparse.ArgumentParser(prog="omnimcp codex-usage")
+    parser = argparse.ArgumentParser(prog="OmniMCP codex-usage")
     parser.add_argument("--timeout-s", type=float, default=25)
     parser.add_argument("--timezone", default="")
     args = parser.parse_args(argv)

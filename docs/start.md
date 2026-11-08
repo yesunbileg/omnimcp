@@ -1,16 +1,19 @@
 # Эхлүүлэх
 
-omniMCP нь одоогоор PyPI-д нийтлэгдээгүй. GitHub-ийн
+OmniMCP нь одоогоор PyPI-д нийтлэгдээгүй. GitHub-ийн
 `main` салбараас `uv`-ээр суулгана. Энэ нь GitHub-ийн хөгжүүлэлтийн хувилбар.
 Linux, Python 3.11 буюу түүнээс шинэ хувилбар, `uv`, Hyprland
 Wayland session хэрэгтэй. Desktop-ийн screenshot/input-д `grim`, `wtype`,
 `busctl`; UI tree-д AT-SPI bus болон accessibility мэдээлэл гаргадаг апп хэрэгтэй.
 
 ```sh
-uv tool install --from 'git+https://github.com/yesunbileg/omnimcp.git@main' omnimcp
-omnimcp --version
-omnimcp doctor
+uv tool install --from 'git+https://github.com/yesunbileg/omnimcp.git@main' OmniMCP
+OmniMCP --version
+OmniMCP doctor
 ```
+
+Үндсэн команд нь `OmniMCP`; хуучин `omnimcp` команд мөн ажиллана.
+Python import, plugin ID, `OMNIMCP_*` тохиргоо болон өгөгдлийн зам өөрчлөгдөхгүй.
 
 Энэ нь branch-ийн одоогийн commit-ийг хэрэглэгчийн `uv` tool орчинд суулгана.
 Шалгахдаа `git ls-remote https://github.com/yesunbileg/omnimcp.git refs/heads/main`
@@ -21,7 +24,7 @@ omnimcp doctor
 
 ## MCP client-д холбох
 
-`omnimcp`-ийг stdio MCP server болгон бүртгэнэ. Ажиллаж буй Hyprland session-оос
+`OmniMCP`-ийг stdio MCP server болгон бүртгэнэ. Ажиллаж буй Hyprland session-оос
 `WAYLAND_DISPLAY`, `HYPRLAND_INSTANCE_SIGNATURE`, `XDG_RUNTIME_DIR`,
 `DBUS_SESSION_BUS_ADDRESS` утгуудыг server процесс руу дамжуул. Эдгээр нь
 desktop-д хандахад хэрэгтэй; өөр session-ийн утга тааж тохируулж болохгүй.
@@ -41,14 +44,14 @@ codex plugin add omnimcp@omnimcp-local
 ```
 
 Plugin нь `OMNIMCP_BIN`-ээр runtime executable-ийг зааж болно. Үүнийг өгөөгүй
-бол `omnimcp`-ийг `PATH`-аас олно. Нэмэлт тохиргоог plugin-ийн өөрийн manifest-д
+бол `OmniMCP`-ийг `PATH`-аас олно. Нэмэлт тохиргоог plugin-ийн өөрийн manifest-д
 оруул; үндсэн Codex config-д тусдаа `mcp_servers.omnimcp` entry нэмж давхар
 бүртгэхгүй. Portable Agent Plugins хувилбарт
 `packaging/codex/omnimcp/mcp.json` доторх `env` map-д бодит замаа бич:
 
 ```json
 "env": {
-  "OMNIMCP_BIN": "/absolute/path/to/omnimcp",
+  "OMNIMCP_BIN": "/absolute/path/to/OmniMCP",
   "OMNIMCP_KANBAN_FILE": "/absolute/path/to/kanban.md"
 }
 ```
@@ -62,8 +65,8 @@ Kanban хэрэглэхгүй бол `OMNIMCP_KANBAN_FILE`-ийг оруулах
 ## Ажиллуулах
 
 ```sh
-omnimcp desktop
-omnimcp canvas /absolute/path/Plan.canvas
+OmniMCP desktop
+OmniMCP canvas /absolute/path/Plan.canvas
 ```
 
 `desktop`-оор session-оо шалга. Kanban тохируулах, аюулгүй байдлын тохиргоо,

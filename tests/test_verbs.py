@@ -92,7 +92,7 @@ def test_version_prints_without_the_server(monkeypatch, capsys):
     with pytest.raises(SystemExit) as e:
         cli.main()
     assert e.value.code == 0
-    assert capsys.readouterr().out.startswith("omnimcp ")
+    assert capsys.readouterr().out.startswith("OmniMCP ")
 
 
 def test_no_arguments_still_runs_the_server(monkeypatch):
@@ -208,7 +208,7 @@ def test_json_and_dry_run_are_accepted_after_the_action_word():
 def test_click_ui_needs_exactly_one_target_as_a_usage_error(capsys):
     for argv in (["click_ui"], ["click_ui", "Save", "--mark", "2"]):
         assert verbs.main(argv) == verbs.EXIT_USAGE
-        assert "omnimcp: usage: pass NAME or --mark N" in capsys.readouterr().err
+        assert "OmniMCP: usage: pass NAME or --mark N" in capsys.readouterr().err
     assert verbs.main(["sequence", "[]"]) == verbs.EXIT_USAGE
     assert "at least one step" in capsys.readouterr().err
 
@@ -217,7 +217,7 @@ def test_usage_errors_are_one_line(capsys):
     with pytest.raises(SystemExit):
         verbs.main(["keyboard", "type"])
     err = capsys.readouterr().err
-    assert err.startswith("omnimcp: usage:") and err.count("\n") == 1
+    assert err.startswith("OmniMCP: usage:") and err.count("\n") == 1
 
 
 def test_text_from_stdin(monkeypatch):
@@ -243,7 +243,7 @@ def test_sequence_steps_inline_file_and_stdin(tmp_path, monkeypatch):
 def test_bad_steps_are_usage_errors(capsys):
     for bad in ("{not json", '{"op": "hypr"}', "[1, 2]", "@/nonexistent/steps.json"):
         assert verbs.main(["sequence", bad]) == verbs.EXIT_USAGE
-        assert "omnimcp: usage:" in capsys.readouterr().err
+        assert "OmniMCP: usage:" in capsys.readouterr().err
 
 
 def test_click_with_one_coordinate_is_a_usage_error(capsys):
@@ -258,7 +258,7 @@ def test_unknown_verb_and_unknown_action_exit_two(capsys):
     with pytest.raises(SystemExit) as e:
         verbs.main(["hypr", "explode"])
     assert e.value.code == 2
-    assert "omnimcp: usage:" in capsys.readouterr().err
+    assert "OmniMCP: usage:" in capsys.readouterr().err
 
 
 # --- gates and exit codes --------------------------------------------------------
@@ -270,7 +270,7 @@ def test_read_only_mode_refuses_acting_verbs_before_calling_them(stub, monkeypat
     assert verbs.main(["pointer", "click", "1", "2"]) == verbs.EXIT_REFUSED
     assert calls == []
     err = capsys.readouterr().err
-    assert err.startswith("omnimcp: refused:") and "OMNIMCP_READONLY" in err
+    assert err.startswith("OmniMCP: refused:") and "OMNIMCP_READONLY" in err
     # observation still works
     stub(
         "desktop",
@@ -293,17 +293,17 @@ def test_a_trust_refusal_is_exit_three_with_the_guards_reason(stub, capsys):
     stub("keyboard", trust.TrustError("0xabc (Signal) is outside the confinement scope"))
     assert verbs.main(["keyboard", "type", "hi", "--window", "0xabc"]) == verbs.EXIT_REFUSED
     assert capsys.readouterr().err == (
-        "omnimcp: refused: 0xabc (Signal) is outside the confinement scope\n"
+        "OmniMCP: refused: 0xabc (Signal) is outside the confinement scope\n"
     )
 
 
 def test_errors_are_one_line_on_stderr(stub, capsys):
     stub("hypr", ValueError("unknown action 'x'"))
     assert verbs.main(["hypr", "workspace", "3"]) == verbs.EXIT_ERROR
-    assert capsys.readouterr().err == "omnimcp: error: unknown action 'x'\n"
+    assert capsys.readouterr().err == "OmniMCP: error: unknown action 'x'\n"
     stub("hypr", RuntimeError("socket gone"))
     assert verbs.main(["hypr", "workspace", "3"]) == verbs.EXIT_ERROR
-    assert capsys.readouterr().err == "omnimcp: error: RuntimeError: socket gone\n"
+    assert capsys.readouterr().err == "OmniMCP: error: RuntimeError: socket gone\n"
 
 
 def test_no_result_is_exit_four():
@@ -530,7 +530,7 @@ def test_a_capture_prints_its_path_and_metadata_and_honors_out(monkeypatch, tmp_
     assert verbs.main(["screenshot", "--out", str(tmp_path / "nope" / "x.jpg")]) == 1
     captured = capsys.readouterr()
     assert captured.out.splitlines()[0] == str(shot) and shot.exists()
-    assert captured.err.startswith("omnimcp: error: cannot move the capture")
+    assert captured.err.startswith("OmniMCP: error: cannot move the capture")
 
 
 def test_then_observations_render_in_their_own_shape(stub, capsys):
@@ -790,7 +790,7 @@ def test_control_characters_never_reach_the_terminal(stub, capsys):
     assert capsys.readouterr().out == "typed into .[2J.window\n"
     stub("keyboard", ValueError("bad \x1b[31mcombo"))
     verbs.main(["keyboard", "key", "x"])
-    assert capsys.readouterr().err == "omnimcp: error: bad .[31mcombo\n"
+    assert capsys.readouterr().err == "OmniMCP: error: bad .[31mcombo\n"
 
 
 def test_desktop_quotes_workspace_names_that_are_not_numbers(stub, capsys):

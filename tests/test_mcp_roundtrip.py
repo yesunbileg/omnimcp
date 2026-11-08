@@ -135,7 +135,7 @@ def test_ui_roundtrip_reads_a11y_tree():
     the window. Exercises AT-SPI + busctl + coordinate mapping end to end."""
     from omnimcp import hyprctl
 
-    # through omnimcp's own dispatcher, not a raw shell-out: the legacy
+    # through OmniMCP's own dispatcher, not a raw shell-out: the legacy
     # strings do not parse on a Lua config, and this is the only harness
     # that would catch a regression there. conftest pins the provider for
     # the unit suite, so drop that first and read the real session.

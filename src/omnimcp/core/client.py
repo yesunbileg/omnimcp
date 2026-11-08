@@ -89,5 +89,5 @@ def rpc(request: dict, timeout: float = 125):
             }
         return {
             "status": "worker_unavailable",
-            "message": f"{exc}. Check omnimcp worker status; install it if it is not configured.",
+            "message": f"{exc}. Check OmniMCP worker status; install it if it is not configured.",
         }

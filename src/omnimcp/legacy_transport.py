@@ -2,6 +2,8 @@
 
 from typing import Any
 
+from omnimcp import __app_name__
+
 
 def build_app(desktop) -> Any:
     from mcp.server.fastmcp import FastMCP
@@ -20,7 +22,7 @@ def build_app(desktop) -> Any:
         instructions += (
             desktop.KANBAN_READONLY_INSTRUCTIONS if readonly else desktop.KANBAN_INSTRUCTIONS
         )
-    app = FastMCP("omnimcp", instructions=instructions)
+    app = FastMCP(__app_name__, instructions=instructions)
     app._mcp_server.version = desktop.__version__
     from omnimcp.codex_usage import codex_usage
 

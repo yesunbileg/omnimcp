@@ -1,4 +1,4 @@
-"""`omnimcp journal` and `omnimcp replay`: reading the record back, and
+"""`OmniMCP journal` and `OmniMCP replay`: reading the record back, and
 re-issuing it. Replay defaults to printing the plan and doing nothing,
 which is the same fail-toward-less-action rule the trust layers follow.
 """
@@ -97,7 +97,7 @@ def calls(monkeypatch):
     return seen
 
 
-# --- omnimcp journal ---------------------------------------------------------
+# --- OmniMCP journal ---------------------------------------------------------
 
 
 def test_journal_lists_entries_and_counts_them(journal_file, capsys):
@@ -156,7 +156,7 @@ def test_journal_never_prints_redacted_text(tmp_path, capsys):
     assert "text=<7 chars>" in capsys.readouterr().out
 
 
-# --- omnimcp replay, the default: say what would happen ----------------------
+# --- OmniMCP replay, the default: say what would happen ----------------------
 
 
 def test_replay_prints_the_plan_and_stops(journal_file, live, calls, capsys):
@@ -179,7 +179,7 @@ def test_replay_reports_an_empty_range(journal_file, live, capsys):
     assert "nothing to replay" in capsys.readouterr().out
 
 
-# --- omnimcp replay --execute ------------------------------------------------
+# --- OmniMCP replay --execute ------------------------------------------------
 
 
 def test_execute_reissues_the_recorded_calls(journal_file, live, calls, capsys):
@@ -241,7 +241,7 @@ def test_execute_refuses_a_tool_this_version_does_not_have(tmp_path, live, calls
         )
     )
     assert cli.replay([str(path), "--execute", "--yes"]) == 1
-    assert "teleport (recorded by a newer omnimcp)" in capsys.readouterr().out
+    assert "teleport (recorded by a newer OmniMCP)" in capsys.readouterr().out
     assert calls == []
 
 

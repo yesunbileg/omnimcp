@@ -10,7 +10,7 @@ in deterministic places:
     $XDG_RUNTIME_DIR/wayland-<n>
 
 ensure_session_env() fills any missing variable from what it finds
-(refusing ambiguous sessions when several sockets exist), so omnimcp
+(refusing ambiguous sessions when several sockets exist), so OmniMCP
 works no matter how its host process was launched.
 """
 

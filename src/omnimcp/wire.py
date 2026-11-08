@@ -1,6 +1,6 @@
 """Minimal Wayland client speaking zwlr_virtual_pointer_unstable_v1.
 
-omnimcp injects pointer input by being a regular Wayland client of the
+OmniMCP injects pointer input by being a regular Wayland client of the
 user's compositor, the same mechanism wlrctl uses, rather than a uinput
 daemon (ydotool) or the RemoteDesktop portal (which
 xdg-desktop-portal-hyprland does not implement). Nothing here needs root,
@@ -171,7 +171,7 @@ class VirtualPointer:
         """Object id of the requested wl_seat, or 0 for the compositor default.
 
         zwlr_virtual_pointer_manager_v1.create_virtual_pointer takes the seat the
-        device belongs to. omnimcp has always passed 0 (null) because there was
+        device belongs to. OmniMCP has always passed 0 (null) because there was
         only ever one seat. Naming one routes this pointer to it, which is how an
         agent gets its own cursor instead of sharing the human's.
         """

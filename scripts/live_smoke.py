@@ -162,7 +162,7 @@ async def main(args):
             assert result["status"] == "ok", result
             snapshot = await call("observe", action="browser.snapshot")
             assert snapshot["status"] == "ok", snapshot
-            assert "omnimcp Fixture" in json.dumps(snapshot), snapshot
+            assert "OmniMCP Fixture" in json.dumps(snapshot), snapshot
             checks["browser_navigation_snapshot"] = "passed"
             text = "\n".join(c.get("text", "") for c in snapshot["content"])
             field = re.search(r'textbox "Name" \[ref=([^\]]+)\]', text)
@@ -188,7 +188,7 @@ async def main(args):
 
 @contextlib.contextmanager
 def fixture_server():
-    page = b"""<!doctype html><title>omnimcp Fixture</title>
+    page = b"""<!doctype html><title>OmniMCP Fixture</title>
     <label>Name <input id='name'></label>
     <button onclick="document.getElementById('result').textContent=
     'Saved '+document.getElementById('name').value">Save</button>
@@ -217,7 +217,7 @@ def fixture_server():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--command", default=str(Path.home() / ".local/bin/omnimcp"))
+    parser.add_argument("--command", default=str(Path.home() / ".local/bin/OmniMCP"))
     parser.add_argument("--desktop", action="store_true")
     parser.add_argument("--browser", action="store_true")
     parser.add_argument("--browser-url", default="")

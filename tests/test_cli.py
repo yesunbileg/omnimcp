@@ -57,7 +57,7 @@ def test_main_dispatch(monkeypatch):
 def test_stop_no_beacon(tmp_path, monkeypatch, capsys):
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
     assert cli.stop() == 0
-    assert "no active omnimcp session" in capsys.readouterr().out
+    assert "no active OmniMCP session" in capsys.readouterr().out
 
 
 def test_stop_signals_beacon_pid(tmp_path, monkeypatch, capsys):
@@ -72,7 +72,7 @@ def test_stop_signals_beacon_pid(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(cli.os, "kill", lambda pid, sig: killed.append((pid, sig)))
     assert cli.stop() == 0
     assert killed == [(pid, cli.signal.SIGTERM)]
-    assert f"stopped omnimcp (pid {pid})" in capsys.readouterr().out
+    assert f"stopped OmniMCP (pid {pid})" in capsys.readouterr().out
 
 
 def test_stop_handles_non_dict_beacon(tmp_path, monkeypatch, capsys):
@@ -122,8 +122,8 @@ def test_stop_reaches_a_verb_acting_beside_a_server(tmp_path, monkeypatch, capsy
         held.close()
     assert killed == [(7777, cli.signal.SIGTERM), (pid, cli.signal.SIGTERM)]
     out = capsys.readouterr().out
-    assert "stopped a running omnimcp verb (pid 7777)" in out
-    assert f"stopped omnimcp (pid {pid})" in out
+    assert "stopped a running OmniMCP verb (pid 7777)" in out
+    assert f"stopped OmniMCP (pid {pid})" in out
     # lock released: nothing acting any more
     assert cli._running_verb_pid() is None
 

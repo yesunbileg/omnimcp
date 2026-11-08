@@ -1,22 +1,21 @@
 # Эхлүүлэх
 
 omniMCP нь одоогоор PyPI-д нийтлэгдээгүй. GitHub-ийн
-`wip/audit-fixes-20261107` хөгжүүлэлтийн салбараас `uv`-ээр суулгана. Энэ бол
-WIP салбар болохоос release биш. Linux, Python 3.11 буюу түүнээс шинэ хувилбар, `uv`, Hyprland
+`main` салбараас `uv`-ээр суулгана. Энэ нь GitHub-ийн хөгжүүлэлтийн хувилбар.
+Linux, Python 3.11 буюу түүнээс шинэ хувилбар, `uv`, Hyprland
 Wayland session хэрэгтэй. Desktop-ийн screenshot/input-д `grim`, `wtype`,
 `busctl`; UI tree-д AT-SPI bus болон accessibility мэдээлэл гаргадаг апп хэрэгтэй.
 
 ```sh
-uv tool install --from 'git+https://github.com/yesunbileg/omnimcp.git@wip/audit-fixes-20261107' omnimcp
+uv tool install --from 'git+https://github.com/yesunbileg/omnimcp.git@main' omnimcp
 omnimcp --version
 omnimcp doctor
 ```
 
 Энэ нь branch-ийн одоогийн commit-ийг хэрэглэгчийн `uv` tool орчинд суулгана.
-Шалгахдаа `git ls-remote https://github.com/yesunbileg/omnimcp.git refs/heads/wip/audit-fixes-20261107`
+Шалгахдаа `git ls-remote https://github.com/yesunbileg/omnimcp.git refs/heads/main`
 ашиглаж branch-ийн commit-ийг баталгаажуул. Branch өөрчлөгдөж болох тул ижил
 хувилбарыг дахин суулгахдаа шалгасан commit hash-аар `@<commit>` ref-ийг солино.
-`31c3194` нь энэ засварын өмнөх baseline бөгөөд шинэ docs/plugin өөрчлөлт агуулаагүй.
 Энэ нь хэрэглэгчийн `uv` tool орчинд суулгана; системийн Python-д `sudo`-гоор
 суулгах шаардлагагүй. Шинэ хувилбар суулгасны дараа MCP client-ээ дахин холбоно.
 

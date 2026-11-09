@@ -1,0 +1,5 @@
+[tool.mutmut]
+source_paths = ["src/omnimcp"]
+only_mutate = ["src/omnimcp/trust.py", "src/omnimcp/safety.py", "src/omnimcp/journal.py"]
+pytest_add_cli_args = ["-q"]
+pytest_add_cli_args_test_selection = ["tests/test_auth_override_policy.py", "tests/test_safety.py", "tests/test_journal.py"]

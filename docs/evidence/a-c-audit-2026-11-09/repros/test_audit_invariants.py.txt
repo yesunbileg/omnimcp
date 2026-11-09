@@ -1,0 +1,92 @@
+"""Audit-only expected-red checks. These are outside the production test suite."""
+import hashlib
+import os
+import struct
+import subprocess
+import sys
+from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
+from omnimcp import canvas, dbuswire, journal, screenshot, wire
+
+
+def test_existing_canvas_backup_preserves_original(tmp_path, monkeypatch):
+    monkeypatch.delenv('OMNIMCP_DRYRUN',raising=False)
+    path=tmp_path/'fixture.canvas'
+    raw=b'{"nodes":[],"edges":[]}\n'
+    path.write_bytes(raw)
+    rev=hashlib.sha256(raw).hexdigest()
+    backup=tmp_path/f'.{path.name}.{rev}.bak'
+    backup.symlink_to(path.name)
+    _,receipt=canvas._write(path,raw,{'nodes':[{'id':'fixture','type':'text','text':'new','x':0,'y':0,'width':100,'height':100}],'edges':[]},rev)
+    assert Path(receipt).read_bytes()==raw,'successful backup receipt lost the original bytes'
+
+
+def test_appended_note_is_not_stored_in_journal(tmp_path,monkeypatch):
+    log=tmp_path/'journal.ndjson'
+    monkeypatch.setenv('OMNIMCP_JOURNAL',str(log))
+    monkeypatch.setenv('OMNIMCP_JOURNAL_TEXT','0')
+    monkeypatch.delenv('OMNIMCP_DRYRUN',raising=False)
+    journal._broken=False
+    canary='SYNTHETIC_PRIVATE_NOTE_20261109'
+    journal.record('kanban_update','act',{'append_text':canary},'ok',1)
+    assert canary not in log.read_text(),'append_text persisted despite text recording disabled'
+
+
+@pytest.mark.parametrize('name',['cli.lock','state.json'])
+def test_stop_finishes_with_nonregular_private_file(tmp_path,name):
+    code='''
+import sys
+from pathlib import Path
+from unittest.mock import patch
+from omnimcp import cli,verbs,safety
+root=Path(sys.argv[1])
+with patch.object(verbs,'lock_path',return_value=root/'cli.lock'),patch.object(safety,'state_path',return_value=root/'state.json'):
+    raise SystemExit(cli.stop())
+'''
+    command=[sys.executable,'-c',code,str(tmp_path)]
+    control=subprocess.run(command,capture_output=True,timeout=5)
+    assert control.returncode==0,control.stderr
+    os.mkfifo(tmp_path/name,0o600)
+    try:
+        result=subprocess.run(command,capture_output=True,timeout=3)
+    except subprocess.TimeoutExpired:
+        pytest.fail(f'stop blocked on {name} FIFO; timed out own child after 3 seconds')
+    assert result.returncode in (0,1)
+
+
+def test_retained_keyboard_has_bounded_live_keyboard_objects():
+    k=wire.VirtualKeyboard.__new__(wire.VirtualKeyboard)
+    k._globals_cache=[(7,wire.VK_INTERFACE,1)]
+    k._registry=3;k._seat=0;k._next_id=10
+    sent=[]
+    k._send=lambda obj,op,data:sent.append((obj,op))
+    k._roundtrip=lambda *args,**kwargs:None
+    k._upload_keymap=lambda *args:None
+    k.type_text('a');k.type_text('b')
+    created=sum(obj in (10,12) and op==wire.VK_CREATE for obj,op in sent)
+    destroyed=sum(obj in (11,13) and op==3 for obj,op in sent)
+    assert created-destroyed<=1,'each call retained another virtual keyboard'
+
+
+def test_dbus_array_does_not_read_beyond_declared_length():
+    raw=struct.pack('<II',4,4)+b'ABCD\0'+b'\0'*3+struct.pack('<i',777)
+    with pytest.raises(dbuswire.DBusError):
+        dbuswire.unmarshal('asi',raw)
+
+
+@pytest.mark.parametrize('raw',[b'\0\0',b'\x01\0\0'])
+def test_malformed_variant_is_a_protocol_error(raw):
+    with pytest.raises(dbuswire.DBusError):
+        dbuswire.unmarshal('v',raw)
+
+
+def test_png_only_grim_can_supply_a_default_capture(monkeypatch):
+    def grim(args,**kwargs):
+        jpeg='-t' in args and args[args.index('-t')+1]=='jpeg'
+        return SimpleNamespace(returncode=int(jpeg),stdout=b'' if jpeg else b'PNG fixture',stderr=b'jpeg support disabled' if jpeg else b'')
+    monkeypatch.setattr(screenshot.shutil,'which',lambda _: '/fixture/grim')
+    monkeypatch.setattr(screenshot.subprocess,'run',grim)
+    data,fmt,_=screenshot._grab_fitting([],1,None)
+    assert fmt=='png' and data

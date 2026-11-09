@@ -1,0 +1,8 @@
+{
+  "bandit": "1.9.4",
+  "mypy": "2.4.1",
+  "pip-audit": "2.10.1",
+  "hypothesis": "6.170.15",
+  "semgrep": "1.184.0",
+  "mutmut": "3.8.1"
+}

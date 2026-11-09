@@ -1,0 +1,11 @@
+from types import SimpleNamespace
+from unittest.mock import patch
+from omnimcp import screenshot
+
+def fake_grim(args, **kwargs):
+    jpeg = '-t' in args and args[args.index('-t') + 1] == 'jpeg'
+    return SimpleNamespace(returncode=int(jpeg), stdout=b'' if jpeg else b'png fixture', stderr=b'jpeg support disabled' if jpeg else b'')
+with patch.object(screenshot.shutil,'which',return_value='/fixture/grim'), patch.object(screenshot.subprocess,'run',side_effect=fake_grim):
+    for lossless in (False,True):
+        try: print('lossless',lossless,'result',screenshot._grab_fitting([],1,None,lossless))
+        except screenshot.ScreenshotError as e: print('lossless',lossless,'error',str(e))

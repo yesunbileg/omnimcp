@@ -1,0 +1,34 @@
+rules:
+  - id: explicit-shell-subprocess
+    languages: [python]
+    severity: WARNING
+    message: Review explicit shell execution against command policy.
+    pattern: subprocess.$FUNC(..., shell=True, ...)
+  - id: dynamic-python-evaluation
+    languages: [python]
+    severity: WARNING
+    message: Review dynamic Python execution of untrusted text.
+    pattern-either:
+      - pattern: eval(...)
+      - pattern: exec(...)
+  - id: predictable-temporary-path
+    languages: [python]
+    severity: WARNING
+    message: Review unsafe temporary filename allocation.
+    pattern: tempfile.mktemp(...)
+  - id: world-writable-state
+    languages: [python]
+    severity: WARNING
+    message: Review world-writable filesystem mode.
+    pattern-either:
+      - pattern: os.chmod($PATH, 0o777)
+      - pattern: os.chmod($PATH, 0o666)
+  - id: ignored-exception
+    languages: [python]
+    severity: INFO
+    message: Review whether swallowed exception is fail-open or harmless cleanup.
+    pattern: |
+      try:
+          ...
+      except Exception:
+          pass

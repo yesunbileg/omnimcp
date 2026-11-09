@@ -1,0 +1,18 @@
+import os, subprocess, sys, tempfile
+from pathlib import Path
+from unittest.mock import patch
+from omnimcp import cli, safety, verbs
+if len(sys.argv)>1:
+    root=Path(sys.argv[2]); kind=sys.argv[1]
+    with patch.object(verbs,'lock_path',return_value=root/'cli.lock'), patch.object(safety,'state_path',return_value=root/'state.json'):
+        cli.stop()
+else:
+    with tempfile.TemporaryDirectory() as d:
+        root=Path(d)
+        for kind in ('lock','state'):
+            fifo=root/('cli.lock' if kind=='lock' else 'state.json'); os.mkfifo(fifo,0o600)
+            try:
+                subprocess.run([sys.executable,__file__,kind,d],timeout=1,check=True,capture_output=True)
+                print(kind,'returned')
+            except subprocess.TimeoutExpired: print(kind,'blocked past 1 second')
+            fifo.unlink()

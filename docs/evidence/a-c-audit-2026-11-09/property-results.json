@@ -1,0 +1,15 @@
+{
+  "completed_property_examples": {
+    "dbus_valid_string_roundtrips": 500,
+    "dbus_array_and_trailing_integer_roundtrips": 500,
+    "event_lines": 1000,
+    "kanban_invalid_or_small_boards": 500,
+    "kanban_valid_card_boards": 500,
+    "nested_text_redaction": 300
+  },
+  "malformed_variant_minimized": {
+    "input_hex": "0000",
+    "exception": "IndexError",
+    "message": "string index out of range"
+  }
+}

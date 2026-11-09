@@ -1,0 +1,73 @@
+import json
+import os
+from hypothesis import given, settings, strategies as st, find
+from omnimcp import dbuswire, events, journal, kanban
+
+counts = {}
+def count(name):
+    counts[name] = counts.get(name, 0) + 1
+
+@settings(max_examples=500, derandomize=True, deadline=None, database=None)
+@given(st.text(alphabet=st.characters(exclude_categories=('Cs',), exclude_characters='\0'), max_size=80))
+def dbus_strings(value):
+    count('dbus_valid_string_roundtrips')
+    assert dbuswire.unmarshal('s', dbuswire.marshal('s', [value])) == [value]
+
+@settings(max_examples=1000, derandomize=True, deadline=None, database=None)
+@given(st.text(max_size=256))
+def event_lines(value):
+    count('event_lines')
+    result = events.parse_event(value)
+    assert result is None or (isinstance(result, tuple) and len(result) == 2)
+
+@settings(max_examples=500, derandomize=True, deadline=None, database=None)
+@given(st.lists(st.text(alphabet=st.characters(exclude_categories=('Cs',),exclude_characters='\0'),max_size=30),max_size=12),st.integers(min_value=-(2**31),max_value=2**31-1))
+def dbus_arrays(values, trailer):
+    count('dbus_array_and_trailing_integer_roundtrips')
+    raw=dbuswire.marshal('asi',[values,trailer])
+    assert dbuswire.unmarshal('asi',raw)==[values,trailer]
+
+@settings(max_examples=500, derandomize=True, deadline=None, database=None)
+@given(st.text(alphabet='abcXYZ0123 АӨҮөүé✓@!.,:;[]{}()-_/',min_size=1,max_size=80),st.booleans())
+def valid_boards(body,checked):
+    count('kanban_valid_card_boards')
+    raw=('---\nkanban-plugin: board\n---\n## Todo\n- ['+('x' if checked else ' ')+'] '+body+'\n').encode()
+    board=kanban.Board(raw)
+    assert len(board.cards)==1
+    assert board.cards[0].text==body
+    assert board.cards[0].checked==checked
+
+@settings(max_examples=500, derandomize=True, deadline=None, database=None)
+@given(st.binary(max_size=256))
+def board_bytes(value):
+    count('kanban_invalid_or_small_boards')
+    try:
+        kanban.Board(value)
+    except (ValueError, UnicodeError):
+        pass
+
+@settings(max_examples=300, derandomize=True, deadline=None, database=None)
+@given(st.one_of(st.text(),st.integers(),st.lists(st.text(),max_size=5)))
+def typed_text_redaction(value):
+    count('nested_text_redaction')
+    result = journal.redact({'steps':[{'args':{'text':value}}]})
+    assert result['steps'][0]['args']['text']['redacted'] is True
+
+def unexpected_variant_error(raw):
+    try:
+        dbuswire.unmarshal('v', raw)
+    except dbuswire.DBusError:
+        return False
+    except Exception:
+        return True
+    return False
+
+os.environ.pop('OMNIMCP_JOURNAL_TEXT',None)
+for probe in [dbus_strings,dbus_arrays,event_lines,board_bytes,valid_boards,typed_text_redaction]:
+    probe()
+bad=find(st.binary(max_size=64),unexpected_variant_error,settings=settings(max_examples=2000,derandomize=True,database=None,deadline=None))
+try:
+    dbuswire.unmarshal('v',bad)
+except Exception as exc:
+    minimized={'input_hex':bad.hex(),'exception':type(exc).__name__,'message':str(exc)}
+print(json.dumps({'completed_property_examples':counts,'malformed_variant_minimized':minimized},indent=2))

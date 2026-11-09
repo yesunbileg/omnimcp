@@ -1,0 +1,54 @@
+import gc, os, socket, tempfile, hashlib
+from pathlib import Path
+from unittest.mock import patch
+from omnimcp import wire, canvas
+
+real_socket = socket.socket
+base, peer = socket.socketpair()
+class Connected:
+    def __init__(self, *args):
+        self.sock = real_socket(fileno=os.dup(base.fileno()))
+    def settimeout(self, value): self.sock.settimeout(value)
+    def connect(self, path): pass
+    def close(self): self.sock.close()
+
+def fdcount(): return len(os.listdir('/proc/self/fd'))
+with patch.object(wire.socket, 'socket', Connected), patch.object(wire.VirtualPointer, '_send'), patch.object(wire.VirtualPointer, '_roundtrip', return_value=[]):
+    gc.collect(); gc.disable(); before=fdcount()
+    for _ in range(1000):
+        try: wire.VirtualPointer('/irrelevant')
+        except wire.WireError: pass
+    after=fdcount(); gc.enable(); collected=gc.collect(); final=fdcount()
+    print('socket missing-manager failures=1000 before=',before,'after=',after,'after_gc=',final,'collected=',collected)
+with tempfile.TemporaryDirectory() as d:
+    root=Path(d); target=root/'board.canvas'; raw=b'{"nodes":[],"edges":[]}\n'; target.write_bytes(raw)
+    rev=hashlib.sha256(raw).hexdigest(); backup=root/f'.{target.name}.{rev}.bak'; backup.symlink_to(target.name)
+    with patch.object(canvas.private_paths, 'private_dir', return_value=root), patch.object(canvas.private_paths, 'open_private_file', side_effect=lambda p,flags,mode: os.open(p,flags,mode)), patch.object(canvas.journal, 'refuse_if_dry'):
+        newrev, receipt=canvas._write(target,raw,{'nodes':[{'id':'x'}],'edges':[]},rev)
+    print('canvas receipt_is_link=',Path(receipt).is_symlink(),'backup_equals_old=',Path(receipt).read_bytes()==raw,'backup_equals_new=',Path(receipt).read_bytes()==target.read_bytes())
+import struct
+from omnimcp import dbuswire, journal, a11y
+payload=struct.pack('<II',4,4)+b'ABCD\0'+b'\0'*3+struct.pack('<i',777)
+print('malformed array:',dbuswire.unmarshal('asi',payload))
+for body in [b'\0\0', b'\x01\0\0']:
+    try: dbuswire.unmarshal('v',body)
+    except Exception as exc: print('malformed variant:',type(exc).__name__)
+with patch.dict(os.environ, {'OMNIMCP_JOURNAL_TEXT':'0'}):
+    print('journal redact:',journal.redact({'text':'fixture','append_text':'fixture'}))
+import fcntl
+from omnimcp import cli, verbs, safety
+with tempfile.TemporaryDirectory() as d:
+    root=Path(d); lock=root/'cli.lock'; lock.write_text('424242')
+    with lock.open() as held:
+        fcntl.flock(held,fcntl.LOCK_EX)
+        with patch.object(verbs,'lock_path',return_value=lock), patch.object(safety,'state_path',return_value=root/'absent'), patch.object(cli.os,'kill') as kill:
+            cli.stop(); print('stop signal call:',kill.call_args)
+class Bus:
+    def call(self,svc,path,iface,method):
+        return [[(':1.5',f'/n{i}') for i in range(5000)]] if path=='/root' else [[]]
+walk=a11y._Walk(Bus(),(':1.5','/root'),2)
+print('a11y walk:',list(walk),'truncated:',walk.truncated)
+k=wire.VirtualKeyboard.__new__(wire.VirtualKeyboard); k._globals_cache=[(7,wire.VK_INTERFACE,1)]; k._registry=3; k._seat=0; k._next_id=10
+sent=[]; k._send=lambda obj,op,data: sent.append((obj,op)); k._roundtrip=lambda *a,**kw: None; k._upload_keymap=lambda *a: None
+k.type_text('a'); k.type_text('b')
+print('keyboard binds',sum(obj==3 and op==0 for obj,op in sent),'creations',sum(obj in (10,12) and op==wire.VK_CREATE for obj,op in sent),'requests',sent)

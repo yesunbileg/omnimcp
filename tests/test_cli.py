@@ -33,6 +33,7 @@ def test_doctor_never_crashes_on_broken_check(monkeypatch, capsys):
     assert cli.doctor() == 1
     out = capsys.readouterr().out
     assert "[FAIL]" in out and "kaput" in out
+    assert "docs/help.md" in out
 
 
 def test_main_dispatch(monkeypatch):

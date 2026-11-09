@@ -162,7 +162,7 @@ def doctor() -> int:
         print(f"{mark} {name:12s} {detail}")
         failures += 0 if ok else 1
     if failures:
-        print(f"\n{failures} check(s) failed. See README troubleshooting.")
+        print(f"\n{failures} check(s) failed. See docs/help.md for troubleshooting.")
         return 1
     print("\nAll checks passed. OmniMCP is ready.")
     return 0

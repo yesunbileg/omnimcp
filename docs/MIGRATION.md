@@ -10,7 +10,7 @@
    example, `uv tool install /absolute/path/to/omnimcp_linux-0.2.0-py3-none-any.whl`).
 3. Change the MCP client command `agentic-os-mcp` to `OmniMCP`, or
    `python -m agentic_os_mcp` to `python -m omnimcp`. Rename the server key
-   `agentic-os-mcp` to `OmniMCP` in the client configuration. Clients that
+   `agentic-os-mcp` to `omnimcp` in the client configuration. Clients that
    qualify tool names by server key must update that prefix too; for example,
    `mcp__agentic-os-mcp__desktop` becomes `mcp__omnimcp__desktop` in clients
    using that convention. Reconnect the client. Install the new user worker

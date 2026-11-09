@@ -22,7 +22,7 @@ def no_ambient_journal(monkeypatch):
     with OMNIMCP_DRYRUN set would pass while every acting tool did
     nothing.
     """
-    for var in ("OMNIMCP_JOURNAL", "OMNIMCP_JOURNAL_TEXT", "OMNIMCP_DRYRUN", "OMNIMCP_KANBAN_FILE"):
+    for var in ("OMNIMCP_JOURNAL", "OMNIMCP_JOURNAL_TEXT", "OMNIMCP_DRYRUN"):
         monkeypatch.delenv(var, raising=False)
     journal._broken = False
     # replay marks its records `by: replay` and the CLI verbs stamp theirs

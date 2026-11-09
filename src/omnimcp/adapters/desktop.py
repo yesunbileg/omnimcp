@@ -250,32 +250,3 @@ def register(r):
             available=selected_session,
             verification="Read compositor active window or client inventory after dispatch.",
         )
-
-    # Mixed legacy tools get distinct read and edit contracts; observe cannot smuggle edits.
-    def canvas_read(ctx, **kwargs):
-        return normalize(server.canvas(action="read", **kwargs), ctx)
-
-    hints = get_type_hints(server._canvas_readonly)
-    params = {
-        p.name: (hints.get(p.name, Any), ... if p.default is inspect.Parameter.empty else p.default)
-        for p in inspect.signature(server._canvas_readonly).parameters.values()
-    }
-    r.add(
-        "canvas.read",
-        canvas_read,
-        params=params,
-        readonly=True,
-        idempotent=True,
-        description="Read saved Canvas cards and connections without desktop access.",
-    )
-    bind("canvas.edit", server.canvas, False, False)
-    from omnimcp import kanban
-
-    if kanban.configured():
-        for name, fn, readonly in (
-            ("kanban.read", server.kanban_read, True),
-            ("kanban.wait", server.kanban_wait, True),
-            ("kanban.add", server.kanban_add, False),
-            ("kanban.update", server.kanban_update, False),
-        ):
-            bind(name, fn, readonly, False)

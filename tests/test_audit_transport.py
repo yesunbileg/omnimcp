@@ -33,8 +33,6 @@ def test_legacy_image_tools_disable_structured_output_and_convert_once():
         _instructions="instructions",
         _OBSERVE_TOOLS=[screenshot, zoom, state],
         _TITLES={"screenshot": "Screenshot", "zoom": "Zoom", "state": "State"},
-        _canvas_readonly=lambda: {},
-        kb=SimpleNamespace(configured=lambda: False),
     )
     app = build_app(desktop)
 

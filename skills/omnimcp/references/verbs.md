@@ -10,7 +10,6 @@ Bare `OmniMCP` (or `OmniMCP serve`) runs the MCP stdio server instead.
 
 - [Conventions](#conventions): output, `--json`, errors, exit codes, captures, stdin, shared flags, bounds
 - Observation (work in read-only mode): [desktop](#desktop), [screenshot](#screenshot), [zoom](#zoom), [ui](#ui), [marks](#marks), [binds](#binds), [wait_for](#wait_for)
-- Canvas (reads and revision-checked edits): [canvas](#canvas)
 - Acting (exit 3 under OMNIMCP_READONLY): [pointer](#pointer), [keyboard](#keyboard), [click_ui](#click_ui), [hypr](#hypr), [launch](#launch), [sequence](#sequence), [clipboard](#clipboard)
 - Owner (the human's tools, not the agent's): [doctor](#doctor), [stop](#stop), [journal](#journal), [replay](#replay), [skill](#skill), [serve and --version](#serve-and---version)
 
@@ -703,45 +702,3 @@ OmniMCP --help         # every verb; OmniMCP <verb> --help for one
 ```
 
 `--help` and `--version` print and exit 0 regardless of stdin.
-
-## canvas
-
-One tool for saved Obsidian Canvas files, independent of the desktop:
-
-```sh
-OmniMCP canvas FILE.canvas [--card n1] [--offset 0] [--limit 100]
-OmniMCP canvas FILE.canvas --action edit --revision HASH --changes @changes.json
-```
-
-Read returns compact JSON text: cards with short IDs, titles, FULL text, types,
-colors, group IDs and file/URL references; connections with short IDs, from/to,
-direction, label and color. `forward` = from → to, `reverse` = from ← to,
-`both` = from ↔ to, `none` = no arrows. Colors are names or hex codes. Group
-membership is inferred from containment; no coordinates, sizes, background
-settings or persistent IDs leave the tool. Embedded image/file bytes and linked
-note contents are not loaded. Text is not truncated. Limit pages to 1–200 entries
-(default 100), follow `next_offset`; cards and connections are paged separately.
-With `--card`, only that card and incident connections are considered.
-
-Short references are scoped to the returned file revision. Save the Canvas in
-Obsidian before edits; pass the revision from read. External editors do not share
-the write lock: avoid simultaneous editing. Edit operations in `--changes` (JSON
-array, `@file`, or `-` for stdin):
-
-- `update_card`: `id`, `set` (text/color, file/subpath/color, url/color, or label/color
-  according to card type).
-- `add_card`: `ref`, `text`, optional `color` and `group`. A new text card is placed
-  automatically below existing cards, or inside the given group (expanded as needed).
-- `remove_card`: `id`; incident connections are also removed.
-- `connect`: `from`, `to`, optional `label`, `color`, `direction`, `ref`.
-- `update_connection`: `id`, `set` (label, color, direction).
-- `remove_connection`: `id`.
-
-New `ref` names can be used later in the same batch. Clear colors with null;
-connection labels can also be cleared with null. Edit batches validate fully,
-preserve unknown extension fields, verify a hidden sibling backup against the
-original bytes, then write atomically. Existing geometry stays unchanged except
-when a group must expand for a new card. Read again after editing for current
-short references. `--dry-run` validates without writing; read-only mode permits
-only reads. No desktop input occurs. The CLI `--json` envelope carries the compact
-result as a string. Files are bounded to 32 MiB and batches to 100 changes.

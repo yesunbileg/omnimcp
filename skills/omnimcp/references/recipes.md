@@ -303,7 +303,7 @@ says `not found, call desktop() for current addresses` (exit 1), re-read.
 
 ## 8. Troubleshooting
 
-**"exposes no accessibility tree" (exit 4).** Terminals, canvas apps, games
+**"exposes no accessibility tree" (exit 4).** Terminals, custom-drawn apps, games
 and Electron/Chrome started without `--force-renderer-accessibility` expose
 little or nothing. Fall back to `screenshot --window`, `zoom`, `pointer`
 (recipe 2). A tree that exists but prints `no actionable elements` may still

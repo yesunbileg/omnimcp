@@ -33,7 +33,7 @@ from typing import Any
 
 from omnimcp import __version__, private_paths
 
-OBSERVE = ("desktop", "screenshot", "zoom", "ui", "marks", "binds", "wait_for", "canvas")
+OBSERVE = ("desktop", "screenshot", "zoom", "ui", "marks", "binds", "wait_for")
 ACT = ("pointer", "keyboard", "click_ui", "hypr", "launch", "sequence")
 OWNER = ("doctor", "stop", "journal", "replay", "skill")
 ALIASES = {"click-ui": "click_ui", "wait-for": "wait_for"}
@@ -142,21 +142,6 @@ def build_parser() -> argparse.ArgumentParser:
         v.add_argument("--out", default=_S, metavar="PATH", help="move the capture to PATH")
 
     verb("desktop", "monitors, workspaces, windows, active window, cursor, layers")
-
-    v = verb("canvas", "read or edit saved Canvas cards and connections without coordinates")
-    v.add_argument("path", metavar="FILE.canvas")
-    v.add_argument("--action", choices=("read", "edit"), default=_S)
-    v.add_argument("--card", default=_S, metavar="n1")
-    v.add_argument("--offset", type=int, default=_S)
-    v.add_argument("--limit", type=int, default=_S)
-    v.add_argument("--revision", default=_S, metavar="HASH")
-    v.add_argument(
-        "--changes",
-        default=_S,
-        metavar="JSON|@file|-",
-        help="change list for --action edit; same operations as the MCP tool",
-    )
-    v.add_argument("--dry-run", dest="dry_run", action="store_true", default=_S)
 
     v = verb("screenshot", "capture the focused monitor, a window, or a region")
     v.add_argument("--window", default=_S, metavar="ADDR", help="window address, or 'active'")
@@ -335,8 +320,6 @@ def normalize(verb: str, ns: argparse.Namespace) -> tuple[dict[str, Any], dict[s
     if verb == "ui":
         if d.pop("all", False):
             d["actionable"] = False
-    elif verb == "canvas" and "changes" in d:
-        d["changes"] = _steps(d["changes"])
     elif verb == "wait_for":
         if "timeout" in d:
             d["timeout_s"] = d.pop("timeout")
@@ -410,8 +393,7 @@ def run(
     dry_run: bool = False,
 ) -> int:
     """Call one tool the way the MCP server would, then speak the shell contract."""
-    canvas_edit = tool == "canvas" and kwargs.get("action") == "edit"
-    if _flag("OMNIMCP_READONLY") and (tool in ACT or tool == "clipboard" or canvas_edit):
+    if _flag("OMNIMCP_READONLY") and (tool in ACT or tool == "clipboard"):
         return _fail(
             "refused",
             f"OMNIMCP_READONLY is set: {tool} is not available in read-only mode "
@@ -435,7 +417,7 @@ def run(
 
     session.ensure_session_env()
     server.use_plain_blocks()  # a shell prints text and paths; no MCP types, no MCP import
-    acting = tool in ACT or canvas_edit or (tool == "clipboard" and kwargs.get("action") == "write")
+    acting = tool in ACT or (tool == "clipboard" and kwargs.get("action") == "write")
     lock = None
     if acting:
         try:

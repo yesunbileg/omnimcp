@@ -682,9 +682,6 @@ server; for agents that run commands). Observation, works in read-only mode:
   marks [--window ADDR] [--name TEXT]
   binds
   wait_for EVENT [--match TEXT] [--timeout S]
-  canvas FILE.canvas [--card n1] [--offset N] [--limit N]
-         [--action edit --revision HASH --changes JSON|@file|-] [--dry-run]
-         (read works in read-only mode; edit is refused)
 Acting (refused with exit 3 under OMNIMCP_READONLY; all take --dry-run, which
 rehearses; all but launch and clipboard take --then none|desktop|ui|screenshot,
 which appends the effect; pointer, keyboard and click_ui take --allow-auth):

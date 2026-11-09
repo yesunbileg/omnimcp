@@ -1,5 +1,19 @@
 # Migrating from Agentic OS MCP
 
+## Canvas болон Kanban-ийг хассан хувилбарт шилжих
+
+Эдгээр integration-ийн MCP tool, compact action, CLI, Python module болон
+`OMNIMCP_KANBAN_FILE` тохиргоо хасагдсан. Хуучин дуудлага `unknown tool`,
+`unsupported` эсвэл CLI usage алдаа буцаана. Энэ environment утгыг client болон
+worker-ийн тохиргооноос авч болно; шинэ runtime үүнийг ашиглахгүй.
+
+Upgrade хийхдээ хуучин worker/MCP server-ийг зогсоож, шинэ хувилбар суулгаад
+worker болон MCP client-ээ дахин эхлүүл. Ажиллаж үлдсэн хуучин процесс өмнөх
+tool-уудаа зарласаар байж болно. Хэрэглэгчийн `.canvas`, самбарын `.md` файл,
+backup болон journal-ийг устгах эсвэл migrate хийхгүй.
+
+## Хуучин package-аас шилжих
+
 1. Disconnect the MCP client and stop its old stdio server. If the old user
    worker was installed, run `agentic-os-mcp worker stop` and disable its
    automatic restart with `systemctl --user disable agentic-os-mcp.service`.

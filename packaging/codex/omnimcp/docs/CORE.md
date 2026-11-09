@@ -8,7 +8,7 @@ using its existing model and credentials. Core OS actions do not require an LLM.
 
 ## Profiles and installation
 
-`OmniMCP` and all existing desktop/Canvas/Kanban verbs keep their previous
+`OmniMCP` and all existing desktop verbs keep their previous
 behavior. `--profile legacy` explicitly selects that surface. Compact is opt-in:
 
 ```sh
@@ -55,7 +55,7 @@ artifact files and directory are private. The socket defaults to
 check. Override `OMNIMCP_STATE_DIR`/`OMNIMCP_SOCKET` for isolated tests.
 Worker environment belongs in a systemd user drop-in. Environment on a later
 MCP bridge cannot silently change the worker's desktop session, credentials,
-Kanban file, browser profile or backend configuration.
+browser profile or backend configuration.
 
 ## Compact API
 
@@ -220,7 +220,7 @@ Use `discover` for the current catalog and each parameter schema. Included domai
 - Network interfaces/routes/DNS/ports, existing NetworkManager connection activation
   with a native checkpoint; new credential provisioning stays in the native GUI.
 - Storage inventory/mounts and optional restic backup/check/verified restore.
-- All existing desktop operations, Canvas and configured Kanban operations.
+- Desktop observation and automation operations.
 - Caelestia theme/DND/brightness/notification observation without restarting the shell.
 - WirePlumber audio, BlueZ devices, UPower, USB, optional ADB, Git, build/test jobs,
   Docker, SSH BatchMode and optional libvirt VM inventory.

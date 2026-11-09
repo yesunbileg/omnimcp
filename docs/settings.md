@@ -30,7 +30,6 @@ MCP bridge-д өгсөн утга ажиллаж буй worker-ийн орчны
 | `OMNIMCP_JOURNAL` | Бичлэг унтраалттай. `1` бол `$XDG_STATE_HOME/omnimcp/journal.ndjson` (эсвэл `~/.local/state/...`), эсвэл зам өгвөл тухайн файлд tool call-уудыг NDJSON-оор бичнэ. |
 | `OMNIMCP_JOURNAL_TEXT` | Унтраалттай. `1`, `true`, `yes`, `on` бол бичсэн/copied текстийг бүрнээр нь журналд хадгална. Ингэхэд нууц үг орж болзошгүй. |
 | `OMNIMCP_JOURNAL_MAX_BYTES` | `8388608` буюу 8 MiB. Журналын файл тус бүрийн эргүүлэлтийн дээд хэмжээ; `0` эсвэл бага утга эргүүлэлтийг унтраана. |
-| `OMNIMCP_KANBAN_FILE` | Тодорхойгүй. Өөрчлөх Kanban Markdown файлын абсолют зам; existing regular `.md` file байх ёстой. |
 | `OMNIMCP_BROWSER_COMMAND` | Тодорхойгүй. Browser MCP server-ийн command-ийг JSON string list (`argv`) хэлбэрээр заана. Заагаагүй бол `~/.config/omnimcp/browser.json`, дараа нь PATH дахь `playwright-mcp` ашиглана. |
 | `OMNIMCP_STATE_DIR` | `$XDG_STATE_HOME/omnimcp` (эсвэл `~/.local/state/omnimcp`). Worker SQLite DB, artifact хадгалдаг хувийн хавтас. |
 | `OMNIMCP_SOCKET` | `$XDG_RUNTIME_DIR/omnimcp-core/worker.sock` (байхгүй үед `/run/user/<uid>/...`). Compact worker-ийн Unix socket зам. |

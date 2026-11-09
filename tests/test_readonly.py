@@ -14,7 +14,6 @@ OBSERVE = {
     "marks",
     "binds",
     "wait_for",
-    "canvas",
     "codex_usage",
 }
 ACT = {"pointer", "keyboard", "click_ui", "hypr", "launch", "sequence", "opencode"}
@@ -145,7 +144,7 @@ def test_every_tool_declares_a_title_and_whether_it_acts(reloaded, monkeypatch):
         if t.name == "codex_usage":
             assert a.readOnlyHint is True and a.openWorldHint is True, t.name
             assert a.destructiveHint is False, t.name
-        elif t.name in OBSERVE - {"canvas"}:
+        elif t.name in OBSERVE:
             assert a.readOnlyHint is True and a.openWorldHint is False, t.name
         else:
             assert a.readOnlyHint is False and a.destructiveHint is True, t.name

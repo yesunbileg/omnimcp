@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Remove the Canvas and Kanban integrations completely: modules, MCP tools,
+  compact actions, CLI commands, board configuration, plugin/skill instructions
+  and feature-specific tests. Existing user files and historical audit evidence
+  are preserved.
+
 - Use the distinct `OmniMCP-linux` distribution name; preserve the OmniMCP product,
   both command aliases, Python imports and state paths. The PyPI `omnimcp` name
   belongs to a different project; install this project from its explicit Git source.
@@ -15,14 +20,6 @@
   keeping `omnimcp` as a compatible alias.
 - Make fake worker socket tests independent of umask; raise the coverage floor
   to 84% and document separate isolated-VM live tests.
-- Reduce shared MCP instructions and serialize Kanban results once as compact
-  JSON. Return small write receipts and support revision-checked `append_text`
-  so recording a result does not require resending the task's instructions.
-- Add one `canvas` tool and CLI verb for semantic Obsidian Canvas read/edit:
-  full content, colors, grouping and directed connections without geometry or
-  persistent IDs. Include revision checks, verified backups, atomic writes,
-  read-only support and dry-run validation.
-
 ## 0.2.0 — OS core
 
 - Add opt-in seven-tool compact profile and compatible CLI operations.

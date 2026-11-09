@@ -2,22 +2,20 @@
 
 This plugin package (manifest version `0.2.1`) starts an installed OmniMCP
 runtime (`0.2.0`) through `bin/OmniMCP`. It does not include or install the
-runtime, credentials, or a user-specific Kanban board.
+runtime or credentials.
 
 Install OmniMCP first as described in the repository [setup guide](../../../docs/start.md).
 The shim uses `OMNIMCP_BIN` when set; otherwise it finds `OmniMCP`
 (or the compatible `omnimcp`) on `PATH` and
 refuses to run itself recursively. The server needs the active Hyprland session
 variables: `WAYLAND_DISPLAY`, `HYPRLAND_INSTANCE_SIGNATURE`, `XDG_RUNTIME_DIR`,
-and `DBUS_SESSION_BUS_ADDRESS`. Configure a Kanban board separately with
-`OMNIMCP_KANBAN_FILE` if needed.
+and `DBUS_SESSION_BUS_ADDRESS`.
 
 Set optional values in this plugin's own `mcp.json` `env` map, for example:
 
 ```json
 "env": {
-  "OMNIMCP_BIN": "/absolute/path/to/OmniMCP",
-  "OMNIMCP_KANBAN_FILE": "/absolute/path/to/kanban.md"
+  "OMNIMCP_BIN": "/absolute/path/to/OmniMCP"
 }
 ```
 

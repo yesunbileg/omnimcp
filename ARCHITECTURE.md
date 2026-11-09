@@ -6,9 +6,6 @@ server, CLI verbs, and Python modules call the same validated tool functions.
 ## Main modules
 
 - `server.py` registers MCP tools and validates requests.
-- `canvas.py` supplies one semantic read/edit tool for saved JSON Canvas files:
-  compact references, content and connections, internal geometry, revision checks,
-  verified backups and atomic writes. It requires no desktop access.
 - `hyprctl.py` reads and changes Hyprland state, including Lua-managed setups.
 - `a11y.py` and `dbuswire.py` read and operate accessible UI controls over AT-SPI.
 - `screenshot.py` captures monitors, windows, and regions and reports coordinate

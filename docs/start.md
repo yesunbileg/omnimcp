@@ -56,13 +56,12 @@ Plugin нь `OMNIMCP_BIN`-ээр runtime executable-ийг зааж болно. 
 
 ```json
 "env": {
-  "OMNIMCP_BIN": "/absolute/path/to/OmniMCP",
-  "OMNIMCP_KANBAN_FILE": "/absolute/path/to/kanban.md"
+  "OMNIMCP_BIN": "/absolute/path/to/OmniMCP"
 }
 ```
 
 Хэрэглэхгүй утгыг хасаж болно. `OMNIMCP_BIN`-ийг өгөөгүй бол `PATH` ашиглана;
-Kanban хэрэглэхгүй бол `OMNIMCP_KANBAN_FILE`-ийг оруулахгүй. Codex compatibility
+Codex compatibility
 `.mcp.json`-д мөн ижил `env` утгуудыг тохируулж, аль хэдийн байгаа `env_vars`
 жагсаалтад session-ийн дөрвөн хувьсагчийг үлдээ. Plugin shim эдгээр утгыг runtime
 руу дамжуулна. Plugin суусны дараа шинэ chat нээ.
@@ -71,8 +70,7 @@ Kanban хэрэглэхгүй бол `OMNIMCP_KANBAN_FILE`-ийг оруулах
 
 ```sh
 OmniMCP desktop
-OmniMCP canvas /absolute/path/Plan.canvas
 ```
 
-`desktop`-оор session-оо шалга. Kanban тохируулах, аюулгүй байдлын тохиргоо,
+`desktop`-оор session-оо шалга. Аюулгүй байдлын тохиргоо,
 буцаалт болон эрхийн хязгаарлалтыг [Тохиргоо](settings.md)-оос үз.

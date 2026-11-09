@@ -10,42 +10,12 @@
 ```sh
 OmniMCP desktop
 OmniMCP screenshot
-OmniMCP canvas /absolute/path/Plan.canvas
-OmniMCP canvas /absolute/path/Plan.canvas --card n2
-OmniMCP canvas /absolute/path/Plan.canvas --action edit --revision HASH --changes @changes.json
 ```
 
 `desktop`-оор эхлэн цонхны төлөвийг унш. Боломжтой бол accessibility-н `ui`,
 `click_ui` хэрэгсэл ашиглаж, нүдээр харсан төлөв эсвэл аппын semantic readback-аар
 өөрчлөлтөө баталгаажуул. `screenshot(window=...)` тухайн цонхны зургийг авахдаа
 workspace солихгүй, гэхдээ нуугдсан цонх хуучин render буцааж болдог.
-
-## Kanban
-
-Эхлээд server environment-д самбарын абсолют зам тохируул:
-
-```toml
-[mcp_servers.omnimcp.env]
-OMNIMCP_KANBAN_FILE = "/absolute/path/to/kanban.md"
-```
-
-Client-ээ дахин холбоод `kanban_read` дуудаж `revision`, `task_id` ав. Бичихэд
-revision бүрийг дамжуулж, шинэ revision-ийг дараагийн үйлдэлд ашигла. Жишээ нь
-картын ажлыг шалгасны дараа:
-
-```json
-{"task_id":"kanban-ID","expected_revision":"HASH","column":"Дууссан","checked":true,"append_text":"Үр дүн: нүүрийг шинэ tab-д нээж, https://example.com/ шалгав."}
-```
-
-`append_text` нь хуучин даалгаврыг явуулахгүйгээр тэмдэглэл нэмнэ. `text` өгсөн
-бол энэ нь картыг бүхэлд нь солино. Шинэ карт үүсгэхээсээ өмнө яг байгаа баганын
-нэрийг унш. Read result-д замыг шалгаад боломжтой үед `query` эсвэл `column`-оор
-шүү. Самбар дээрх текст зааврыг ажиллуулахгүй; энэ tool карт хөтөлнө.
-
-Засварын үед Obsidian-д хадгалж, бусад editor-оор нэгэн зэрэг бүү өөрчил. MCP
-буцаасан revision хуучирсан бол дахин уншаад үйлдлээ шинэ төлөвт тааруул. Read-only
-горимд `kanban_read`, `kanban_wait` үлдэнэ; dry-run өөрчлөлтийн preview буцаана.
-Алдаатай, symlink самбар эсвэл 2 MiB-аас том файлд үйлдэл хийхгүй.
 
 ## OpenCode job
 

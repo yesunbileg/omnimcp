@@ -69,9 +69,7 @@ def reject_every_tool(profile, runtime_dir):
 
 
 def test_real_legacy_entrypoint_redacts_invalid_tool_input(tmp_path):
-    result = call_entrypoint(
-        "canvas", {"path": "/tmp/a.canvas", "action": "R2_SECRET_MARKER"}, "legacy", tmp_path
-    )
+    result = call_entrypoint("pointer", {"action": "R2_SECRET_MARKER"}, "legacy", tmp_path)
     message = " ".join(block.text for block in result.content if hasattr(block, "text"))
     assert result.isError
     assert "action" in message

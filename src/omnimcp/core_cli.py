@@ -75,7 +75,6 @@ def worker(argv):
         executable = str(Path(sys.executable).absolute()).replace("%", "%%").replace('"', '\\"')
         persisted = ""
         for key in (
-            "OMNIMCP_KANBAN_FILE",
             "OMNIMCP_BACKGROUND",
             "OMNIMCP_READONLY",
             "OMNIMCP_DRYRUN",

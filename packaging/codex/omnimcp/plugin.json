@@ -9,7 +9,7 @@
       "interface": {
         "displayName": "OmniMCP",
         "shortDescription": "Control your Linux desktop",
-        "longDescription": "Use the existing OmniMCP server and its workflow skill to inspect and operate the local Hyprland desktop, Canvas files, and the configured Kanban board.",
+        "longDescription": "Use the existing OmniMCP server and its workflow skill to inspect and operate the local Hyprland desktop.",
         "category": "Developer Tools",
         "capabilities": [
           "Read",

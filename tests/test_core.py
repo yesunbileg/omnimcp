@@ -60,7 +60,7 @@ def test_observe_rejects_changes_unknown_fields_and_untyped_arguments(engine, tm
         == "invalid_params"
     )
     assert engine.request({"op": "observe", "action": "unknown"})["status"] == "unsupported"
-    schema = engine.request({"op": "discover", "action": "canvas.read"})["parameters"]
+    schema = engine.request({"op": "discover", "action": "file.read"})["parameters"]
     assert "action" not in schema["properties"] and "changes" not in schema["properties"]
 
 

@@ -18,10 +18,6 @@ def build_app(desktop) -> Any:
             "\nUse opencode to delegate an explicit subagent task in a project directory. "
             "No desktop snapshot is needed. Poll its job_id for completion and verify effects.\n"
         )
-    if desktop.kb.configured():
-        instructions += (
-            desktop.KANBAN_READONLY_INSTRUCTIONS if readonly else desktop.KANBAN_INSTRUCTIONS
-        )
     app = FastMCP(__app_name__, instructions=instructions)
     app._mcp_server.version = desktop.__version__
     from omnimcp.codex_usage import codex_usage
@@ -42,16 +38,6 @@ def build_app(desktop) -> Any:
                 title=desktop._TITLES[tool.__name__], readOnlyHint=True, openWorldHint=False
             ),
         )(tool)
-    app.tool(
-        name="canvas",
-        structured_output=False,
-        annotations=ToolAnnotations(
-            title="Canvas cards and connections",
-            readOnlyHint=readonly,
-            destructiveHint=not readonly,
-            openWorldHint=False,
-        ),
-    )(desktop._canvas_readonly if readonly else desktop.canvas)
     if not readonly:
         from omnimcp.opencode import opencode
 
@@ -80,24 +66,5 @@ def build_app(desktop) -> Any:
                     title=desktop._TITLES[tool.__name__], readOnlyHint=False, destructiveHint=True
                 )
             )(tool)
-    if desktop.kb.configured():
-        for tool in (desktop.kanban_read, desktop.kanban_wait):
-            app.tool(
-                structured_output=False,
-                annotations=ToolAnnotations(
-                    title=desktop._TITLES[tool.__name__], readOnlyHint=True, openWorldHint=False
-                ),
-            )(tool)
-        if not readonly:
-            for tool in (desktop.kanban_add, desktop.kanban_update):
-                app.tool(
-                    structured_output=False,
-                    annotations=ToolAnnotations(
-                        title=desktop._TITLES[tool.__name__],
-                        readOnlyHint=False,
-                        destructiveHint=True,
-                        openWorldHint=False,
-                    ),
-                )(tool)
     hide_validation_input(app)
     return app

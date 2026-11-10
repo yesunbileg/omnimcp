@@ -1,5 +1,7 @@
 # Verification record and release gates
 
+> **Historical record (2026-10-21).** This document describes the installation and tests on that date, not the current feature set. See [the 2026-11-09 feature-removal record](audits/2026-11-09-board-feature-removal.md) for the later removal status.
+
 Validation date: 2026-10-21, Arch Linux, existing Hyprland/Caelestia user session.
 The baseline dirty tree was archived outside the repository before editing.
 

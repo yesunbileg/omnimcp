@@ -2,9 +2,11 @@
 
 import asyncio
 import importlib.util
+import json
 import os
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 from mcp.shared.memory import create_connected_server_and_client_session
@@ -88,3 +90,15 @@ def test_removed_names_return_unknown_tool_on_actual_mcp(configured_old_board):
                 assert "unknown tool" in message.lower(), (name, message)
 
     asyncio.run(exercise())
+
+
+@pytest.mark.parametrize(
+    "relative_path",
+    ("plugin.json", ".codex-plugin/plugin.json"),
+)
+def test_codex_plugin_manifests_exclude_removed_integrations(relative_path):
+    package = Path(__file__).resolve().parents[1] / "packaging" / "codex" / "omnimcp"
+    manifest = json.loads((package / relative_path).read_text(encoding="utf-8"))
+    metadata = json.dumps(manifest, ensure_ascii=False).lower()
+    for forbidden in ("canvas", "kanban", "obsidian"):
+        assert forbidden not in metadata, (relative_path, forbidden)
